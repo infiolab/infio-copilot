@@ -5,30 +5,58 @@ on:
     tags:
       - '*'
 
+env:
+  PLUGIN_NAME: obsidian-infio-copilot
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-
+      - uses: actions/checkout@v2
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v1
         with:
-          node-version: '18.x'
+          node-version: 20.x
 
-      - name: Build plugin
+      - name: Build
+        id: build
         run: |
           npm install
           npm run build
 
-      - name: Create release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test
+        id: test
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
+          npm run tests
 
-          gh release create "$tag" \
-            --title="$tag" \
-            --draft \
-            main.js manifest.json styles.css
+      - name: Bundle
+        id: bundle
+        run: |
+          mkdir ${{ env.PLUGIN_NAME }}
+          cp main.js manifest.json styles.css ${{ env.PLUGIN_NAME }}
+          zip -r ${{ env.PLUGIN_NAME }}-${{ steps.build.outputs.tag_name }}.zip ${{ env.PLUGIN_NAME }}
+          ls
+          echo "::set-output name=tag_name::$(git tag --sort version:refname | tail -n 1)"
+
+      - name: Get release notes
+        id: release_notes
+        run: |
+          CHANGELOG=$(sed -n -e "/## ${{ steps.bundle.outputs.tag_name }}/,/## /p" CHANGELOG.md | sed '/## /d')
+          if [ -z "$CHANGELOG" ]; then  
+            echo "Error: No release notes found for this version in CHANGELOG.md"  
+            exit 1  
+          fi  
+          echo "::set-output name=body::${CHANGELOG}"
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          token: ${{ github.token }}
+          files: |
+            ${{ env.PLUGIN_NAME }}-${{ steps.bundle.outputs.tag_name }}.zip
+            main.js
+            manifest.json
+            styles.css
+          body: ${{ steps.release_notes.outputs.body }}
