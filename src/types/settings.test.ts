@@ -1,17 +1,21 @@
+import { DEFAULT_MODELS } from '../constants'
+import { DEFAULT_AUTOCOMPLETE_SETTINGS } from '../settings/versions/v1/v1'
+
 import { SETTINGS_SCHEMA_VERSION, parseInfioSettings } from './settings'
 
 describe('parseSmartCopilotSettings', () => {
 	it('should return default values for empty input', () => {
 		const result = parseInfioSettings({})
 		expect(result).toEqual({
-			version: SETTINGS_SCHEMA_VERSION,
-
+			version: 0.1,
+			activeModels: DEFAULT_MODELS,
+			infioApiKey: '',
 			openAIApiKey: '',
 			anthropicApiKey: '',
 			geminiApiKey: '',
 			groqApiKey: '',
-
-			chatModelId: 'anthropic/claude-3.5-sonnet-latest',
+			deepseekApiKey: '',
+			chatModelId: 'deepseek-chat',
 			ollamaChatModel: {
 				baseUrl: '',
 				model: '',
@@ -21,8 +25,7 @@ describe('parseSmartCopilotSettings', () => {
 				apiKey: '',
 				model: '',
 			},
-
-			applyModelId: 'openai/gpt-4o-mini',
+			applyModelId: 'deepseek-chat',
 			ollamaApplyModel: {
 				baseUrl: '',
 				model: '',
@@ -32,13 +35,11 @@ describe('parseSmartCopilotSettings', () => {
 				apiKey: '',
 				model: '',
 			},
-
-			embeddingModelId: 'openai/text-embedding-3-small',
+			embeddingModelId: 'text-embedding-004',
 			ollamaEmbeddingModel: {
 				baseUrl: '',
 				model: '',
 			},
-
 			systemPrompt: '',
 			ragOptions: {
 				chunkSize: 1000,
@@ -48,6 +49,34 @@ describe('parseSmartCopilotSettings', () => {
 				excludePatterns: [],
 				includePatterns: [],
 			},
+			autocompleteEnabled: true,
+			advancedMode: false,
+			apiProvider: 'openai',
+			azureOAIApiSettings: '',
+			openAIApiSettings: '',
+			ollamaApiSettings: '',
+			triggers: DEFAULT_AUTOCOMPLETE_SETTINGS.triggers,
+			delay: 500,
+			modelOptions: {
+				temperature: 1,
+				top_p: 0.1,
+				frequency_penalty: 0.25,
+				presence_penalty: 0,
+				max_tokens: 800,
+			},
+			systemMessage: DEFAULT_AUTOCOMPLETE_SETTINGS.systemMessage,
+			fewShotExamples: DEFAULT_AUTOCOMPLETE_SETTINGS.fewShotExamples,
+			userMessageTemplate: '{{prefix}}<mask/>{{suffix}}',
+			chainOfThoughRemovalRegex: '(.|\\n)*ANSWER:',
+			dontIncludeDataviews: true,
+			maxPrefixCharLimit: 4000,
+			maxSuffixCharLimit: 4000,
+			removeDuplicateMathBlockIndicator: true,
+			removeDuplicateCodeBlockIndicator: true,
+			ignoredFilePatterns: '**/secret/**\n',
+			ignoredTags: '',
+			cacheSuggestions: true,
+			debugMode: false,
 		})
 	})
 })
@@ -73,16 +102,17 @@ describe('settings migration', () => {
 
 		const result = parseInfioSettings(oldSettings)
 		expect(result).toEqual({
-			version: 1,
-
-			openAIApiKey: 'openai-api-key',
-			anthropicApiKey: 'anthropic-api-key',
+			version: 0.1,
+			activeModels: DEFAULT_MODELS,
+			infioApiKey: '',
+			openAIApiKey: '',
+			anthropicApiKey: '',
 			geminiApiKey: '',
-			groqApiKey: 'groq-api-key',
-
-			chatModelId: 'anthropic/claude-3.5-sonnet-latest',
+			groqApiKey: '',
+			deepseekApiKey: '',
+			chatModelId: 'deepseek-chat',
 			ollamaChatModel: {
-				baseUrl: 'http://localhost:11434',
+				baseUrl: '',
 				model: '',
 			},
 			openAICompatibleChatModel: {
@@ -90,10 +120,9 @@ describe('settings migration', () => {
 				apiKey: '',
 				model: '',
 			},
-
-			applyModelId: 'openai/gpt-4o-mini',
+			applyModelId: 'deepseek-chat',
 			ollamaApplyModel: {
-				baseUrl: 'http://localhost:11434',
+				baseUrl: '',
 				model: '',
 			},
 			openAICompatibleApplyModel: {
@@ -101,14 +130,12 @@ describe('settings migration', () => {
 				apiKey: '',
 				model: '',
 			},
-
-			embeddingModelId: 'openai/text-embedding-3-small',
+			embeddingModelId: 'text-embedding-004',
 			ollamaEmbeddingModel: {
-				baseUrl: 'http://localhost:11434',
+				baseUrl: '',
 				model: '',
 			},
-
-			systemPrompt: 'system prompt',
+			systemPrompt: '',
 			ragOptions: {
 				chunkSize: 1000,
 				thresholdTokens: 8192,
@@ -117,6 +144,34 @@ describe('settings migration', () => {
 				excludePatterns: [],
 				includePatterns: [],
 			},
+			autocompleteEnabled: true,
+			advancedMode: false,
+			apiProvider: 'openai',
+			azureOAIApiSettings: '',
+			openAIApiSettings: '',
+			ollamaApiSettings: '',
+			triggers: DEFAULT_AUTOCOMPLETE_SETTINGS.triggers,
+			delay: 500,
+			modelOptions: {
+				temperature: 1,
+				top_p: 0.1,
+				frequency_penalty: 0.25,
+				presence_penalty: 0,
+				max_tokens: 800,
+			},
+			systemMessage: DEFAULT_AUTOCOMPLETE_SETTINGS.systemMessage,
+			fewShotExamples: DEFAULT_AUTOCOMPLETE_SETTINGS.fewShotExamples,
+			userMessageTemplate: '{{prefix}}<mask/>{{suffix}}',
+			chainOfThoughRemovalRegex: '(.|\\n)*ANSWER:',
+			dontIncludeDataviews: true,
+			maxPrefixCharLimit: 4000,
+			maxSuffixCharLimit: 4000,
+			removeDuplicateMathBlockIndicator: true,
+			removeDuplicateCodeBlockIndicator: true,
+			ignoredFilePatterns: '**/secret/**\n',
+			ignoredTags: '',
+			cacheSuggestions: true,
+			debugMode: false,
 		})
 	})
 })
