@@ -28,7 +28,7 @@ jobs:
       - name: Test
         id: test
         run: |
-          npm run tests
+          npm run test
 
       - name: Bundle
         id: bundle
