@@ -42,7 +42,7 @@ jobs:
       - name: Get release notes
         id: release_notes
         run: |
-          CHANGELOG=$(sed -n -e "/## ${{ steps.bundle.outputs.tag_name }}/,/## /p" CHANGELOG.md | sed '/## /d')
+          CHANGELOG=$(sed -n -e "/## v0.0.1/,/---/p" CHANGELOG.md | sed '1d;$d')
           if [ -z "$CHANGELOG" ]; then  
             echo "Error: No release notes found for this version in CHANGELOG.md"  
             exit 1  
