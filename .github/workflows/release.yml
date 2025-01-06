@@ -32,20 +32,24 @@ jobs:
         run: |
           npm run test
 
-      - name: Bundle
-        id: bundle
+      - name: Get tag name
+        id: get_tag
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Bundle
+        id: bundle
+        run: |
           mkdir ${{ env.PLUGIN_NAME }}
           cp main.js manifest.json styles.css ${{ env.PLUGIN_NAME }}
-          zip -r ${{ env.PLUGIN_NAME }}-${TAG_NAME}.zip ${{ env.PLUGIN_NAME }}
+          zip -r ${{ env.PLUGIN_NAME }}-${{ steps.get_tag.outputs.tag_name }}.zip ${{ env.PLUGIN_NAME }}
           ls
 
       - name: Get release notes
         id: release_notes
         run: |
-          CHANGELOG=$(sed -n -e "/## ${{ steps.bundle.outputs.tag_name }}/,/---/p" CHANGELOG.md | sed '1d;$d')
+          CHANGELOG=$(sed -n -e "/## ${{ steps.get_tag.outputs.tag_name }}/,/---/p" CHANGELOG.md | sed '1d;$d')
           if [ -z "$CHANGELOG" ]; then  
             echo "Error: No release notes found for this version in CHANGELOG.md"  
             exit 1  
@@ -60,7 +64,7 @@ jobs:
         with:
           token: ${{ github.token }}
           files: |
-            ${{ env.PLUGIN_NAME }}-${{ steps.bundle.outputs.tag_name }}.zip
+            ${{ env.PLUGIN_NAME }}-${{ steps.get_tag.outputs.tag_name }}.zip
             main.js
             manifest.json
             styles.css
