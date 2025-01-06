@@ -5,8 +5,10 @@
 ### Added
 - Initial release of obsidian-infio-copilot plugin
 - Basic functionality for AI-powered assistance in Obsidian
-sed -n -e "/## v0.0.1/,/---/p" CHANGELOG.md | sed '1d;$d'
-## Unreleased
+- Interactive chat with selected notes
+- Smart autocomplete based on your notes
+- Enhanced user experience with customizable prompts
+- Integration with Obsidian's search functionality
 
 ### Fixed
 - Bug fixes and improvements

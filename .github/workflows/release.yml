@@ -35,10 +35,11 @@ jobs:
       - name: Bundle
         id: bundle
         run: |
-          echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           mkdir ${{ env.PLUGIN_NAME }}
           cp main.js manifest.json styles.css ${{ env.PLUGIN_NAME }}
-          zip -r ${{ env.PLUGIN_NAME }}-${{ steps.bundle.outputs.tag_name }}.zip ${{ env.PLUGIN_NAME }}
+          zip -r ${{ env.PLUGIN_NAME }}-${TAG_NAME}.zip ${{ env.PLUGIN_NAME }}
           ls
 
       - name: Get release notes
