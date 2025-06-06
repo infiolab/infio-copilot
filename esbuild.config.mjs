@@ -19,11 +19,30 @@ const context = await esbuild.context({
 	},
 	entryPoints: ['src/main.ts'],
 	bundle: true,
-	plugins: [inlineWorkerPlugin({
-		define: {
-			'process': '{}', // 继承主配置
-		},
-	})],
+	plugins: [
+		inlineWorkerPlugin({
+			define: {
+				'process': '{}', // 继承主配置
+			},
+		}),
+		// 添加模块替换插件
+		{
+			name: 'mobile-compatibility',
+			setup(build) {
+				// 替换 Node.js 模块为空实现
+				build.onResolve({ filter: /^(fs|path|os|crypto|util|stream|events|buffer|url|querystring|assert|readline|child_process|https?|zlib|net|dns|tls|vm|cluster)$/ }, () => {
+					return { path: 'mobile-stub', namespace: 'mobile-stub' }
+				})
+				
+				build.onLoad({ filter: /.*/, namespace: 'mobile-stub' }, () => {
+					return {
+						contents: 'module.exports = {}',
+						loader: 'js'
+					}
+				})
+			}
+		}
+	],
 	external: [
 		'fs',
 		'obsidian',
@@ -43,13 +62,81 @@ const context = await esbuild.context({
 		'@lezer/highlight',
 		'@lezer/lr',
 		'@lexical/clipboard/clipboard',
+		// 移动端不支持的模块
+		'chokidar',
+		'shell-env',
+		// 进程相关模块
+		'cross-spawn',
+		'which',
+		'isexe',
+		// 其他 Node.js 专用模块
+		'util',
+		'stream',
+		'crypto',
+		'os',
+		'events',
+		'buffer',
+		'url',
+		'querystring',
+		'assert',
+		'readline',
+		// Git 和版本控制相关
+		'simple-git',
+		// AI SDK 可能使用的包
+		'@modelcontextprotocol/sdk',
+		// Node.js 环境检测包
+		'isomorphic-ws',
+		'ws',
+		// 更多可能导致问题的包
+		'node-fetch',
+		'http',
+		'https',
+		'zlib',
+		'tty',
+		'net',
+		'dns',
+		'timers',
+		'worker_threads',
+		'v8',
+		'vm',
+		'perf_hooks',
+		'inspector',
+		'cluster',
+		'dgram',
+		'tls',
+		'repl',
+		'punycode',
+		'domain',
+		'constants',
+		'_http_agent',
+		'_http_client',
+		'_http_common',
+		'_http_incoming',
+		'_http_outgoing',
+		'_http_server',
+		'_stream_duplex',
+		'_stream_passthrough',
+		'_stream_readable',
+		'_stream_transform',
+		'_stream_writable',
+		'_tls_common',
+		'_tls_wrap',
 		...nodeBuiltins,
 	],
 	format: 'cjs',
 	define: {
 		'import.meta.url': 'import_meta_url',
-		// process: '{}',
+		// 更全面的环境变量定义
 		'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
+		'process.env.BROWSER': 'true',
+		'process.platform': '"browser"',
+		'process.version': '"v16.0.0"',
+		'process.versions': '{}',
+		'process.arch': '"unknown"',
+		'global': 'globalThis',
+		'Buffer': 'undefined',
+		'__dirname': '"/"',
+		'__filename': '"/index.js"',
 	},
 	inject: [path.resolve('import-meta-url-shim.js')],
 	target: 'es2020',

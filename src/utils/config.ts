@@ -12,13 +12,16 @@ export async function injectEnv<C extends string | Record<PropertyKey, any>>(con
 	let _config: string = isObject ? JSON.stringify(config) : config
 
 	_config = _config.replace(/\$\{env:([\w]+)\}/g, (_, name) => {
+		// 移动端兼容性检查
+		const envValue = (typeof process !== 'undefined' && process.env) ? process.env[name] : undefined
+		
 		// Check if null or undefined
 		// intentionally using == to match null | undefined
-		if (process.env[name] == null) {
+		if (envValue == null) {
 			console.warn(`[injectEnv] env variable ${name} referenced but not found in process.env`)
 		}
 
-		return process.env[name] ?? notFoundValue
+		return envValue ?? notFoundValue
 	})
 
 	return (isObject ? JSON.parse(_config) : _config) as C extends string ? string : C

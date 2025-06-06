@@ -6,5 +6,5 @@
 	"description": "A Cursor-inspired AI assistant for notes that offers smart autocomplete and interactive chat with your selected notes",
 	"author": "Felix.D",
 	"authorUrl": "https://github.com/infiolab",
-	"isDesktopOnly": true
+	"isDesktopOnly": false
 }

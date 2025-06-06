@@ -11,8 +11,11 @@ import { getDiffStrategy } from "./core/diff/DiffStrategy"
 import { InlineEdit } from './core/edit/inline-edit-processor'
 import { McpHub } from './core/mcp/McpHub'
 import { RAGEngine } from './core/rag/rag-engine'
+import { MobileRAGEngine } from './core/rag/mobile-rag-engine'
 import { DBManager } from './database/database-manager'
+import { MobileDatabaseManager } from './database/mobile-database-manager'
 import { migrateToJsonDatabase } from './database/json/migrateToJsonDatabase'
+import { canUseFeature, getMobileFeatureMessage, isMobilePlatform } from './utils/platform-compatibility'
 import EventListener from "./event-listener"
 import { t } from './lang/helpers'
 import { PreviewView } from './PreviewView'
@@ -45,9 +48,9 @@ export default class InfioPlugin extends Plugin {
 	settingTab: InfioSettingTab
 	settingsListeners: ((newSettings: InfioSettings) => void)[] = []
 	initChatProps?: ChatProps
-	dbManager: DBManager | null = null
+	dbManager: DBManager | MobileDatabaseManager | null = null
 	mcpHub: McpHub | null = null
-	ragEngine: RAGEngine | null = null
+	ragEngine: RAGEngine | MobileRAGEngine | null = null
 	inlineEdit: InlineEdit | null = null
 	diffStrategy?: DiffStrategy
 
@@ -470,14 +473,21 @@ export default class InfioPlugin extends Plugin {
 		chatView.focusMessage()
 	}
 
-	async getDbManager(): Promise<DBManager> {
+	async getDbManager(): Promise<DBManager | MobileDatabaseManager> {
 		if (this.dbManager) {
 			return this.dbManager
 		}
 
 		if (!this.dbManagerInitPromise) {
 			this.dbManagerInitPromise = (async () => {
-				this.dbManager = await DBManager.create(this.app)
+				// 根据平台选择不同的数据库管理器
+				if (isMobilePlatform()) {
+					console.log('检测到移动端平台，使用简化数据库管理器')
+					new Notice(getMobileFeatureMessage('database'), 5000)
+					this.dbManager = await MobileDatabaseManager.create(this.app) as any
+				} else {
+					this.dbManager = await DBManager.create(this.app)
+				}
 				return this.dbManager
 			})()
 		}
@@ -491,6 +501,14 @@ export default class InfioPlugin extends Plugin {
 		if (!this.settings.mcpEnabled) {
 			// new Notice('MCP is not enabled')
 			return null
+		}
+
+		// 检查移动端兼容性
+		if (isMobilePlatform()) {
+			if (!canUseFeature('supportsMCP')) {
+				new Notice(getMobileFeatureMessage('mcp'), 5000)
+				return null
+			}
 		}
 
 		// if we already have an instance, return it
@@ -510,7 +528,7 @@ export default class InfioPlugin extends Plugin {
 		return this.mcpHubInitPromise
 	}
 
-	async getRAGEngine(): Promise<RAGEngine> {
+	async getRAGEngine(): Promise<RAGEngine | MobileRAGEngine> {
 		if (this.ragEngine) {
 			return this.ragEngine
 		}
@@ -518,7 +536,14 @@ export default class InfioPlugin extends Plugin {
 		if (!this.ragEngineInitPromise) {
 			this.ragEngineInitPromise = (async () => {
 				const dbManager = await this.getDbManager()
-				this.ragEngine = new RAGEngine(this.app, this.settings, dbManager)
+				
+				// 根据平台选择不同的 RAG 引擎
+				if (isMobilePlatform() && dbManager instanceof MobileDatabaseManager) {
+					console.log('检测到移动端平台，使用简化 RAG 引擎')
+					this.ragEngine = new MobileRAGEngine(this.app, this.settings, dbManager) as any
+				} else {
+					this.ragEngine = new RAGEngine(this.app, this.settings, dbManager as DBManager)
+				}
 				return this.ragEngine
 			})()
 		}

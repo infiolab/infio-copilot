@@ -1,5 +1,25 @@
-import fs from "fs/promises"
-import * as path from "path"
+// 条件导入 Node.js 模块
+let fs: any = null
+let path: any = null
+
+try {
+	if (typeof window === 'undefined' || !(window as any).Platform?.isMobileApp) {
+		fs = require("fs/promises")
+		path = require("path")
+	} else {
+		// 移动端不支持文件系统操作
+		fs = {
+			mkdir: async () => { throw new Error('移动端不支持文件系统操作') },
+			access: async () => { throw new Error('移动端不支持文件系统操作') }
+		}
+		path = {
+			normalize: (p: string) => p,
+			dirname: (p: string) => ''
+		}
+	}
+} catch (error) {
+	console.log('移动端跳过 fs 模块导入:', error.message)
+}
 
 /**
  * Asynchronously creates all non-existing subdirectories for a given file path

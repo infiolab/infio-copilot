@@ -4,10 +4,25 @@ import { App, EventRef, Notice, TFile, normalizePath } from 'obsidian';
 // Node built-in
 import * as path from "path";
 
-// SDK / External Libraries
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+// SDK / External Libraries - 条件导入
+let Client: any = null
+let SSEClientTransport: any = null  
+let StdioClientTransport: any = null
+
+try {
+	if (typeof window === 'undefined' || !(window as any).Platform?.isMobileApp) {
+		// 只在非移动端环境导入 MCP SDK
+		const mcpSdk = require("@modelcontextprotocol/sdk/client/index.js")
+		const mcpSSE = require("@modelcontextprotocol/sdk/client/sse.js")
+		const mcpStdio = require("@modelcontextprotocol/sdk/client/stdio.js")
+		
+		Client = mcpSdk.Client
+		SSEClientTransport = mcpSSE.SSEClientTransport
+		StdioClientTransport = mcpStdio.StdioClientTransport
+	}
+} catch (error) {
+	console.log('移动端跳过 MCP SDK 导入:', error.message)
+}
 import {
 	CallToolResultSchema,
 	ListResourceTemplatesResultSchema,
@@ -15,11 +30,24 @@ import {
 	ListToolsResultSchema,
 	ReadResourceResultSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import chokidar, { FSWatcher } from "chokidar"; // Keep chokidar
+// 条件导入移动端不支持的模块
+let chokidar: any = null
+let shellEnvSync: any = null
+
+try {
+  if (typeof window === 'undefined' || !(window as any).Platform?.isMobileApp) {
+    // 只在非移动端环境导入
+    chokidar = require("chokidar")
+    const shellEnv = require('shell-env')
+    shellEnvSync = shellEnv.shellEnvSync
+  }
+} catch (error) {
+  console.log('移动端跳过桌面专用模块导入:', error.message)
+}
+
 import delay from "delay"; // Keep delay
 import deepEqual from "fast-deep-equal"; // Keep fast-deep-equal
 import ReconnectingEventSource from "reconnecting-eventsource"; // Keep reconnecting-eventsource
-import { EnvironmentVariables, shellEnvSync } from 'shell-env';
 import { z } from "zod"; // Keep zod
 
 // Internal/Project imports
@@ -41,8 +69,8 @@ import {
 
 export type McpConnection = {
 	server: McpServer
-	client: Client
-	transport: StdioClientTransport | SSEClientTransport
+	client: any // 动态类型，支持移动端兼容
+	transport: any // 动态类型，支持移动端兼容
 }
 
 // Base configuration schema for common settings
@@ -119,19 +147,27 @@ export class McpHub {
 	private plugin: InfioPlugin
 	private mcpSettingsFilePath: string | null = null
 	// private globalMcpFilePath: string | null = null
-	private fileWatchers: Map<string, FSWatcher[]> = new Map()
+	private fileWatchers: Map<string, any[]> = new Map()
 	private isDisposed: boolean = false
 	connections: McpConnection[] = []
 	isConnecting: boolean = false
 	private refCount: number = 0 // Reference counter for active clients
 	private eventRefs: EventRef[] = []; // For managing Obsidian event listeners
 	// private providerRef: any; // TODO: Replace with actual type and initialize properly. Removed for now as it causes issues and its usage is unclear in the current scope.
-	private shellEnv: EnvironmentVariables
+	private shellEnv: any
 
 	constructor(app: App, plugin: InfioPlugin) {
 		this.app = app
 		this.plugin = plugin
-		this.shellEnv = shellEnvSync()
+		
+		// 移动端兼容性处理
+		if (shellEnvSync) {
+			this.shellEnv = shellEnvSync()
+		} else {
+			this.shellEnv = { PATH: '', HOME: '' } // 移动端默认值
+			console.log('移动端: 使用默认 shell 环境变量')
+		}
+		
 		// Placeholder for providerRef initialization - this needs a proper solution if providerRef is essential.
 		// if ((this.app as any).plugins?.plugins['obsidian-infio-copilot']) {
 		// 	this.providerRef = (this.app as any).plugins.plugins['obsidian-infio-copilot'];
@@ -387,7 +423,7 @@ export class McpHub {
 				},
 			)
 
-			let transport: StdioClientTransport | SSEClientTransport
+			let transport: any
 
 			// Inject environment variables to the config
 			let configInjected = { ...config };
@@ -770,6 +806,12 @@ export class McpHub {
 		config: z.infer<typeof ServerConfigSchema>,
 		source: "global" | "project" = "global",
 	) {
+		// 移动端不支持文件监听
+		if (!chokidar) {
+			console.log(`移动端: 跳过 ${name} 的文件监听设置`)
+			return
+		}
+
 		// Initialize an empty array for this server if it doesn't exist
 		if (!this.fileWatchers.has(name)) {
 			this.fileWatchers.set(name, [])

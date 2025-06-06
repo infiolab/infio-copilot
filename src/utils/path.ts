@@ -1,5 +1,128 @@
-import os from "os"
-import * as path from "path"
+// 条件导入 Node.js 模块
+let os: any = null
+let path: any = null
+
+try {
+	if (typeof window === 'undefined' || !(window as any).Platform?.isMobileApp) {
+		os = require("os")
+		path = require("path")
+	} else {
+		// 移动端提供简化的 path 接口
+		path = {
+			normalize: (p: string) => p.replace(/\\/g, '/'),
+			resolve: (...paths: string[]) => {
+				const joined = paths.filter(p => p).join('/').replace(/\/+/g, '/')
+				return joined.startsWith('/') ? joined : '/' + joined
+			},
+			join: (...paths: string[]) => {
+				const joined = paths.filter(p => p).join('/').replace(/\/+/g, '/')
+				return joined || '.'
+			},
+			relative: (from: string, to: string) => {
+				const fromParts = from.split('/').filter(p => p)
+				const toParts = to.split('/').filter(p => p)
+				
+				let commonLength = 0
+				for (let i = 0; i < Math.min(fromParts.length, toParts.length); i++) {
+					if (fromParts[i] === toParts[i]) {
+						commonLength++
+					} else {
+						break
+					}
+				}
+				
+				const upCount = fromParts.length - commonLength
+				const relativeParts = new Array(upCount).fill('..').concat(toParts.slice(commonLength))
+				return relativeParts.join('/') || '.'
+			},
+			basename: (p: string, ext?: string) => {
+				const base = p.split('/').pop() || p
+				if (ext && base.endsWith(ext)) {
+					return base.slice(0, -ext.length)
+				}
+				return base
+			},
+			dirname: (p: string) => {
+				const parts = p.split('/')
+				parts.pop()
+				return parts.join('/') || (p.startsWith('/') ? '/' : '.')
+			},
+			extname: (p: string) => {
+				const base = p.split('/').pop() || p
+				const dotIndex = base.lastIndexOf('.')
+				return dotIndex > 0 ? base.slice(dotIndex) : ''
+			},
+			sep: '/',
+			delimiter: ':',
+			posix: null,
+			win32: null
+		}
+		// 添加对自身的引用
+		path.posix = path
+		path.win32 = path
+		os = {
+			homedir: () => '/home/mobile'
+		}
+	}
+} catch (error) {
+	console.log('移动端跳过 path/os 模块导入:', error.message)
+	// 提供默认实现
+	path = {
+		normalize: (p: string) => p.replace(/\\/g, '/'),
+		resolve: (...paths: string[]) => {
+			const joined = paths.filter(p => p).join('/').replace(/\/+/g, '/')
+			return joined.startsWith('/') ? joined : '/' + joined
+		},
+		join: (...paths: string[]) => {
+			const joined = paths.filter(p => p).join('/').replace(/\/+/g, '/')
+			return joined || '.'
+		},
+		relative: (from: string, to: string) => {
+			const fromParts = from.split('/').filter(p => p)
+			const toParts = to.split('/').filter(p => p)
+			
+			let commonLength = 0
+			for (let i = 0; i < Math.min(fromParts.length, toParts.length); i++) {
+				if (fromParts[i] === toParts[i]) {
+					commonLength++
+				} else {
+					break
+				}
+			}
+			
+			const upCount = fromParts.length - commonLength
+			const relativeParts = new Array(upCount).fill('..').concat(toParts.slice(commonLength))
+			return relativeParts.join('/') || '.'
+		},
+		basename: (p: string, ext?: string) => {
+			const base = p.split('/').pop() || p
+			if (ext && base.endsWith(ext)) {
+				return base.slice(0, -ext.length)
+			}
+			return base
+		},
+		dirname: (p: string) => {
+			const parts = p.split('/')
+			parts.pop()
+			return parts.join('/') || (p.startsWith('/') ? '/' : '.')
+		},
+		extname: (p: string) => {
+			const base = p.split('/').pop() || p
+			const dotIndex = base.lastIndexOf('.')
+			return dotIndex > 0 ? base.slice(dotIndex) : ''
+		},
+		sep: '/',
+		delimiter: ':',
+		posix: null,
+		win32: null
+	}
+	// 添加对自身的引用
+	path.posix = path
+	path.win32 = path
+	os = {
+		homedir: () => '/home/mobile'
+	}
+}
 
 
 /*
@@ -62,7 +185,9 @@ export function arePathsEqual(path1?: string, path2?: string): boolean {
 	path1 = normalizePath(path1)
 	path2 = normalizePath(path2)
 
-	if (process.platform === "win32") {
+	// 移动端兼容性检查
+	const isWin32 = typeof process !== 'undefined' && process.platform === "win32"
+	if (isWin32) {
 		return path1.toLowerCase() === path2.toLowerCase()
 	}
 	return path1 === path2

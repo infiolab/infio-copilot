@@ -7,9 +7,10 @@ import {
 } from 'react'
 
 import { RAGEngine } from '../core/rag/rag-engine'
+import { MobileRAGEngine } from '../core/rag/mobile-rag-engine'
 
 export type RAGContextType = {
-	getRAGEngine: () => Promise<RAGEngine>
+	getRAGEngine: () => Promise<RAGEngine | MobileRAGEngine>
 }
 
 const RAGContext = createContext<RAGContextType | null>(null)
@@ -17,7 +18,7 @@ const RAGContext = createContext<RAGContextType | null>(null)
 export function RAGProvider({
 	getRAGEngine,
 	children,
-}: PropsWithChildren<{ getRAGEngine: () => Promise<RAGEngine> }>) {
+}: PropsWithChildren<{ getRAGEngine: () => Promise<RAGEngine | MobileRAGEngine> }>) {
 	useEffect(() => {
 		// start initialization of ragEngine in the background
 		void getRAGEngine()

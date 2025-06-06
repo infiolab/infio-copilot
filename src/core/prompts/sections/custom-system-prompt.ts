@@ -1,9 +1,18 @@
 // @ts-nocheck
 
-import fs from "fs/promises"
-import path from "path"
+// 条件导入 Node.js 模块
+let fs: any = null
+let path: any = null
 
-import { Mode } from "../../../shared/modes"
+try {
+	if (typeof window === 'undefined' || !(window as any).Platform?.isMobileApp) {
+		fs = require("fs/promises")
+		path = require("path")
+	}
+} catch (error) {
+	console.log('移动端跳过 fs/path 模块导入:', error.message)
+}
+
 import { fileExistsAtPath } from "../../../utils/fs"
 import { Mode } from "../../../utils/modes"
 
@@ -11,6 +20,12 @@ import { Mode } from "../../../utils/modes"
  * Safely reads a file, returning an empty string if the file doesn't exist
  */
 async function safeReadFile(filePath: string): Promise<string> {
+	// 移动端不支持文件系统读取
+	if (!fs) {
+		console.log('移动端: safeReadFile 不可用')
+		return ""
+	}
+	
 	try {
 		const content = await fs.readFile(filePath, "utf-8")
 		// When reading with "utf-8" encoding, content should be a string

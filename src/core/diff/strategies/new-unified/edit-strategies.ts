@@ -1,10 +1,21 @@
 import { App, FileSystemAdapter, normalizePath } from "obsidian"
 
-import * as fs from "fs"
-import * as path from "path"
-
 import { diff_match_patch } from "diff-match-patch"
-import simpleGit, { SimpleGit } from "simple-git"
+
+// 条件导入 Node.js 模块
+let fs: any = null
+let path: any = null
+let simpleGit: any = null
+
+try {
+	if (typeof window === 'undefined' || !(window as any).Platform?.isMobileApp) {
+		fs = require("fs")
+		path = require("path")
+		simpleGit = require("simple-git").default
+	}
+} catch (error) {
+	console.log('移动端跳过 git 相关模块导入:', error.message)
+}
 
 import { validateEditResult } from "./search-strategies"
 import { EditResult, Hunk } from "./types"
@@ -152,6 +163,12 @@ export function applyDMP(hunk: Hunk, content: string[], matchPosition: number): 
 
 // Git fallback strategy that works with full content
 export async function applyGitFallback(app: App, hunk: Hunk, content: string[]): Promise<EditResult> {
+	// 移动端不支持 Git 操作
+	if (!fs || !path || !simpleGit) {
+		console.log('移动端: Git 回退策略不可用')
+		return { confidence: 0, result: content, strategy: "git-fallback" }
+	}
+
 	// let tmpDir: tmp.DirResult | undefined
 	const adapter = app.vault.adapter as FileSystemAdapter;
 	const vaultBasePath = adapter.getBasePath();
@@ -166,7 +183,7 @@ export async function applyGitFallback(app: App, hunk: Hunk, content: string[]):
 		}
 		await adapter.mkdir(tmpGitPath);
 		// tmpDir = tmp.dirSync({ unsafeCleanup: true })
-		const git: SimpleGit = simpleGit(tmpGitPath)
+		const git: any = simpleGit(tmpGitPath)
 
 		await git.init()
 		await git.addConfig("user.name", "Temp")

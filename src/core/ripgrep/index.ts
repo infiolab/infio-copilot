@@ -1,10 +1,21 @@
-// import * as vscode from "vscode"
-import * as childProcess from "child_process"
-import * as fs from "fs"
-import * as path from "path"
-import * as readline from "readline"
+// 条件导入 Node.js 模块
+let childProcess: any = null
+let fs: any = null
+let path: any = null
+let readline: any = null
 
-const isWindows = /^win/.test(process.platform)
+try {
+	if (typeof window === 'undefined' || !(window as any).Platform?.isMobileApp) {
+		childProcess = require("child_process")
+		fs = require("fs")
+		path = require("path")
+		readline = require("readline")
+	}
+} catch (error) {
+	console.log('移动端跳过 ripgrep 相关模块导入:', error.message)
+}
+
+const isWindows = typeof process !== 'undefined' && /^win/.test(process.platform)
 const binName = isWindows ? "rg.exe" : "rg"
 
 interface SearchResult {
@@ -88,6 +99,12 @@ export async function regexSearchFiles(
 	regex: string,
 	ripgrepPath: string,
 ): Promise<string> {
+	// 移动端不支持 ripgrep
+	if (!childProcess || !fs || !path || !readline) {
+		console.log('移动端: ripgrep 功能不可用，使用简化搜索')
+		return "移动端暂不支持正则搜索功能，请使用基础文本搜索。"
+	}
+
 	const rgPath = await getBinPath(ripgrepPath)
 
 	if (!rgPath) {

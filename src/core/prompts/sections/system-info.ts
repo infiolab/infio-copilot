@@ -1,6 +1,14 @@
-import os from "os"
-
 import { Platform } from 'obsidian';
+
+// 条件导入 Node.js 模块
+let os: any = null
+try {
+	if (typeof window === 'undefined' || !(window as any).Platform?.isMobileApp) {
+		os = require("os")
+	}
+} catch (error) {
+	console.log('移动端跳过 os 模块导入:', error.message)
+}
 
 
 export function getSystemInfoSection(cwd: string): string {

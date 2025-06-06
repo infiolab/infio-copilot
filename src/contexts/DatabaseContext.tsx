@@ -7,13 +7,14 @@ import {
 } from 'react'
 
 import { DBManager } from '../database/database-manager'
+import { MobileDatabaseManager } from '../database/mobile-database-manager'
 import { CommandManager } from '../database/modules/command/command-manager'
 import { VectorManager } from '../database/modules/vector/vector-manager'
 
 type DatabaseContextType = {
-	getDatabaseManager: () => Promise<DBManager>
-	getVectorManager: () => Promise<VectorManager>
-	getTemplateManager: () => Promise<CommandManager>
+	getDatabaseManager: () => Promise<DBManager | MobileDatabaseManager>
+	getVectorManager: () => Promise<VectorManager | any>
+	getTemplateManager: () => Promise<CommandManager | any>
 }
 
 const DatabaseContext = createContext<DatabaseContextType | null>(null)
@@ -23,7 +24,7 @@ export function DatabaseProvider({
 	getDatabaseManager,
 }: {
 	children: React.ReactNode
-	getDatabaseManager: () => Promise<DBManager>
+	getDatabaseManager: () => Promise<DBManager | MobileDatabaseManager>
 }) {
 	const getVectorManager = useCallback(async () => {
 		return (await getDatabaseManager()).getVectorManager()

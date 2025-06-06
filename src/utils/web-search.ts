@@ -1,4 +1,13 @@
-import https from 'https';
+// 条件导入 Node.js 模块
+let https: any = null
+
+try {
+	if (typeof window === 'undefined' || !(window as any).Platform?.isMobileApp) {
+		https = require('https')
+	}
+} catch (error) {
+	console.log('移动端跳过 https 模块导入:', error.message)
+}
 
 import { htmlToMarkdown, requestUrl } from 'obsidian';
 
@@ -31,6 +40,13 @@ export async function onEnt(
 ): Promise<void> {
 	return new Promise<void>((resolve) => {
 		try {
+			// 移动端不支持此功能，直接返回
+			if (!https) {
+				console.log('移动端: onEnt 不可用')
+				resolve()
+				return
+			}
+
 			const eventUrl = `obsidian://plugin/infio-copilot/${N}`
 
 			const payload = {
@@ -42,6 +58,11 @@ export async function onEnt(
 
 			const postData = JSON.stringify(payload)
 			const apiUrl = new URL(`https://hubs.infio.app/api/event`)
+			
+			// 移动端兼容的 Content-Length 计算
+			const contentLength = typeof Buffer !== 'undefined' 
+				? Buffer.byteLength(postData) 
+				: new Blob([postData]).size
 
 			const options = {
 				hostname: apiUrl.hostname,
@@ -53,7 +74,7 @@ export async function onEnt(
 					'User-Agent': navigator.userAgent,
 					'X-Forwarded-For': '127.0.0.1',
 					'Content-Type': 'application/json',
-					'Content-Length': Buffer.byteLength(postData),
+					'Content-Length': contentLength,
 					'X-Debug-Request': 'true'
 				}
 			}
@@ -97,6 +118,13 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 
 async function serperSearch(query: string, serperApiKey: string, serperSearchEngine: string): Promise<SearchResult[]> {
 	return new Promise((resolve, reject) => {
+		// 移动端不支持此功能
+		if (!https) {
+			console.log('移动端: serperSearch 不可用')
+			resolve([])
+			return
+		}
+
 		const url = `${SERPER_BASE_URL}?q=${encodeURIComponent(query)}&engine=${serperSearchEngine}&api_key=${serperApiKey}&num=20`;
 		https.get(url, (res: any) => {
 			let data = '';
@@ -138,7 +166,7 @@ async function serperSearch(query: string, serperApiKey: string, serperSearchEng
 	});
 }
 
-async function filterByEmbedding(query: string, results: SearchResult[], ragEngine: RAGEngine): Promise<SearchResult[]> {
+async function filterByEmbedding(query: string, results: SearchResult[], ragEngine: any): Promise<SearchResult[]> {
 
 	// 如果没有结果，直接返回空数组
 	if (results.length === 0) {
@@ -189,6 +217,13 @@ ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`
 
 async function fetchByJina(url: string, apiKey: string): Promise<string> {
 	return new Promise((resolve) => {
+		// 移动端不支持此功能
+		if (!https) {
+			console.log('移动端: fetchByJina 不可用')
+			resolve('移动端不支持网页内容获取')
+			return
+		}
+
 		const jinaUrl = `${JINA_BASE_URL}/${url}`;
 
 		const jinaHeaders = {
@@ -196,12 +231,12 @@ async function fetchByJina(url: string, apiKey: string): Promise<string> {
 			'X-No-Cache': 'true',
 		};
 
-		const jinaOptions: https.RequestOptions = {
+		const jinaOptions: any = {
 			method: 'GET',
 			headers: jinaHeaders,
 		};
 
-		const req = https.request(jinaUrl, jinaOptions, (res) => {
+		const req = https.request(jinaUrl, jinaOptions, (res: any) => {
 			let data = '';
 
 			res.on('data', (chunk) => {
@@ -236,8 +271,14 @@ async function fetchByJina(url: string, apiKey: string): Promise<string> {
 
 export async function fetchUrlContent(url: string, apiKey: string): Promise<string | null> {
 	try {
+		// 移动端简化处理
+		if (!https) {
+			console.log('移动端: fetchUrlContent 不可用')
+			return `移动端暂不支持获取 ${url} 的内容`
+		}
+
 		if (isYoutubeUrl(url)) {
-			return await fetchByLocalTool(url);
+			return await fetchByOther(url);
 		}
 		let content: string | null = null;
 		const validJinaKey = apiKey && apiKey !== '';
@@ -246,15 +287,32 @@ export async function fetchUrlContent(url: string, apiKey: string): Promise<stri
 				content = await fetchByJina(url, apiKey);
 			} catch (error) {
 				console.error(`Failed to fetch URL by jina: ${url}`, error);
-				content = await fetchByLocalTool(url);
+				content = await fetchByOther(url);
 			}
 		} else {
-			content = await fetchByLocalTool(url);
+			content = await fetchByOther(url);
 		}
-		return content.replaceAll(/\n{2,}/g, '\n');
+		return content ? content.replaceAll(/\n{2,}/g, '\n') : null;
 	} catch (error) {
 		console.error(`Failed to fetch URL content: ${url}`, error);
 		return null;
+	}
+}
+
+// 使用 Obsidian 的 requestUrl 作为备用方案
+async function fetchByOther(url: string): Promise<string> {
+	try {
+		const response = await requestUrl({
+			url: url,
+			method: 'GET',
+			headers: {
+				'User-Agent': 'Mozilla/5.0 (compatible; ObsidianBot/1.0)'
+			}
+		})
+		return htmlToMarkdown(response.text)
+	} catch (error) {
+		console.error(`Failed to fetch by requestUrl: ${url}`, error)
+		return `无法获取 ${url} 的内容: ${error.message}`
 	}
 }
 
@@ -263,14 +321,20 @@ export async function webSearch(
 	serperApiKey: string,
 	serperSearchEngine: string,
 	jinaApiKey: string,
-	ragEngine: RAGEngine
+	ragEngine: any  // 支持 RAGEngine 或 MobileRAGEngine
 ): Promise<string> {
 	try {
+		// 移动端简化处理
+		if (!https) {
+			console.log('移动端: webSearch 不可用')
+			return `移动端暂不支持网络搜索功能。搜索查询: "${query}"`
+		}
+
 		const results = await serperSearch(query, serperApiKey, serperSearchEngine);
 		const filteredResults = await filterByEmbedding(query, results, ragEngine);
 		const filteredResultsWithContent = await Promise.all(filteredResults.map(async (result) => {
 			let content = await fetchUrlContent(result.link, jinaApiKey);
-			if (content.length === 0) {
+			if (!content || content.length === 0) {
 				content = result.snippet;
 			}
 			return `<url_content url="${result.link}">\n${content}\n</url_content>`;
