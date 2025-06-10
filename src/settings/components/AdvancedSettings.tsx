@@ -25,11 +25,11 @@ export default function AdvancedSettings({ settings, updateSettings, errors }: P
                     t("settings.AutoComplete.advanced.chainOfThoughtRemovalRegexDescription")
                 }
                 placeholder={t("settings.AutoComplete.advanced.regexPlaceholder")}
-                value={settings.chainOfThoughRemovalRegex}
-                errorMessage={errors.get("chainOfThoughRemovalRegex")}
+                value={settings.chainOfThoughtRemovalRegex}
+                errorMessage={errors.get("chainOfThoughtRemovalRegex")}
                 setValue={(value: string) =>
                     updateSettings({
-                        chainOfThoughRemovalRegex: value,
+                        chainOfThoughtRemovalRegex: value,
                     })
                 }
             />

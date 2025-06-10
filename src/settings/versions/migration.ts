@@ -35,8 +35,8 @@ export function migrateFromV0ToV1(settings: SettingsV0): SettingsV1 {
 	// Add the 'version' property with the value '1'
 	updatedSettings.version = '1';
 
-	if (!isRegexValid(updatedSettings.chainOfThoughRemovalRegex)) {
-		updatedSettings.chainOfThoughRemovalRegex = DEFAULT_SETTINGS_V1.chainOfThoughRemovalRegex;
+	if (!isRegexValid(updatedSettings.chainOfThoughtRemovalRegex)) {
+		updatedSettings.chainOfThoughtRemovalRegex = DEFAULT_SETTINGS_V1.chainOfThoughtRemovalRegex;
 	}
 
 	updatedSettings.ignoredFilePatterns = DEFAULT_SETTINGS_V1.ignoredFilePatterns;
