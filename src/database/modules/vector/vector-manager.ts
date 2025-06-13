@@ -131,27 +131,34 @@ export class VectorManager {
 
 		const embeddingProgress = { completed: 0 }
 		const embeddingChunks: InsertVector[] = []
-		const batchSize = 100
-		const limit = pLimit(50)
-		const abortController = new AbortController()
-		const tasks = contentChunks.map((chunk) =>
-			limit(async () => {
-				if (abortController.signal.aborted) {
-					throw new Error('Operation was aborted')
-				}
-				try {
+		const insertBatchSize = 64 // 数据库插入批量大小
+		
+		try {
+			if (embeddingModel.supportsBatch) {
+				// 支持批量处理的提供商：使用批量处理逻辑
+				const embeddingBatchSize = 64 // API批量处理大小
+				
+				for (let i = 0; i < contentChunks.length; i += embeddingBatchSize) {
+					const batchChunks = contentChunks.slice(i, Math.min(i + embeddingBatchSize, contentChunks.length))
+					const batchTexts = batchChunks.map(chunk => chunk.content)
+					
 					await backOff(
 						async () => {
-							const embedding = await embeddingModel.getEmbedding(chunk.content)
-							const embeddedChunk = {
-								path: chunk.path,
-								mtime: chunk.mtime,
-								content: chunk.content,
-								embedding,
-								metadata: chunk.metadata,
+							const batchEmbeddings = await embeddingModel.getBatchEmbeddings(batchTexts)
+							
+							// 合并embedding结果到chunk数据
+							for (let j = 0; j < batchChunks.length; j++) {
+								const embeddedChunk: InsertVector = {
+									path: batchChunks[j].path,
+									mtime: batchChunks[j].mtime,
+									content: batchChunks[j].content,
+									embedding: batchEmbeddings[j],
+									metadata: batchChunks[j].metadata,
+								}
+								embeddingChunks.push(embeddedChunk)
 							}
-							embeddingChunks.push(embeddedChunk)
-							embeddingProgress.completed++
+							
+							embeddingProgress.completed += batchChunks.length
 							updateProgress?.({
 								completedChunks: embeddingProgress.completed,
 								totalChunks: contentChunks.length,
@@ -165,15 +172,51 @@ export class VectorManager {
 							jitter: 'full',
 						},
 					)
-				} catch (error) {
-					abortController.abort()
-					throw error
 				}
-			}),
-		)
-
-		try {
-			await Promise.all(tasks)
+			} else {
+				// 不支持批量处理的提供商：使用原来的逐个处理逻辑
+				const limit = pLimit(50)
+				const abortController = new AbortController()
+				const tasks = contentChunks.map((chunk) =>
+					limit(async () => {
+						if (abortController.signal.aborted) {
+							throw new Error('Operation was aborted')
+						}
+						try {
+							await backOff(
+								async () => {
+									const embedding = await embeddingModel.getEmbedding(chunk.content)
+									const embeddedChunk = {
+										path: chunk.path,
+										mtime: chunk.mtime,
+										content: chunk.content,
+										embedding,
+										metadata: chunk.metadata,
+									}
+									embeddingChunks.push(embeddedChunk)
+									embeddingProgress.completed++
+									updateProgress?.({
+										completedChunks: embeddingProgress.completed,
+										totalChunks: contentChunks.length,
+										totalFiles: filesToIndex.length,
+									})
+								},
+								{
+									numOfAttempts: 5,
+									startingDelay: 1000,
+									timeMultiple: 1.5,
+									jitter: 'full',
+								},
+							)
+						} catch (error) {
+							abortController.abort()
+							throw error
+						}
+					}),
+				)
+				
+				await Promise.all(tasks)
+			}
 
 			// all embedding generated, batch insert
 			if (embeddingChunks.length > 0) {
@@ -182,7 +225,7 @@ export class VectorManager {
 				while (inserted < embeddingChunks.length) {
 					const chunksToInsert = embeddingChunks.slice(
 						inserted,
-						Math.min(inserted + batchSize, embeddingChunks.length)
+						Math.min(inserted + insertBatchSize, embeddingChunks.length)
 					)
 					await this.repository.insertVectors(chunksToInsert, embeddingModel)
 					inserted += chunksToInsert.length
@@ -242,25 +285,33 @@ export class VectorManager {
 		})
 
 		const embeddingChunks: InsertVector[] = []
-		const limit = pLimit(50)
-		const abortController = new AbortController()
-		const tasks = contentChunks.map((chunk) =>
-			limit(async () => {
-				if (abortController.signal.aborted) {
-					throw new Error('Operation was aborted')
-				}
-				try {
+		const insertBatchSize = 64 // 数据库插入批量大小
+		
+		try {
+			if (embeddingModel.supportsBatch) {
+				// 支持批量处理的提供商：使用批量处理逻辑
+				const embeddingBatchSize = 64 // API批量处理大小
+				
+				for (let i = 0; i < contentChunks.length; i += embeddingBatchSize) {
+					console.log(`Embedding batch ${i / embeddingBatchSize + 1} of ${Math.ceil(contentChunks.length / embeddingBatchSize)}`)
+					const batchChunks = contentChunks.slice(i, Math.min(i + embeddingBatchSize, contentChunks.length))
+					const batchTexts = batchChunks.map(chunk => chunk.content)
+					
 					await backOff(
 						async () => {
-							const embedding = await embeddingModel.getEmbedding(chunk.content)
-							const embeddedChunk = {
-								path: chunk.path,
-								mtime: chunk.mtime,
-								content: chunk.content,
-								embedding,
-								metadata: chunk.metadata,
+							const batchEmbeddings = await embeddingModel.getBatchEmbeddings(batchTexts)
+							
+							// 合并embedding结果到chunk数据
+							for (let j = 0; j < batchChunks.length; j++) {
+								const embeddedChunk: InsertVector = {
+									path: batchChunks[j].path,
+									mtime: batchChunks[j].mtime,
+									content: batchChunks[j].content,
+									embedding: batchEmbeddings[j],
+									metadata: batchChunks[j].metadata,
+								}
+								embeddingChunks.push(embeddedChunk)
 							}
-							embeddingChunks.push(embeddedChunk)
 						},
 						{
 							numOfAttempts: 5,
@@ -269,22 +320,51 @@ export class VectorManager {
 							jitter: 'full',
 						},
 					)
-				} catch (error) {
-					abortController.abort()
-					throw error
 				}
-			}),
-		)
-
-		try {
-			await Promise.all(tasks)
+			} else {
+				// 不支持批量处理的提供商：使用原来的逐个处理逻辑
+				const limit = pLimit(50)
+				const abortController = new AbortController()
+				const tasks = contentChunks.map((chunk) =>
+					limit(async () => {
+						if (abortController.signal.aborted) {
+							throw new Error('Operation was aborted')
+						}
+						try {
+							await backOff(
+								async () => {
+									const embedding = await embeddingModel.getEmbedding(chunk.content)
+									const embeddedChunk = {
+										path: chunk.path,
+										mtime: chunk.mtime,
+										content: chunk.content,
+										embedding,
+										metadata: chunk.metadata,
+									}
+									embeddingChunks.push(embeddedChunk)
+								},
+								{
+									numOfAttempts: 5,
+									startingDelay: 1000,
+									timeMultiple: 1.5,
+									jitter: 'full',
+								},
+							)
+						} catch (error) {
+							abortController.abort()
+							throw error
+						}
+					}),
+				)
+				
+				await Promise.all(tasks)
+			}
 
 			// all embedding generated, batch insert
 			if (embeddingChunks.length > 0) {
-				const batchSize = 100
 				let inserted = 0
 				while (inserted < embeddingChunks.length) {
-					const chunksToInsert = embeddingChunks.slice(inserted, Math.min(inserted + batchSize, embeddingChunks.length))
+					const chunksToInsert = embeddingChunks.slice(inserted, Math.min(inserted + insertBatchSize, embeddingChunks.length))
 					await this.repository.insertVectors(chunksToInsert, embeddingModel)
 					inserted += chunksToInsert.length
 				}

@@ -30,6 +30,7 @@ export const getEmbeddingModel = (
 			return {
 				id: settings.embeddingModelId,
 				dimension: modelInfo.dimensions,
+				supportsBatch: true,
 				getEmbedding: async (text: string) => {
 					try {
 						if (!openai.apiKey) {
@@ -42,6 +43,30 @@ export const getEmbeddingModel = (
 							input: text,
 						})
 						return embedding.data[0].embedding
+					} catch (error) {
+						if (
+							error.status === 429 &&
+							error.message.toLowerCase().includes('rate limit')
+						) {
+							throw new LLMRateLimitExceededException(
+								'OpenAI API rate limit exceeded. Please try again later.',
+							)
+						}
+						throw error
+					}
+				},
+				getBatchEmbeddings: async (texts: string[]) => {
+					try {
+						if (!openai.apiKey) {
+							throw new LLMAPIKeyNotSetException(
+								'OpenAI API key is missing. Please set it in settings menu.',
+							)
+						}
+						const embedding = await openai.embeddings.create({
+							model: settings.embeddingModelId,
+							input: texts,
+						})
+						return embedding.data.map(item => item.embedding)
 					} catch (error) {
 						if (
 							error.status === 429 &&
@@ -67,6 +92,7 @@ export const getEmbeddingModel = (
 			return {
 				id: settings.embeddingModelId,
 				dimension: modelInfo.dimensions,
+				supportsBatch: true,
 				getEmbedding: async (text: string) => {
 					try {
 						if (!openai.apiKey) {
@@ -79,6 +105,30 @@ export const getEmbeddingModel = (
 							input: text,
 						})
 						return embedding.data[0].embedding
+					} catch (error) {
+						if (
+							error.status === 429 &&
+							error.message.toLowerCase().includes('rate limit')
+						) {
+							throw new LLMRateLimitExceededException(
+								'OpenAI API rate limit exceeded. Please try again later.',
+							)
+						}
+						throw error
+					}
+				},
+				getBatchEmbeddings: async (texts: string[]) => {
+					try {
+						if (!openai.apiKey) {
+							throw new LLMAPIKeyNotSetException(
+								'OpenAI API key is missing. Please set it in settings menu.',
+							)
+						}
+						const embedding = await openai.embeddings.create({
+							model: settings.embeddingModelId,
+							input: texts,
+						})
+						return embedding.data.map(item => item.embedding)
 					} catch (error) {
 						if (
 							error.status === 429 &&
@@ -104,6 +154,7 @@ export const getEmbeddingModel = (
 			return {
 				id: settings.embeddingModelId,
 				dimension: modelInfo.dimensions,
+				supportsBatch: true,
 				getEmbedding: async (text: string) => {
 					try {
 						if (!openai.apiKey) {
@@ -116,6 +167,30 @@ export const getEmbeddingModel = (
 							input: text,
 						})
 						return embedding.data[0].embedding
+					} catch (error) {
+						if (
+							error.status === 429 &&
+							error.message.toLowerCase().includes('rate limit')
+						) {
+							throw new LLMRateLimitExceededException(
+								'SiliconFlow API rate limit exceeded. Please try again later.',
+							)
+						}
+						throw error
+					}
+				},
+				getBatchEmbeddings: async (texts: string[]) => {
+					try {
+						if (!openai.apiKey) {
+							throw new LLMAPIKeyNotSetException(
+								'SiliconFlow API key is missing. Please set it in settings menu.',
+							)
+						}
+						const embedding = await openai.embeddings.create({
+							model: settings.embeddingModelId,
+							input: texts,
+						})
+						return embedding.data.map(item => item.embedding)
 					} catch (error) {
 						if (
 							error.status === 429 &&
@@ -141,6 +216,7 @@ export const getEmbeddingModel = (
 			return {
 				id: settings.embeddingModelId,
 				dimension: modelInfo.dimensions,
+				supportsBatch: false,
 				getEmbedding: async (text: string) => {
 					try {
 						if (!openai.apiKey) {
@@ -165,6 +241,30 @@ export const getEmbeddingModel = (
 						throw error
 					}
 				},
+				getBatchEmbeddings: async (texts: string[]) => {
+					try {
+						if (!openai.apiKey) {
+							throw new LLMAPIKeyNotSetException(
+								'Alibaba Qwen API key is missing. Please set it in settings menu.',
+							)
+						}
+						const embedding = await openai.embeddings.create({
+							model: settings.embeddingModelId,
+							input: texts,
+						})
+						return embedding.data.map(item => item.embedding)
+					} catch (error) {
+						if (
+							error.status === 429 &&
+							error.message.toLowerCase().includes('rate limit')
+						) {
+							throw new LLMRateLimitExceededException(
+								'Alibaba Qwen API rate limit exceeded. Please try again later.',
+							)
+						}
+						throw error
+					}
+				},
 			}
 		}
 		case ApiProvider.Google: {
@@ -174,10 +274,32 @@ export const getEmbeddingModel = (
 			return {
 				id: settings.embeddingModelId,
 				dimension: modelInfo.dimensions,
+				supportsBatch: false,
 				getEmbedding: async (text: string) => {
 					try {
 						const response = await model.embedContent(text)
 						return response.embedding.values
+					} catch (error) {
+						if (
+							error.status === 429 &&
+							error.message.includes('RATE_LIMIT_EXCEEDED')
+						) {
+							throw new LLMRateLimitExceededException(
+								'Gemini API rate limit exceeded. Please try again later.',
+							)
+						}
+						throw error
+					}
+				},
+				getBatchEmbeddings: async (texts: string[]) => {
+					try {
+						const embeddings = await Promise.all(
+							texts.map(async (text) => {
+								const response = await model.embedContent(text)
+								return response.embedding.values
+							})
+						)
+						return embeddings
 					} catch (error) {
 						if (
 							error.status === 429 &&
@@ -201,6 +323,7 @@ export const getEmbeddingModel = (
 			return {
 				id: settings.embeddingModelId,
 				dimension: 0,
+				supportsBatch: false,
 				getEmbedding: async (text: string) => {
 					if (!settings.ollamaProvider.baseUrl) {
 						throw new LLMBaseUrlNotSetException(
@@ -213,6 +336,18 @@ export const getEmbeddingModel = (
 					})
 					return embedding.data[0].embedding
 				},
+				getBatchEmbeddings: async (texts: string[]) => {
+					if (!settings.ollamaProvider.baseUrl) {
+						throw new LLMBaseUrlNotSetException(
+							'Ollama Address is missing. Please set it in settings menu.',
+						)
+					}
+					const embedding = await openai.embeddings.create({
+						model: settings.embeddingModelId,
+						input: texts,
+					})
+					return embedding.data.map(item => item.embedding)
+				},
 			}
 		}
 		case ApiProvider.OpenAICompatible: {
@@ -224,6 +359,7 @@ export const getEmbeddingModel = (
 			return {
 				id: settings.embeddingModelId,
 				dimension: 0,
+				supportsBatch: false,
 				getEmbedding: async (text: string) => {
 					try {
 						if (!openai.apiKey) {
@@ -237,6 +373,31 @@ export const getEmbeddingModel = (
 							encoding_format: "float",
 						})
 						return embedding.data[0].embedding
+					} catch (error) {
+						if (
+							error.status === 429 &&
+							error.message.toLowerCase().includes('rate limit')
+						) {
+							throw new LLMRateLimitExceededException(
+								'OpenAI Compatible API rate limit exceeded. Please try again later.',
+							)
+						}
+						throw error
+					}
+				},
+				getBatchEmbeddings: async (texts: string[]) => {
+					try {
+						if (!openai.apiKey) {
+							throw new LLMAPIKeyNotSetException(
+								'OpenAI Compatible API key is missing. Please set it in settings menu.',
+							)
+						}
+						const embedding = await openai.embeddings.create({
+							model: settings.embeddingModelId,
+							input: texts,
+							encoding_format: "float",
+						})
+						return embedding.data.map(item => item.embedding)
 					} catch (error) {
 						if (
 							error.status === 429 &&

@@ -1,4 +1,24 @@
 releases:
+  - version: "0.6.6"
+    fixes:
+      - "fixed pdf content null byte error"
+  - version: "0.6.5"
+    fixes:
+      - "fixed openai provider test error"
+  - version: "0.6.4"
+    features:
+      - "Added batch embedding for siliconflow"
+
+  - version: "0.6.3"
+    features:
+      - "Added Core Search Plugin and Omnisearch Support for Local File Searching PR from @travertexs"
+      - "Added one-click configuration for model selection"
+      - "Added test connection for API key"
+  - version: "0.6.0"
+    features:
+      - "Added Infio built-in MCP (Model Control Protocol) support"
+      - "Optimized startup performance for faster loading times"
+      - "Support Infio provider MCP tools"
   - version: "0.5.2"
     features:
       - "Added Infio provider"

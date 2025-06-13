@@ -203,12 +203,12 @@ export const triggerSchema = z.object({
 
 const FilesSearchSettingsSchema = z.object({
 	method: z.enum(['match', 'regex', 'semantic', 'auto']).catch('auto'),
-	regexBackend: z.enum(['coreplugin', 'ripgrep']).catch('ripgrep'),
+	regexBackend: z.enum(['coreplugin', 'ripgrep']).catch('coreplugin'),
 	matchBackend: z.enum(['omnisearch', 'coreplugin']).catch('coreplugin'),
 	ripgrepPath: z.string().catch(''),
 }).catch({
 	method: 'auto',
-	regexBackend: 'ripgrep',
+	regexBackend: 'coreplugin',
 	matchBackend: 'coreplugin',
 	ripgrepPath: '',
 });
@@ -218,7 +218,7 @@ export const InfioSettingsSchema = z.object({
 	version: z.literal(SETTINGS_SCHEMA_VERSION).catch(SETTINGS_SCHEMA_VERSION),
 
 	// Provider
-	defaultProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.OpenRouter),
+	defaultProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	infioProvider: InfioProviderSchema,
 	openrouterProvider: OpenRouterProviderSchema,
 	siliconflowProvider: SiliconFlowProviderSchema,
@@ -241,16 +241,19 @@ export const InfioSettingsSchema = z.object({
 		modelId: z.string(),
 	})).catch([]),
 
+	// Active Provider Tab (for UI state)
+	activeProviderTab: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
+
 	// Chat Model 
-	chatModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.OpenRouter),
+	chatModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	chatModelId: z.string().catch(''),
 
 	// Apply Model
-	applyModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.OpenRouter),
+	applyModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	applyModelId: z.string().catch(''),
 
 	// Embedding Model
-	embeddingModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Google),
+	embeddingModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	embeddingModelId: z.string().catch(''),
 
 	// fuzzyMatchThreshold

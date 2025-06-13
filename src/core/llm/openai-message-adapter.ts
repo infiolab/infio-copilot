@@ -21,7 +21,8 @@ export class OpenAIMessageAdapter {
   async generateResponse(
     client: OpenAI,
     request: LLMRequestNonStreaming,
-    options?: LLMOptions,
+		options?: LLMOptions,
+		extraParams?: Record<string, any>,
   ): Promise<LLMResponseNonStreaming> {
     const response = await client.chat.completions.create(
       {
@@ -36,6 +37,7 @@ export class OpenAIMessageAdapter {
         presence_penalty: request.presence_penalty,
         logit_bias: request.logit_bias,
         prediction: request.prediction,
+        ...extraParams,
       },
       {
         signal: options?.signal,
@@ -47,7 +49,8 @@ export class OpenAIMessageAdapter {
   async streamResponse(
     client: OpenAI,
     request: LLMRequestStreaming,
-    options?: LLMOptions,
+		options?: LLMOptions,
+		extraParams?: Record<string, any>,
   ): Promise<AsyncIterable<LLMResponseStreaming>> {
     const stream = await client.chat.completions.create(
       {
@@ -64,7 +67,8 @@ export class OpenAIMessageAdapter {
         stream: true,
         stream_options: {
           include_usage: true,
-        },
+				},
+				...extraParams,
       },
       {
         signal: options?.signal,

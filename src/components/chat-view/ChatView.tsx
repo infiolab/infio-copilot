@@ -23,16 +23,16 @@ import { useLLM } from '../../contexts/LLMContext'
 import { useMcpHub } from '../../contexts/McpHubContext'
 import { useRAG } from '../../contexts/RAGContext'
 import { useSettings } from '../../contexts/SettingsContext'
+import { matchSearchUsingCorePlugin } from '../../core/file-search/match/coreplugin-match'
+import { matchSearchUsingOmnisearch } from '../../core/file-search/match/omnisearch-match'
+import { regexSearchUsingCorePlugin } from '../../core/file-search/regex/coreplugin-regex'
+import { regexSearchUsingRipgrep } from '../../core/file-search/regex/ripgrep-regex'
 import {
 	LLMAPIKeyInvalidException,
 	LLMAPIKeyNotSetException,
 	LLMBaseUrlNotSetException,
 	LLMModelNotSetException,
 } from '../../core/llm/exception'
-import { matchSearchUsingCorePlugin } from '../../core/file-search/match/coreplugin-match'
-import { matchSearchUsingOmnisearch } from '../../core/file-search/match/omnisearch-match'
-import { regexSearchUsingRipgrep } from '../../core/file-search/regex/ripgrep-regex'
-import { regexSearchUsingCorePlugin } from '../../core/file-search/regex/coreplugin-regex'
 import { useChatHistory } from '../../hooks/use-chat-history'
 import { useCustomModes } from '../../hooks/use-custom-mode'
 import { t } from '../../lang/helpers'
@@ -50,24 +50,26 @@ import {
 	getMentionableKey,
 	serializeMentionable,
 } from '../../utils/mentionable'
-import { readTFileContent } from '../../utils/obsidian'
+import { readTFileContent, readTFileContentPdf } from '../../utils/obsidian'
 import { openSettingsModalWithError } from '../../utils/open-settings-modal'
 import { PromptGenerator, addLineNumbers } from '../../utils/prompt-generator'
 // Removed empty line above, added one below for group separation
 import { fetchUrlsContent, onEnt, webSearch } from '../../utils/web-search'
 
-import { ModeSelect } from './chat-input/ModeSelect' // Start of new group
+import { ModeSelect } from './chat-input/ModeSelect'; // Start of new group
 import PromptInputWithActions, { ChatUserInputRef } from './chat-input/PromptInputWithActions'
 import { editorStateToPlainText } from './chat-input/utils/editor-state-to-plain-text'
 import { ChatHistory } from './ChatHistoryView'
 import CommandsView from './CommandsView'
 import CustomModeView from './CustomModeView'
+import FileReadResults from './FileReadResults'
 import HelloInfo from './HelloInfo'
-import McpHubView from './McpHubView' // Moved after MarkdownReasoningBlock
+import MarkdownReasoningBlock from './Markdown/MarkdownReasoningBlock'
+import McpHubView from './McpHubView'; // Moved after MarkdownReasoningBlock
 import QueryProgress, { QueryProgressState } from './QueryProgress'
 import ReactMarkdown from './ReactMarkdown'
 import SimilaritySearchResults from './SimilaritySearchResults'
-import MarkdownReasoningBlock from './Markdown/MarkdownReasoningBlock'
+import WebsiteReadResults from './WebsiteReadResults'
 
 // Add an empty line here
 const getNewInputMessage = (app: App, defaultMention: string): ChatUserMessage => {
@@ -579,7 +581,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 					if (!opFile) {
 						throw new Error(`File not found: ${toolArgs.filepath}`)
 					}
-					const fileContent = await readTFileContent(opFile, app.vault)
+					const fileContent = await readTFileContentPdf(opFile, app.vault, app)
 					const formattedContent = `[read_file for '${toolArgs.filepath}'] Result:\n${addLineNumbers(fileContent)}\n`;
 					return {
 						type: 'read_file',
@@ -1110,6 +1112,18 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 											)
 										}}
 									/>
+									{message.fileReadResults && (
+										<FileReadResults
+											key={"file-read-" + message.id}
+											fileContents={message.fileReadResults}
+										/>
+									)}
+									{message.websiteReadResults && (
+										<WebsiteReadResults
+											key={"website-read-" + message.id}
+											websiteContents={message.websiteReadResults}
+										/>
+									)}
 									{message.similaritySearchResults && (
 										<SimilaritySearchResults
 											key={"similarity-search-" + message.id}

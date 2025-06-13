@@ -5,6 +5,7 @@ import { htmlToMarkdown, requestUrl } from 'obsidian';
 import { JINA_BASE_URL, SERPER_BASE_URL } from '../constants';
 import { RAGEngine } from '../core/rag/rag-engine';
 
+import { isVideoUrl, getVideoProvider } from './video-detector';
 import { YoutubeTranscript, isYoutubeUrl } from './youtube-transcript';
 
 
@@ -172,18 +173,37 @@ async function filterByEmbedding(query: string, results: SearchResult[], ragEngi
 }
 
 async function fetchByLocalTool(url: string): Promise<string> {
-	if (isYoutubeUrl(url)) {
-		// TODO: pass language based on user preferences
-		const { title, transcript } =
-			await YoutubeTranscript.fetchTranscriptAndMetadata(url)
+	// 检查是否为视频内容
+	if (isVideoUrl(url)) {
+		const provider = getVideoProvider(url)
+		
+		// 对于YouTube，使用现有的转录功能
+		if (provider === 'youtube') {
+			try {
+				// TODO: pass language based on user preferences
+				const { title, transcript } =
+					await YoutubeTranscript.fetchTranscriptAndMetadata(url)
 
-		return `Title: ${title}
+				return `Title: ${title}
 Video Transcript:
 ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`
+			} catch (error) {
+				console.warn('Failed to extract YouTube transcript:', error)
+				// 如果转录失败，返回视频信息提示
+				return `Video Content Detected: ${url}
+Platform: YouTube
+Note: This is a video content. Transcript extraction failed. Please use specialized video processing tools for content analysis.`
+			}
+		}
+		
+		// 对于其他视频平台，返回视频信息提示
+		return `Video Content Detected: ${url}
+Platform: ${provider || 'Unknown'}
+Note: This is a video content. Please use specialized video processing tools for content analysis.`
 	}
 
+	// 非视频内容，使用常规方式获取网页内容
 	const response = await requestUrl({ url })
-
 	return htmlToMarkdown(response.text)
 }
 
@@ -236,7 +256,8 @@ async function fetchByJina(url: string, apiKey: string): Promise<string> {
 
 export async function fetchUrlContent(url: string, apiKey: string): Promise<string | null> {
 	try {
-		if (isYoutubeUrl(url)) {
+		// 如果是视频内容，直接使用本地工具处理
+		if (isVideoUrl(url)) {
 			return await fetchByLocalTool(url);
 		}
 		let content: string | null = null;

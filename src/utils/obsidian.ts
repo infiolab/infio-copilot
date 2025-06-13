@@ -1,19 +1,76 @@
 import * as path from 'path'
 
-import { App, Editor, MarkdownView, TFile, TFolder, Vault, WorkspaceLeaf } from 'obsidian'
+import { App, Editor, MarkdownView, TFile, TFolder, Vault, WorkspaceLeaf, loadPdfJs } from 'obsidian'
 
 import { MentionableBlockData } from '../types/mentionable'
+
+export async function parsePdfContent(file: TFile, app: App): Promise<string> {
+	try {
+		// 使用 Obsidian 内置的 PDF.js
+		const pdfjsLib = await loadPdfJs()
+
+		// Read PDF file as binary buffer
+		const pdfBuffer = await app.vault.readBinary(file)
+
+		// 使用 Obsidian 内置的 PDF.js 处理 PDF
+		const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer })
+		const doc = await loadingTask.promise
+		let fullText = ''
+
+		for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+			const page = await doc.getPage(pageNum)
+			const textContent = await page.getTextContent()
+			const pageText = textContent.items
+				.map((item: any) => item.str)
+				.join(' ')
+			fullText += pageText + '\n\n'
+		}
+
+		// 清理null字节，防止PostgreSQL UTF8编码错误
+		const cleanText = (fullText || '(Empty PDF content)').replace(/\0/g, '')
+		return cleanText
+	} catch (error: any) {
+		console.error('Error parsing PDF:', error)
+		return `(Error reading PDF file: ${error?.message || 'Unknown error'})`
+	}
+}
 
 export async function readTFileContent(
 	file: TFile,
 	vault: Vault,
 ): Promise<string> {
-	return await vault.cachedRead(file)
+	if (file.extension != 'md') {
+		return "(Binary file, unable to display content)"
+	}
+	const content = await vault.cachedRead(file)
+	// 清理null字节，防止PostgreSQL UTF8编码错误
+	return content.replace(/\0/g, '')
+}
+
+export async function readTFileContentPdf(
+	file: TFile,
+	vault: Vault,
+	app?: App,
+): Promise<string> {
+	if (file.extension === 'pdf') {
+		if (app) {
+			const content = await parsePdfContent(file, app)
+			// 清理null字节，防止PostgreSQL UTF8编码错误
+			return content.replace(/\0/g, '')
+		}
+		return "(PDF file, app context required for processing)"
+	}
+	if (file.extension != 'md') {
+		return "(Binary file, unable to display content)"
+	}
+	const content = await vault.cachedRead(file)
+	// 清理null字节，防止PostgreSQL UTF8编码错误
+	return content.replace(/\0/g, '')
 }
 
 export async function readMultipleTFiles(
 	files: TFile[],
-	vault: Vault,
+	vault: Vault
 ): Promise<string[]> {
 	// Read files in parallel
 	const readPromises = files.map((file) => readTFileContent(file, vault))

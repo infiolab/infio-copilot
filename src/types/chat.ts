@@ -18,6 +18,8 @@ export type ChatUserMessage = {
 	similaritySearchResults?: (Omit<SelectVector, 'embedding'> & {
 		similarity: number
 	})[]
+	fileReadResults?: Array<{ path: string, content: string }>
+	websiteReadResults?: Array<{ url: string, content: string }>
 }
 
 export type ChatAssistantMessage = {
@@ -45,6 +47,8 @@ export type SerializedChatUserMessage = {
 	similaritySearchResults?: (Omit<SelectVector, 'embedding'> & {
 		similarity: number
 	})[]
+	fileReadResults?: Array<{ path: string, content: string }>
+	websiteReadResults?: Array<{ url: string, content: string }>
 }
 
 export type SerializedChatAssistantMessage = {
