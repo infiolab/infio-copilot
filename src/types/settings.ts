@@ -392,6 +392,26 @@ const MIGRATIONS: Migration[] = [
 			return newData
 		},
 	},
+
+	// A very inelegant fix, but whatever :/
+	// TODO: Should be rewritten in a future release
+	{
+		fromVersion: 0.4,
+		toVersion: 0.4,
+		migrate: (data) => {
+			const newData = { ...data }
+			newData.version = SETTINGS_SCHEMA_VERSION
+
+			// Replace 'chainOfThoughRemovalRegex' with 'chainOfThoughtRemovalRegex'
+			if (newData.chainOfThoughRemovalRegex) {
+				const cotRemovalRegexKey = newData.chainOfThoughRemovalRegex;
+				delete newData.chainOfThoughRemovalRegex;
+				newData.chainOfThoughtRemovalRegex = cotRemovalRegexKey;
+			}
+
+			return newData
+		},
+	},
 ]
 
 function migrateSettings(
@@ -417,10 +437,32 @@ function migrateSettings(
 }
 
 export function parseInfioSettings(data: unknown): InfioSettings {
+	const migratedData = migrateSettings(data as Record<string, unknown>);
+
 	try {
-		const migratedData = migrateSettings(data as Record<string, unknown>)
 		return InfioSettingsSchema.parse(migratedData)
 	} catch (error) {
+		// Instead of hard resetting, we can attempt to parse the migrated data
+		// and catch specific errors to fix or use defaults.
+		console.error("Failed to parse settings with migrated data, attempting to fix: ", error);
+		const fixedData: Record<string, any> = {};
+		const defaultSettings = DEFAULT_SETTINGS;
+
+		// Iterate over the schema keys to build the fixed data
+		for (const key in InfioSettingsSchema.shape) {
+			const schema = InfioSettingsSchema.shape[key];
+			try {
+				fixedData[key] = schema.parse((migratedData as any)[key]);
+			} catch {
+				fixedData[key] = (defaultSettings as any)[key];
+			}
+		}
+
+		try {
+			return InfioSettingsSchema.parse(fixedData);
+		} catch (fixError) {
+			console.error("Failed to fix settings with migrated data, using default settings instead: ", fixError);
 		return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
+		}
 	}
 }
