@@ -1,11 +1,46 @@
-import { App, TFile  } from "obsidian";
+import { App, TFile, View } from "obsidian";
 import {
     MAX_RESULTS,
-    truncateLine,
-    findLineDetails,
+	truncateLine,
+	buildLineIndexs,
+    lineIndex,
+	findLineIndexBS,
     SearchResult,
     formatResults,
 } from '../search-common';
+
+// A tuple representing the [start, end] character offsets of a match.
+type MatchOffsetTuple = [number, number];
+
+interface FileSearchResult {
+    app: App
+    children: any[]
+    childrenEl: HTMLElement
+    collapseEl: HTMLElement
+    collapsed: boolean
+    collapsible: boolean
+    containerEl: HTMLElement
+    content: string
+    dom: any
+    el: HTMLElement
+    extraContext: () => boolean
+    file: TFile
+    info: any
+    onMatchRender: any
+    pusherEl: HTMLElement
+    result: {
+        filename?: MatchOffsetTuple[]
+        content?: MatchOffsetTuple[]
+    }
+}
+
+interface SearchDOM {
+    resultDomLookup: Map<TFile, FileSearchResult>;
+}
+
+interface SearchView extends View {
+    dom: SearchDOM;
+}
 
 /**
  * Searches using Obsidian's core search plugin and builds context for each match.
@@ -19,7 +54,8 @@ export async function matchSearchUsingCorePlugin(
     app: App,
 ): Promise<string> {
     try {
-        const searchPlugin = (app as any).internalPlugins.plugins['global-search']?.instance;
+        // @ts-ignore
+        const searchPlugin = app.internalPlugins.plugins['global-search']?.instance;
         if (!searchPlugin) {
             throw new Error("Core search plugin is not available.");
         }
@@ -28,64 +64,101 @@ export async function matchSearchUsingCorePlugin(
         // It does not return the results directly.
         searchPlugin.openGlobalSearch(query);
 
-        const searchLeaf = app.workspace.getLeavesOfType('search')[0];
-        if (!searchLeaf) {
-            throw new Error("No active search pane found after triggering search.");
-        }
+        const getSearchResults = (): Map<TFile, FileSearchResult> | null => {
+            const searchLeaf = app.workspace.getLeavesOfType('search')[0];
+            if (!searchLeaf) {
+                return null;
+            }
 
-        // Ensure the view is fully loaded before we try to access its properties.
-        const view = await searchLeaf.open(searchLeaf.view);
-        const searchResultsMap = await new Promise<Map<TFile, any>>(resolve => {
+            const searchView = searchLeaf.view as SearchView;
+            if (searchView.dom?.resultDomLookup && searchView.dom.resultDomLookup.size > 0) {
+                return searchView.dom.resultDomLookup;
+            }
+            return null;
+        };
+
+        const searchResultsMap = await new Promise<Map<TFile, FileSearchResult>>(resolve => {
             setTimeout(() => {
-                // @ts-ignore
-                const results = (view as any).dom?.resultDomLookup;
+                const results = getSearchResults();
                 resolve(results || new Map());
             }, 10000)
         });
 
-        if (!searchResultsMap || searchResultsMap.size === 0) {
-			console.error("No results found or search results map is not available.");
-			return "No results found."
+        if (!searchResultsMap) {
+            const searchLeaf = app.workspace.getLeavesOfType('search')[0];
+            if (searchLeaf) {
+                // @ts-ignore
+                const searchInput = searchLeaf.view.searchQuery?.inputEl?.value;
+                if (searchInput === query) {
+                    return "No results found.";
+                }
+            }
+            throw new Error("Could not retrieve search results within the time limit.");
         }
 
         const results: SearchResult[] = [];
-        const vault = app.vault;
-
         for (const [file, fileMatches] of searchResultsMap.entries()) {
             if (results.length >= MAX_RESULTS) {
                 break;
             }
 
-            const content = await vault.cachedRead(file as TFile);
-            const lines = content.split('\n');
+            if (
+                !file || !(file instanceof TFile) ||
+                !fileMatches.content || fileMatches.content.length === 0
+            ) {
+				continue;
+			}
+			const lines = fileMatches.content.split('\n');
+			const indexs = buildLineIndexs(lines);
 
-            // `fileMatches.result.content` holds an array of matches for the file.
-            // Each match is an array: [matched_text, start_offset]
-            for (const match of fileMatches.result.content) {
-                if (results.length >= MAX_RESULTS) break;
-                
-                const startOffset = match[1];
-                const { lineNumber, columnNumber, lineContent } = findLineDetails(lines, startOffset);
+            for (const [startOffset, endOffset] of fileMatches.result.content) {
+                if (results.length >= MAX_RESULTS) {
+                    break;
+                }
 
-                if (lineNumber === -1) continue;
+                const lineIndexs: [lineIndex, lineIndex] = [
+                    findLineIndexBS(indexs, startOffset),
+                    findLineIndexBS(indexs, endOffset),
+                ];
+                if (
+                    lineIndexs[0].line === -1 || lineIndexs[1].line === -1 ||
+                    lineIndexs[1].line < lineIndexs[0].line
+                ) { 
+                    continue;
+                }
+
+                const match = lines.slice(lineIndexs[0].line, lineIndexs[1].line + 1).join('\n').trimEnd();
+                const columnStart = lineIndexs[0].column;
+                const columnEnd = lineIndexs[1].column + (indexs[lineIndexs[1].line] - indexs[lineIndexs[0].line]);
+
+                const finalLines = 
+                    truncateLine(match, columnStart, Math.min(columnEnd, match.length - 1)).split('\n');
+                finalLines.forEach((line, index) => {
+                    finalLines.splice(index, 1, line.trimEnd());
+                });
 
                 results.push({
                     file: file.path,
-                    line: lineNumber + 1, // ripgrep is 1-based, so we adjust
-                    column: columnNumber + 1,
-                    match: truncateLine(lineContent.trimEnd()),
-                    beforeContext: lineNumber > 0 ? [truncateLine(lines[lineNumber - 1].trimEnd())] : [],
-                    afterContext:
-                        lineNumber < lines.length - 1
-                            ? [truncateLine(lines[lineNumber + 1].trimEnd())]
+                    match: finalLines,
+                    precedingContext:
+                        lineIndexs[0].line > 0
+                            ? [truncateLine(lines[lineIndexs[0].line - 1].trimEnd(), 0)]
+                            : [],
+                    succeedingContext:
+                        lineIndexs[1].line < lines.length - 1
+                            ? [truncateLine(lines[lineIndexs[1].line + 1].trimEnd(), 0)]
                             : [],
                 });
             }
         }
 
-        return formatResults(results, ".\\");
+		if (results.length === 0) {
+			return "No results found.";
+		}
+
+        return formatResults(results);
     } catch (error) {
 		console.error("Error during core plugin processing:", error);
-		return "An error occurred during the search.";
+		return `An error occurred during the search: ${error}`;
 	}
 }
