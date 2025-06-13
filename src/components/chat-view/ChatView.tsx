@@ -700,9 +700,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 				} else if (toolArgs.type === 'search_web') {
 					const results = await webSearch(
 						toolArgs.query,
-						settings.serperApiKey,
-						settings.serperSearchEngine,
-						settings.jinaApiKey,
+						settings.webSearchSettings,
 						(await getRAGEngine())
 					)
 					const formattedContent = `[search_web for '${toolArgs.query}'] Result:\n${results}\n`;
@@ -720,7 +718,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 						}
 					}
 				} else if (toolArgs.type === 'fetch_urls_content') {
-					const results = await fetchUrlsContent(toolArgs.urls, settings.jinaApiKey)
+					const results = await fetchUrlsContent(toolArgs.urls, settings.webSearchSettings)
 					const formattedContent = `[ fetch_urls_content ] Result:\n${results}\n`;
 					return {
 						type: 'fetch_urls_content',
