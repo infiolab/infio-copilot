@@ -322,8 +322,12 @@ export default {
 			google: 'Google',
 			duckDuckGo: 'DuckDuckGo',
 			bing: 'Bing',
+			urlFetchBackend: 'URL 检索后端',
+			urlFetchBackendDescription: '选择 URL 检索的后端。',
+			jina: 'Jina',
+			local: '本地',
 			jinaApiKey: 'Jina API 密钥（可选）',
-			jinaApiKeyDescription: '用于将网页解析为 Markdown 格式的 API 密钥。如果未提供，将使用本地解析。请从此处获取您的密钥',
+			jinaApiKeyDescription: '使用 API 密钥以获得更高速率限制。请从此处获取您的密钥',
 		},
 		
 		// RAG 部分
