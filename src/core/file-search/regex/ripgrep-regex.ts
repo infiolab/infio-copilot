@@ -55,13 +55,13 @@ async function execRipgrep(bin: string, args: string[]): Promise<string> {
 		})
 		rl.on("close", () => {
 			if (errorOutput) {
-				reject(new Error(`ripgrep process error: ${errorOutput}`))
+				reject(new Error(`(ripgrep process error) ${errorOutput}`))
 			} else {
 				resolve(output)
 			}
 		})
 		rgProcess.on("error", (error) => {
-			reject(new Error(`ripgrep process error: ${error.message}`))
+			reject(new Error(`(ripgrep process error) ${error.message}`))
 		})
 	})
 }
@@ -71,38 +71,32 @@ export async function regexSearchUsingRipgrep(
 	regex: string,
 	ripgrepPath: string,
 ): Promise<string> {
-	const rgPath = await getBinPath(ripgrepPath)
-
-	if (!rgPath) {
-		throw new Error("Could not find ripgrep binary")
-	}
-
-	// use --glob param to exclude .obsidian directory
-	const args = [
-		"--json", 
-		"-e", 
-		regex, 
-		"--glob", 
-		"!.obsidian/**", // exclude .obsidian directory and all its subdirectories
-		"--glob",
-		"!.git/**",
-		"--context", 
-		"1", 
-		directoryPath
-	]
-
-	let output: string
 	try {
-		output = await execRipgrep(rgPath, args)
-	} catch (error) {
-		console.error("Error executing ripgrep:", error)
-		return "No results found."
-	}
-	const results: SearchResult[] = []
-	let currentResult: Partial<SearchResult> | null = null
+		const rgPath = await getBinPath(ripgrepPath);
+		if (!rgPath) {
+			throw new Error("Could not find ripgrep binary");
+		}
 
-	output.split("\n").forEach((line) => {
-		if (line) {
+		// use --glob param to exclude .obsidian directory
+		const args = [
+			"--json", 
+			"-e", 
+			regex, 
+			"--glob", 
+			"!.obsidian/**", // exclude .obsidian directory and all its subdirectories
+			"--glob",
+			"!.git/**",
+			"--context", 
+			"1", 
+			directoryPath
+		]
+
+		let output = await execRipgrep(rgPath, args);
+
+		const results: SearchResult[] = []
+		let currentResult: Partial<SearchResult> | null = null
+
+		output.split("\n").forEach((line) => { if (line) {
 			try {
 				const parsed = JSON.parse(line)
 				if (parsed.type === "match") {
@@ -111,37 +105,43 @@ export async function regexSearchUsingRipgrep(
 					}
 
 					// Safety check: truncate extremely long lines to prevent excessive output
-					const matchText = parsed.data.lines.text
-					const truncatedMatch = truncateLine(matchText)
+					const matchText = parsed.data.lines.text;
+					const truncatedMatch = truncateLine(matchText, 0);
 
 					currentResult = {
 						file: parsed.data.path.text,
+						match: [truncatedMatch],
 						line: parsed.data.line_number,
 						column: parsed.data.submatches[0].start,
-						match: truncatedMatch,
-						beforeContext: [],
-						afterContext: [],
 					}
 				} else if (parsed.type === "context" && currentResult) {
 					// Apply the same truncation logic to context lines
 					const contextText = parsed.data.lines.text
-					const truncatedContext = truncateLine(contextText)
 
 					if (parsed.data.line_number < currentResult.line!) {
-						currentResult.beforeContext!.push(truncatedContext)
+						const truncatedContext = truncateLine(contextText, 0)
+						currentResult.precedingContext!.push(truncatedContext)
 					} else {
-						currentResult.afterContext!.push(truncatedContext)
+						const truncatedContext = truncateLine(contextText, 0)
+						currentResult.succeedingContext!.push(truncatedContext)
 					}
 				}
 			} catch (error) {
-				console.error("Error parsing ripgrep output:", error)
+				throw new Error("Error parsing ripgrep output:", error);
 			}
-		}
-	})
+		}})
 
-	if (currentResult) {
-		results.push(currentResult as SearchResult)
+		if (currentResult) {
+			results.push(currentResult as SearchResult)
+		}
+
+		if (results.length === 0) {
+			return "No results found.";
+		}
+
+		return formatResults(results, directoryPath);
+	} catch (error) {
+		console.error("Error during ripgrep processing:", error);
+		return `An error occurred during the search: ${error}`;
 	}
-	
-	return formatResults(results, directoryPath)
 }
