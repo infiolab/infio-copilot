@@ -51,7 +51,7 @@ export function useChatHistory(): UseChatHistory {
 					} else {
 						const firstUserMessage = messages.find((v) => v.role === 'user') as ChatUserMessage
 
-						await chatManager.createChat({
+						const newChat = await chatManager.createChat({
 							id,
 							title: firstUserMessage?.content
 								? editorStateToPlainText(firstUserMessage.content).substring(

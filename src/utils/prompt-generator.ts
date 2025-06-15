@@ -465,17 +465,17 @@ export class PromptGenerator {
 					this.app
 				)
 
-				// 为文件夹内容创建Markdown文件
-				const markdownFilePath = await this.createMarkdownFileForContent(
-					`${folder.path}/folder-contents`,
-					content,
-					false
-				)
+				// // 为文件夹内容创建Markdown文件
+				// const markdownFilePath = await this.createMarkdownFileForContent(
+				// 	`${folder.path}/folder-contents`,
+				// 	content,
+				// 	false
+				// )
 
 				completedFolders++
 				folderContents.push(`<folder_content path="${folder.path}">\n${content}\n</folder_content>`)
-				folderContentsForProgress.push({ path: markdownFilePath, content })
-				allFileReadResults.push({ path: markdownFilePath, content })
+				folderContentsForProgress.push({ path: folder.path, content })
+				allFileReadResults.push({ path: folder.path, content })
 			}
 
 			// 文件夹读取完成（如果之前没有文件需要读取）
@@ -665,6 +665,7 @@ export class PromptGenerator {
 			}
 		}
 		if (isOverThreshold) {
+			console.log("isOverThreshold", isOverThreshold)
 			fileContentsPrompts = files.map((file) => {
 				return `<file_content path="${file.path}">\n(Content omitted due to token limit. Relevant sections will be provided by semantic search below.)\n</file_content>`
 			}).join('\n')

@@ -20,7 +20,10 @@ export default {
 			conversationNotFound: "Conversation not found",
 			fileNotFound: "File not found: {{path}}",
 			failedToApplyEditChanges: "Failed to apply edit changes",
-			failedToSearchAndReplace: "Failed to search and replace"
+			failedToSearchAndReplace: "Failed to search and replace",
+			failedToDeleteConversation: "Failed to delete conversation",
+			titleRequired: "Title is required",
+			failedToUpdateTitle: "Failed to update title"
 		},
 		apply: {
 			changesApplied: "Changes successfully applied",
@@ -30,7 +33,21 @@ export default {
 			noResultsFound: "No results found for '{{query}}'"
 		},
 		history: {
-			noConversations: "No conversations"
+			title: "Chat History",
+			description: "Manage your conversation history and switch between different chats",
+			noConversations: "No conversations",
+			noSearchResults: "No search results found",
+			noMatchingChats: "No matching chats found",
+			noChats: "No chats available",
+			newChat: "New Chat",
+			searchPlaceholder: "Search conversations...",
+			editTitle: "Edit title",
+			deleteChat: "Delete chat",
+			deleteConversation: "Delete conversation",
+			save: "Save",
+			cancel: "Cancel",
+			yesterday: "Yesterday",
+			daysAgo: "days ago"
 		},
 		shortcutInfo: {
 			editInline: "Edit inline",

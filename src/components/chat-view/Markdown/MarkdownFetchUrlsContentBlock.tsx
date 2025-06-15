@@ -16,7 +16,7 @@ export default function MarkdownFetchUrlsContentBlock({
 	finish: boolean
 }) {
 	const containerRef = useRef<HTMLDivElement>(null)
-	const [isOpen, setIsOpen] = useState(true)
+	const [isOpen, setIsOpen] = useState(false)
 
 	React.useEffect(() => {
 		if (finish && applyStatus === ApplyStatus.Idle) {

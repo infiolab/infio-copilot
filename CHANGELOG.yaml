@@ -1,4 +1,19 @@
 releases:
+  - version: "0.6.10"
+    features:
+      - "update chat history view"
+      - "add vector search view"
+  - version: "0.6.9"
+    features:
+      - "Added search view"
+  - version: "0.6.8"
+    fixes:
+      - "fixed vector embedding memory leak"
+      - "update chat view style"
+  - version: "0.6.7"
+    fixes:
+      - "fixed pdf & md content null byte error"
+      - "fixed vector embedding memory leak"
   - version: "0.6.6"
     fixes:
       - "fixed pdf content null byte error"

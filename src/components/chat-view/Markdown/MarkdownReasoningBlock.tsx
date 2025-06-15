@@ -13,7 +13,7 @@ export default function MarkdownReasoningBlock({
 }>) {
 	const { isDarkMode } = useDarkModeContext()
 	const containerRef = useRef<HTMLDivElement>(null)
-	const [isOpen, setIsOpen] = useState(true)
+	const [isOpen, setIsOpen] = useState(false)
 
 	useEffect(() => {
 		if (containerRef.current) {

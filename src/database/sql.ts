@@ -76,6 +76,22 @@ export const migrations: Record<string, SqlMigration> = {
 			CREATE INDEX IF NOT EXISTS "embeddingIndex_384"
 			ON "embeddings_384"
 			USING hnsw ("embedding" vector_cosine_ops);
+
+            -- Create B-tree indexes for path field to optimize file path queries
+            CREATE INDEX IF NOT EXISTS "pathIndex_1536" 
+            ON "embeddings_1536" ("path");
+
+            CREATE INDEX IF NOT EXISTS "pathIndex_1024" 
+            ON "embeddings_1024" ("path");
+
+            CREATE INDEX IF NOT EXISTS "pathIndex_768" 
+            ON "embeddings_768" ("path");
+
+            CREATE INDEX IF NOT EXISTS "pathIndex_512" 
+            ON "embeddings_512" ("path");
+
+            CREATE INDEX IF NOT EXISTS "pathIndex_384" 
+            ON "embeddings_384" ("path");
         `
 	},
 	template: {

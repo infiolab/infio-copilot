@@ -21,7 +21,10 @@ export default {
 			conversationNotFound: "未找到对话",
 			fileNotFound: "未找到文件：{{path}}",
 			failedToApplyEditChanges: "应用编辑更改失败",
-			failedToSearchAndReplace: "搜索和替换失败"
+			failedToSearchAndReplace: "搜索和替换失败",
+			failedToDeleteConversation: "删除对话失败",
+			titleRequired: "标题不能为空",
+			failedToUpdateTitle: "更新标题失败"
 		},
 		apply: {
 			changesApplied: "更改已成功应用",
@@ -31,7 +34,21 @@ export default {
 			noResultsFound: "未找到 '{{query}}' 的结果"
 		},
 		history: {
-			noConversations: "没有对话"
+			title: "聊天记录",
+			description: "管理您的对话历史，并在不同聊天之间切换",
+			noConversations: "没有对话",
+			noSearchResults: "未找到搜索结果",
+			noMatchingChats: "未找到匹配的聊天",
+			noChats: "没有可用的聊天",
+			newChat: "新建聊天",
+			searchPlaceholder: "搜索对话...",
+			editTitle: "编辑标题",
+			deleteChat: "删除聊天",
+			deleteConversation: "删除对话",
+			save: "保存",
+			cancel: "取消",
+			yesterday: "昨天",
+			daysAgo: "天前"
 		},
 		shortcutInfo: {
 			editInline: "行内编辑",
@@ -103,6 +120,7 @@ export default {
 			viewDetails: "查看详情"
 		},
 		input: {
+			search: "搜索",
 			submit: "提交",
 			collectedModels: "收集的模型",
 			loading: "加载中...",

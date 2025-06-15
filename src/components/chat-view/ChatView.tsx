@@ -2,7 +2,7 @@ import * as path from 'path'
 
 import { BaseSerializedNode } from '@lexical/clipboard/clipboard'
 import { useMutation } from '@tanstack/react-query'
-import { CircleStop, History, NotebookPen, Plus, Server, SquareSlash } from 'lucide-react'
+import { CircleStop, History, NotebookPen, Plus, Search, Server, SquareSlash, Undo } from 'lucide-react'
 import { App, Notice } from 'obsidian'
 import {
 	forwardRef,
@@ -59,7 +59,7 @@ import { fetchUrlsContent, onEnt, webSearch } from '../../utils/web-search'
 import { ModeSelect } from './chat-input/ModeSelect'; // Start of new group
 import PromptInputWithActions, { ChatUserInputRef } from './chat-input/PromptInputWithActions'
 import { editorStateToPlainText } from './chat-input/utils/editor-state-to-plain-text'
-import { ChatHistory } from './ChatHistoryView'
+import ChatHistoryView from './ChatHistoryView'
 import CommandsView from './CommandsView'
 import CustomModeView from './CustomModeView'
 import FileReadResults from './FileReadResults'
@@ -68,7 +68,9 @@ import MarkdownReasoningBlock from './Markdown/MarkdownReasoningBlock'
 import McpHubView from './McpHubView'; // Moved after MarkdownReasoningBlock
 import QueryProgress, { QueryProgressState } from './QueryProgress'
 import ReactMarkdown from './ReactMarkdown'
+import SearchView from './SearchView'
 import SimilaritySearchResults from './SimilaritySearchResults'
+import UserMessageView from './UserMessageView'
 import WebsiteReadResults from './WebsiteReadResults'
 
 // Add an empty line here
@@ -176,9 +178,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		}
 	}
 
-	const [tab, setTab] = useState<'chat' | 'commands' | 'custom-mode' | 'mcp'>('chat')
+	const [tab, setTab] = useState<'chat' | 'commands' | 'custom-mode' | 'mcp' | 'search' | 'history'>('chat')
 
 	const [selectedSerializedNodes, setSelectedSerializedNodes] = useState<BaseSerializedNode[]>([])
+	
+	// 跟踪正在编辑的消息ID
+	const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
 
 	useEffect(() => {
 		const scrollContainer = chatMessagesRef.current
@@ -761,7 +766,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 									return item.text
 								}
 								if (item.type === "resource") {
-									const { blob: _blob, ...rest } = item.resource
+									// eslint-disable-next-line @typescript-eslint/no-unused-vars
+									const { blob, ...rest } = item.resource
 									return JSON.stringify(rest, null, 2)
 								}
 								return ""
@@ -989,36 +995,30 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 					>
 						<Plus size={18} />
 					</button>
-					<ChatHistory
-						chatList={chatList}
-						currentConversationId={currentConversationId}
-						onSelect={async (conversationId) => {
-							if (tab !== 'chat') {
+					<button
+						onClick={() => {
+							if (tab === 'history') {
 								setTab('chat')
+							} else {
+								setTab('history')
 							}
-							if (conversationId === currentConversationId) return
-							await handleLoadConversation(conversationId)
-						}}
-						onDelete={async (conversationId) => {
-							await deleteConversation(conversationId)
-							if (conversationId === currentConversationId) {
-								const nextConversation = chatList.find(
-									(chat) => chat.id !== conversationId,
-								)
-								if (nextConversation) {
-									void handleLoadConversation(nextConversation.id)
-								} else {
-									handleNewChat()
-								}
-							}
-						}}
-						onUpdateTitle={async (conversationId, newTitle) => {
-							await updateConversationTitle(conversationId, newTitle)
 						}}
 						className="infio-chat-list-dropdown"
 					>
-						<History size={18} />
-					</ChatHistory>
+						<History size={18} color={tab === 'history' ? 'var(--text-accent)' : 'var(--text-color)'} />
+					</button>
+					<button
+						onClick={() => {
+							if (tab === 'search') {
+								setTab('chat')
+							} else {
+								setTab('search')
+							}
+						}}
+						className="infio-chat-list-dropdown"
+					>
+						<Search size={18} color={tab === 'search' ? 'var(--text-accent)' : 'var(--text-color)'} />
+					</button>
 					<button
 						onClick={() => {
 							// switch between chat and prompts
@@ -1075,41 +1075,70 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 							message.role === 'user' ? (
 								message.content &&
 								<div key={"user-" + message.id} className="infio-chat-messages-user">
-									<PromptInputWithActions
-										key={"input-" + message.id}
-										ref={(ref) => registerChatUserInputRef(message.id, ref)}
-										initialSerializedEditorState={message.content}
-										onSubmit={(content, useVaultSearch) => {
-											if (editorStateToPlainText(content).trim() === '') return
-											handleSubmit(
-												[
-													...chatMessages.slice(0, index),
-													{
-														role: 'user',
-														applyStatus: ApplyStatus.Idle,
-														content: content,
-														promptContent: null,
-														id: message.id,
-														mentionables: message.mentionables,
-													},
-												],
-												useVaultSearch,
-											)
-											chatUserInputRefs.current.get(inputMessage.id)?.focus()
-										}}
-										onFocus={() => {
-											setFocusedMessageId(message.id)
-										}}
-										onCreateCommand={handleCreateCommand}
-										mentionables={message.mentionables}
-										setMentionables={(mentionables) => {
-											setChatMessages((prevChatHistory) =>
-												prevChatHistory.map((msg) =>
-													msg.id === message.id ? { ...msg, mentionables } : msg,
-												),
-											)
-										}}
-									/>
+									{editingMessageId === message.id ? (
+										<div className="infio-chat-edit-container">
+											<button
+												onClick={() => {
+													setEditingMessageId(null)
+													chatUserInputRefs.current.get(inputMessage.id)?.focus()
+												}}
+												className="infio-chat-edit-cancel-button"
+												title="取消编辑"
+											>
+												<Undo size={16} />
+											</button>
+											<PromptInputWithActions
+												key={"input-" + message.id}
+												ref={(ref) => registerChatUserInputRef(message.id, ref)}
+												initialSerializedEditorState={message.content}
+												onSubmit={(content, useVaultSearch) => {
+													if (editorStateToPlainText(content).trim() === '') return
+													setEditingMessageId(null) // 退出编辑模式
+													handleSubmit(
+														[
+															...chatMessages.slice(0, index),
+															{
+																role: 'user',
+																applyStatus: ApplyStatus.Idle,
+																content: content,
+																promptContent: null,
+																id: message.id,
+																mentionables: message.mentionables,
+															},
+														],
+														useVaultSearch,
+													)
+													chatUserInputRefs.current.get(inputMessage.id)?.focus()
+												}}
+												onFocus={() => {
+													setFocusedMessageId(message.id)
+												}}
+												onCreateCommand={handleCreateCommand}
+												mentionables={message.mentionables}
+												setMentionables={(mentionables) => {
+													setChatMessages((prevChatHistory) =>
+														prevChatHistory.map((msg) =>
+															msg.id === message.id ? { ...msg, mentionables } : msg,
+														),
+													)
+												}}
+
+											/>
+										</div>
+									) : (
+										<UserMessageView
+											content={message.content}
+											mentionables={message.mentionables}
+											onEdit={() => {
+												setEditingMessageId(message.id)
+												setFocusedMessageId(message.id)
+												// 延迟聚焦，确保组件已渲染
+												setTimeout(() => {
+													chatUserInputRefs.current.get(message.id)?.focus()
+												}, 0)
+											}}
+										/>
+									)}
 									{message.fileReadResults && (
 										<FileReadResults
 											key={"file-read-" + message.id}
@@ -1181,6 +1210,10 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 						addedBlockKey={addedBlockKey}
 					/>
 				</>
+			) : tab === 'search' ? (
+				<div className="infio-chat-commands">
+					<SearchView />
+				</div>
 			) : tab === 'commands' ? (
 				<div className="infio-chat-commands">
 					<CommandsView
@@ -1190,6 +1223,33 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 			) : tab === 'custom-mode' ? (
 				<div className="infio-chat-commands">
 					<CustomModeView />
+				</div>
+			) : tab === 'history' ? (
+				<div className="infio-chat-commands">
+					<ChatHistoryView
+						currentConversationId={currentConversationId}
+						onSelect={async (conversationId) => {
+							setTab('chat')
+							if (conversationId === currentConversationId) return
+							await handleLoadConversation(conversationId)
+						}}
+						onDelete={async (conversationId) => {
+							await deleteConversation(conversationId)
+							if (conversationId === currentConversationId) {
+								const nextConversation = chatList.find(
+									(chat) => chat.id !== conversationId,
+								)
+								if (nextConversation) {
+									void handleLoadConversation(nextConversation.id)
+								} else {
+									handleNewChat()
+								}
+							}
+						}}
+						onUpdateTitle={async (conversationId, newTitle) => {
+							await updateConversationTitle(conversationId, newTitle)
+						}}
+					/>
 				</div>
 			) : (
 				<div className="infio-chat-commands">
