@@ -21,7 +21,10 @@ export default {
 			conversationNotFound: "未找到对话",
 			fileNotFound: "未找到文件：{{path}}",
 			failedToApplyEditChanges: "应用编辑更改失败",
-			failedToSearchAndReplace: "搜索和替换失败"
+			failedToSearchAndReplace: "搜索和替换失败",
+			failedToDeleteConversation: "删除对话失败",
+			titleRequired: "标题不能为空",
+			failedToUpdateTitle: "更新标题失败"
 		},
 		apply: {
 			changesApplied: "更改已成功应用",
@@ -31,7 +34,21 @@ export default {
 			noResultsFound: "未找到 '{{query}}' 的结果"
 		},
 		history: {
-			noConversations: "没有对话"
+			title: "聊天记录",
+			description: "管理您的对话历史，并在不同聊天之间切换",
+			noConversations: "没有对话",
+			noSearchResults: "未找到搜索结果",
+			noMatchingChats: "未找到匹配的聊天",
+			noChats: "没有可用的聊天",
+			newChat: "新建聊天",
+			searchPlaceholder: "搜索对话...",
+			editTitle: "编辑标题",
+			deleteChat: "删除聊天",
+			deleteConversation: "删除对话",
+			save: "保存",
+			cancel: "取消",
+			yesterday: "昨天",
+			daysAgo: "天前"
 		},
 		shortcutInfo: {
 			editInline: "行内编辑",
@@ -40,6 +57,12 @@ export default {
 		},
 		searchResults: {
 			showReferencedDocuments: "显示引用的文档"
+		},
+		fileResults: {
+			showReadFiles: "显示读取的文件"
+		},
+		websiteResults: {
+			showReadWebsites: "显示网页内容文件"
 		},
 		LLMResponseInfoPopover: {
 			header: "LLM 响应信息",
@@ -54,6 +77,12 @@ export default {
 		},
 		queryProgress: {
 			readingMentionableFiles: "正在读取提及的文件",
+			readingFiles: "正在读取文件",
+			readingFilesDone: "文件读取完成",
+			filesLoaded: "已加载 {count} 个文件",
+			readingWebsites: "正在读取网页内容",
+			readingWebsitesDone: "网页内容读取完成",
+			websitesLoaded: "已加载 {count} 个网页",
 			indexing: "正在索引",
 			file: "文件",
 			chunkIndexed: "块已索引",
@@ -91,6 +120,7 @@ export default {
 			viewDetails: "查看详情"
 		},
 		input: {
+			search: "搜索",
 			submit: "提交",
 			collectedModels: "收集的模型",
 			loading: "加载中...",
@@ -196,14 +226,63 @@ export default {
 		// 模型设置部分
 		ApiProvider: {
 			label: 'LLM 提供商：',
+			labelDescription: '选择您想要使用的 LLM 提供商，支持配置多个提供商，API 密钥将安全保存在本地',
 			useCustomBaseUrl: '使用自定义基础 URL',
+			useCustomBaseUrlDescription: '为该提供商使用自定义的API端点URL',
 			enterApiKey: '输入您的 API 密钥',
+			enterApiKeyDescription: 'API Key 可以从官方网站{provider_api_url}获取',
 			enterCustomUrl: '输入您的自定义 API 端点 URL',
 		},
 		Models: {
 			chatModel: '聊天模型：',
+			chatModelDescription: '用于日常对话和问答的模型，处理大部分聊天交互',
 			autocompleteModel: '自动补全模型：',
+			autocompleteModelDescription: '用于代码和文本自动补全的模型，提供智能写作建议',
 			embeddingModel: '嵌入模型：',
+			embeddingModelDescription: '用于文档向量化和语义搜索的模型，支持 RAG 功能',
+		},
+		
+		// 模型提供商设置
+		ModelProvider: {
+			noApiKeySet: '当前未设置任何 API Key',
+			setApiKey: '设置 {provider} API Key',
+			modelSelection: '模型选择',
+			oneClickConfig: '一键配置',
+			oneClickConfigTooltip: '自动配置模型为已设置 API Key 的提供商的推荐模型',
+			chatModelConfigured: '已自动配置聊天模型：{provider}/{model}',
+			autocompleteModelConfigured: '已自动配置自动补全模型：{provider}/{model}',
+			embeddingModelConfigured: '已自动配置嵌入模型：{provider}/{model}',
+			provider: '提供商',
+			model: '模型',
+			selectModel: '选择模型...',
+			searchOrEnterModelName: '搜索或输入模型名称...',
+			enterCustomModelName: '输入自定义模型名称',
+			custom: '自定义: ',
+			testConnection: {
+				testApiConnection: '测试 API 连接',
+				testingConnection: '正在测试连接...',
+				connectionSuccess: '连接测试成功',
+				connectionFailed: '连接测试失败',
+				notSupported: '不支持测试 {provider} 的 API 连接',
+				invalidApiKey: 'API Key 无效或缺失',
+				invalidBaseUrl: '基础 URL 设置错误',
+				requestTimeout: '请求超时，请检查网络连接',
+				networkError: '网络连接失败',
+				unauthorizedError: 'API Key 授权失败',
+				forbiddenError: '访问被拒绝，请检查 API Key 权限',
+				rateLimitError: '请求频率过高，请稍后重试',
+				serverError: '服务器内部错误',
+				noDefaultModel: '{provider} 没有可用的默认模型',
+				invalidResponse: '响应格式无效',
+				// UI 文本
+				showApiKey: '显示 API Key',
+				hideApiKey: '隐藏 API Key',
+				testConnectionTooltip: '测试 API 连接',
+				testing: '测试中',
+				success: '成功',
+				failed: '失败',
+				test: '测试',
+			},
 		},
 		
 		// 模型参数部分
@@ -406,7 +485,7 @@ export default {
 			noErrors: "没有错误记录",
 			parameters: "参数",
 			toolNoDescription: "无描述",
-			useMcpToolFrom: "Use MCP tool from",
+			useMcpToolFrom: "使用来自以下的 MCP 工具：",
 		}
 	}
 };

@@ -1,14 +1,20 @@
-import { NotebookPen, Server, SquareSlash } from 'lucide-react';
+import { NotebookPen, Search, Server, SquareSlash } from 'lucide-react';
 import React from 'react';
 
 import { t } from '../../lang/helpers';
 
 interface HelloInfoProps {
-	onNavigate: (tab: 'commands' | 'custom-mode' | 'mcp') => void;
+	onNavigate: (tab: 'commands' | 'custom-mode' | 'mcp' | 'search') => void;
 }
 
 const HelloInfo: React.FC<HelloInfoProps> = ({ onNavigate }) => {
 	const navigationItems = [
+		{
+			label: '语义搜索',
+			description: '使用 RAG 在笔记库中进行语义搜索',
+			icon: <Search size={20} />,
+			action: () => onNavigate('search'),
+		},
 		{
 			label: t('chat.navigation.commands'),
 			description: t('chat.navigation.commandsDesc'),

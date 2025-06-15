@@ -1,4 +1,39 @@
 releases:
+  - version: "0.6.10"
+    features:
+      - "update chat history view"
+      - "add vector search view"
+  - version: "0.6.9"
+    features:
+      - "Added search view"
+  - version: "0.6.8"
+    fixes:
+      - "fixed vector embedding memory leak"
+      - "update chat view style"
+  - version: "0.6.7"
+    fixes:
+      - "fixed pdf & md content null byte error"
+      - "fixed vector embedding memory leak"
+  - version: "0.6.6"
+    fixes:
+      - "fixed pdf content null byte error"
+  - version: "0.6.5"
+    fixes:
+      - "fixed openai provider test error"
+  - version: "0.6.4"
+    features:
+      - "Added batch embedding for siliconflow"
+
+  - version: "0.6.3"
+    features:
+      - "Added Core Search Plugin and Omnisearch Support for Local File Searching PR from @travertexs"
+      - "Added one-click configuration for model selection"
+      - "Added test connection for API key"
+  - version: "0.6.0"
+    features:
+      - "Added Infio built-in MCP (Model Control Protocol) support"
+      - "Optimized startup performance for faster loading times"
+      - "Support Infio provider MCP tools"
   - version: "0.5.2"
     features:
       - "Added Infio provider"

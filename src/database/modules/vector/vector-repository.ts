@@ -102,7 +102,7 @@ export class VectorRepository {
     const params = data.flatMap(vector => [
       vector.path,
       vector.mtime,
-      vector.content,
+      vector.content.replace(/\0/g, ''), // 清理null字节
       `[${vector.embedding.join(',')}]`,  // 转换为PostgreSQL vector格式
       vector.metadata
     ])

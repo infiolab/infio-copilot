@@ -43,6 +43,7 @@ const context = await esbuild.context({
 		'@lezer/highlight',
 		'@lezer/lr',
 		'@lexical/clipboard/clipboard',
+		'pdfjs-dist',
 		...nodeBuiltins,
 	],
 	format: 'cjs',

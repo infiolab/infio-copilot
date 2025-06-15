@@ -258,6 +258,8 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
 			let fileContent: string;
 			try {
 				fileContent = await plugin.app.vault.cachedRead(activeFile);
+				// 清理null字节，防止PostgreSQL UTF8编码错误
+				fileContent = fileContent.replace(/\0/g, '');
 			} catch (err) {
 				const error = err as Error;
 				console.error(t("inlineEdit.readFileError"), error.message);
@@ -278,7 +280,9 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
 				return;
 			}
 
-			const oldContent = await plugin.app.vault.read(activeFile);
+			let oldContent = await plugin.app.vault.read(activeFile);
+			// 清理null字节，防止PostgreSQL UTF8编码错误
+			oldContent = oldContent.replace(/\0/g, '');
 			await plugin.app.workspace.getLeaf(true).setViewState({
 				type: APPLY_VIEW_TYPE,
 				active: true,

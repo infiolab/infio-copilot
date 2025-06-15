@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 
+import { ALIBABA_QWEN_BASE_URL } from '../../constants'
 import { LLMModel } from '../../types/llm/model'
 import {
   LLMOptions,
@@ -32,6 +33,24 @@ export class OpenAICompatibleProvider implements BaseLLMProvider {
     this.baseURL = baseURL
   }
 
+  // 检查是否为阿里云Qwen API
+  private isAlibabaQwen(): boolean {
+    return this.baseURL === ALIBABA_QWEN_BASE_URL || 
+           this.baseURL?.includes('dashscope.aliyuncs.com')
+  }
+
+  // 获取提供商特定的额外参数
+  private getExtraParams(isStreaming: boolean): Record<string, any> {
+    const extraParams: Record<string, any> = {}
+    
+    // 阿里云Qwen API需要在非流式调用中设置 enable_thinking: false
+    if (this.isAlibabaQwen() && !isStreaming) {
+      extraParams.enable_thinking = false
+    }
+    
+    return extraParams
+  }
+
   async generateResponse(
     model: LLMModel,
     request: LLMRequestNonStreaming,
@@ -43,7 +62,8 @@ export class OpenAICompatibleProvider implements BaseLLMProvider {
       )
     }
 
-    return this.adapter.generateResponse(this.client, request, options)
+    const extraParams = this.getExtraParams(false) // 非流式调用
+    return this.adapter.generateResponse(this.client, request, options, extraParams)
   }
 
   async streamResponse(
@@ -57,6 +77,7 @@ export class OpenAICompatibleProvider implements BaseLLMProvider {
       )
     }
 
-    return this.adapter.streamResponse(this.client, request, options)
+    const extraParams = this.getExtraParams(true) // 流式调用
+    return this.adapter.streamResponse(this.client, request, options, extraParams)
   }
 }

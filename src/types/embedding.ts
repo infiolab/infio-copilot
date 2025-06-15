@@ -17,5 +17,7 @@ export type EmbeddingModelOption = {
 export type EmbeddingModel = {
   id: string
   dimension: number
+  supportsBatch: boolean
   getEmbedding: (text: string) => Promise<number[]>
+  getBatchEmbeddings: (texts: string[]) => Promise<number[][]>
 }

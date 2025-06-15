@@ -56,7 +56,7 @@ export abstract class AbstractJsonRepository<T, M> {
   // List metadata for all records by parsing file names.
   public async listMetadata(): Promise<(M & { fileName: string })[]> {
     const files = await this.app.vault.adapter.list(this.dataDir)
-    return files.files
+    const result = files.files
       .map((filePath) => path.basename(filePath))
       .filter((fileName) => fileName.endsWith('.json'))
       .map((fileName) => {
@@ -66,6 +66,7 @@ export abstract class AbstractJsonRepository<T, M> {
       .filter(
         (metadata): metadata is M & { fileName: string } => metadata !== null,
       )
+    return result
   }
 
   public async read(fileName: string): Promise<T | null> {

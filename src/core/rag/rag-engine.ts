@@ -102,6 +102,7 @@ export class RAGEngine {
 	async processQuery({
 		query,
 		scope,
+		limit,
 		onQueryProgressChange,
 	}: {
 		query: string
@@ -109,6 +110,7 @@ export class RAGEngine {
 			files: string[]
 			folders: string[]
 		}
+		limit?: number
 		onQueryProgressChange?: (queryProgress: QueryProgressState) => void
 	}): Promise<
 		(Omit<SelectVector, 'embedding'> & {
@@ -121,9 +123,10 @@ export class RAGEngine {
 
 		await this.initializeDimension()
 
-		if (!this.initialized) {
-			await this.updateVaultIndex({ reindexAll: false }, onQueryProgressChange)
-		}
+		// if (!this.initialized) {
+		// 	console.log("need to updateVaultIndex")
+		// 	await this.updateVaultIndex({ reindexAll: false }, onQueryProgressChange)
+		// }
 		const queryEmbedding = await this.getEmbedding(query)
 		onQueryProgressChange?.({
 			type: 'querying',
@@ -133,7 +136,7 @@ export class RAGEngine {
 			this.embeddingModel,
 			{
 				minSimilarity: this.settings.ragOptions.minSimilarity,
-				limit: this.settings.ragOptions.limit,
+				limit: limit ?? this.settings.ragOptions.limit,
 				scope,
 			},
 		)

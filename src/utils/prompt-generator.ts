@@ -1,4 +1,4 @@
-import { App, MarkdownView, TAbstractFile, TFile, TFolder, Vault, getLanguage, htmlToMarkdown, requestUrl } from 'obsidian'
+import { App, MarkdownView, TAbstractFile, TFile, TFolder, Vault, getLanguage, htmlToMarkdown, normalizePath, requestUrl } from 'obsidian'
 
 import { editorStateToPlainText } from '../components/chat-view/chat-input/utils/editor-state-to-plain-text'
 import { QueryProgressState } from '../components/chat-view/QueryProgress'
@@ -6,8 +6,10 @@ import { DiffStrategy } from '../core/diff/DiffStrategy'
 import { McpHub } from '../core/mcp/McpHub'
 import { SystemPrompt } from '../core/prompts/system'
 import { RAGEngine } from '../core/rag/rag-engine'
+import { ConvertDataManager } from '../database/json/convert-data/ConvertDataManager'
+import { ConvertType } from '../database/json/convert-data/types'
 import { SelectVector } from '../database/schema'
-import { ChatAssistantMessage, ChatMessage, ChatUserMessage } from '../types/chat'
+import { ChatMessage, ChatUserMessage } from '../types/chat'
 import { ContentPart, RequestMessage } from '../types/llm/request'
 import {
 	MentionableBlock,
@@ -21,10 +23,12 @@ import { InfioSettings } from '../types/settings'
 import { CustomModePrompts, Mode, ModeConfig, getFullModeDetails } from "../utils/modes"
 
 import {
+	parsePdfContent,
 	readTFileContent
 } from './obsidian'
 import { tokenCount } from './token'
-import { YoutubeTranscript, isYoutubeUrl } from './youtube-transcript'
+import { isVideoUrl, isYoutubeUrl } from './video-detector'
+import { YoutubeTranscript } from './youtube-transcript'
 
 export function addLineNumbers(content: string, startLine: number = 1): string {
 	const lines = content.split("\n")
@@ -66,9 +70,20 @@ async function getFolderTreeContent(path: TFolder): Promise<string> {
 	}
 }
 
-async function getFileOrFolderContent(path: TAbstractFile, vault: Vault): Promise<string> {
+async function getFileOrFolderContent(
+	path: TAbstractFile,
+	vault: Vault,
+	app?: App
+): Promise<string> {
 	try {
 		if (path instanceof TFile) {
+			if (path.extension === 'pdf') {
+				// Handle PDF files without line numbers
+				if (app) {
+					return await parsePdfContent(path, app)
+				}
+				return "(PDF file, app context required for processing)"
+			}
 			if (path.extension != 'md') {
 				return "(Binary file, unable to display content)"
 			}
@@ -85,6 +100,14 @@ async function getFileOrFolderContent(path: TAbstractFile, vault: Vault): Promis
 					fileContentPromises.push(
 						(async () => {
 							try {
+								if (entry.extension === 'pdf') {
+									// Handle PDF files in folders
+									if (app) {
+										const content = await parsePdfContent(entry, app)
+										return `<file_content path="${entry.path}">\n${content}\n</file_content>`
+									}
+									return `<file_content path="${entry.path}">\n(PDF file, app context required for processing)\n</file_content>`
+								}
 								if (entry.extension != 'md') {
 									return undefined
 								}
@@ -120,6 +143,7 @@ export class PromptGenerator {
 	private customModePrompts: CustomModePrompts | null = null
 	private customModeList: ModeConfig[] | null = null
 	private getMcpHub: () => Promise<McpHub> | null = null
+	private convertDataManager: ConvertDataManager
 	private static readonly EMPTY_ASSISTANT_MESSAGE: RequestMessage = {
 		role: 'assistant',
 		content: '',
@@ -142,6 +166,7 @@ export class PromptGenerator {
 		this.customModePrompts = customModePrompts ?? null
 		this.customModeList = customModeList ?? null
 		this.getMcpHub = getMcpHub ?? null
+		this.convertDataManager = new ConvertDataManager(app)
 	}
 
 	public async generateRequestMessages({
@@ -165,7 +190,7 @@ export class PromptGenerator {
 		}
 		const isNewChat = messages.filter(message => message.role === 'user').length === 1
 
-		const { promptContent, similaritySearchResults } =
+		const { promptContent, similaritySearchResults, fileReadResults, websiteReadResults } =
 			await this.compileUserMessagePrompt({
 				isNewChat,
 				message: lastUserMessage,
@@ -179,6 +204,8 @@ export class PromptGenerator {
 				...lastUserMessage,
 				promptContent,
 				similaritySearchResults,
+				fileReadResults,
+				websiteReadResults,
 			},
 		]
 
@@ -196,18 +223,18 @@ export class PromptGenerator {
 			...compiledMessages.slice(-19)
 				.filter((message) => !(message.role === 'assistant' && message.isToolResult))
 				.map((message): RequestMessage => {
-				if (message.role === 'user') {
-					return {
-						role: 'user',
-						content: message.promptContent ?? '',
+					if (message.role === 'user') {
+						return {
+							role: 'user',
+							content: message.promptContent ?? '',
+						}
+					} else {
+						return {
+							role: 'assistant',
+							content: message.content,
+						}
 					}
-				} else {
-					return {
-						role: 'assistant',
-						content: message.content,
-					}
-				}
-			}),
+				}),
 		]
 
 		return {
@@ -299,6 +326,8 @@ export class PromptGenerator {
 		similaritySearchResults?: (Omit<SelectVector, 'embedding'> & {
 			similarity: number
 		})[]
+		fileReadResults?: Array<{ path: string, content: string }>
+		websiteReadResults?: Array<{ url: string, content: string }>
 	}> {
 		// Add environment details
 		// const environmentDetails = isNewChat
@@ -330,27 +359,138 @@ export class PromptGenerator {
 
 		const taskPrompt = isNewChat ? `<task>\n${query}\n</task>` : `<feedback>\n${query}\n</feedback>`
 
+		// 收集所有读取结果用于显示
+		const allFileReadResults: Array<{ path: string, content: string }> = []
+		const allWebsiteReadResults: Array<{ url: string, content: string }> = []
+
 		// user mention files
 		const files = message.mentionables
 			.filter((m): m is MentionableFile => m.type === 'file')
 			.map((m) => m.file)
-		let fileContentsPrompts = files.length > 0
-			? (await Promise.all(files.map(async (file) => {
-				const content = await getFileOrFolderContent(file, this.app.vault)
-				return `<file_content path="${file.path}">\n${content}\n</file_content>`
-			}))).join('\n')
-			: undefined
+		let fileContentsPrompts: string | undefined = undefined
+		if (files.length > 0) {
+			// 初始化文件读取进度
+			onQueryProgressChange?.({
+				type: 'reading-files',
+				totalFiles: files.length,
+				completedFiles: 0
+			})
+
+			// 确保UI有时间显示初始状态
+			await new Promise(resolve => setTimeout(resolve, 100))
+
+			const fileContents: string[] = []
+			const fileContentsForProgress: Array<{ path: string, content: string }> = []
+			let completedFiles = 0
+
+			for (const file of files) {
+				// 更新当前正在读取的文件
+				onQueryProgressChange?.({
+					type: 'reading-files',
+					currentFile: file.path,
+					totalFiles: files.length,
+					completedFiles: completedFiles
+				})
+
+				// 如果文件不是 md 文件且 mcpHub 存在，使用 MCP 工具转换
+				const mcpHub = await this.getMcpHub?.()
+				let content: string
+				let markdownFilePath = ''
+				if (file.extension !== 'md' && mcpHub?.isBuiltInServerAvailable()) {
+					[content, markdownFilePath] = await this.callMcpToolConvertDocument(file, mcpHub)
+				} else {
+					content = await getFileOrFolderContent(
+						file,
+						this.app.vault,
+						this.app
+					)
+				}
+
+				// 创建Markdown文件
+				markdownFilePath = markdownFilePath || await this.createMarkdownFileForContent(
+					file.path,
+					content,
+					false
+				)
+
+				completedFiles++
+				fileContents.push(`<file_content path="${file.path}">\n${content}\n</file_content>`)
+				fileContentsForProgress.push({ path: markdownFilePath, content })
+				allFileReadResults.push({ path: markdownFilePath, content })
+			}
+
+			// 文件读取完成
+			onQueryProgressChange?.({
+				type: 'reading-files-done',
+				fileContents: fileContentsForProgress
+			})
+
+			// 让用户看到完成状态
+			await new Promise(resolve => setTimeout(resolve, 200))
+
+			fileContentsPrompts = fileContents.join('\n')
+		}
 
 		// user mention folders
 		const folders = message.mentionables
 			.filter((m): m is MentionableFolder => m.type === 'folder')
 			.map((m) => m.folder)
-		let folderContentsPrompts = folders.length > 0
-			? (await Promise.all(folders.map(async (folder) => {
-				const content = await getFileOrFolderContent(folder, this.app.vault)
-				return `<folder_content path="${folder.path}">\n${content}\n</folder_content>`
-			}))).join('\n')
-			: undefined
+		let folderContentsPrompts: string | undefined = undefined
+		if (folders.length > 0) {
+			// 初始化文件夹读取进度（如果之前没有文件需要读取）
+			if (files.length === 0) {
+				onQueryProgressChange?.({
+					type: 'reading-files',
+					totalFiles: folders.length,
+					completedFiles: 0
+				})
+			}
+
+			const folderContents: string[] = []
+			const folderContentsForProgress: Array<{ path: string, content: string }> = []
+			let completedFolders = 0
+
+			for (const folder of folders) {
+				// 更新当前正在读取的文件夹
+				onQueryProgressChange?.({
+					type: 'reading-files',
+					currentFile: folder.path,
+					totalFiles: folders.length,
+					completedFiles: completedFolders
+				})
+
+				const content = await getFileOrFolderContent(
+					folder,
+					this.app.vault,
+					this.app
+				)
+
+				// // 为文件夹内容创建Markdown文件
+				// const markdownFilePath = await this.createMarkdownFileForContent(
+				// 	`${folder.path}/folder-contents`,
+				// 	content,
+				// 	false
+				// )
+
+				completedFolders++
+				folderContents.push(`<folder_content path="${folder.path}">\n${content}\n</folder_content>`)
+				folderContentsForProgress.push({ path: folder.path, content })
+				allFileReadResults.push({ path: folder.path, content })
+			}
+
+			// 文件夹读取完成（如果之前没有文件需要读取）
+			if (files.length === 0) {
+				onQueryProgressChange?.({
+					type: 'reading-files-done',
+					fileContents: folderContentsForProgress
+				})
+
+				// 让用户看到完成状态
+				await new Promise(resolve => setTimeout(resolve, 200))
+			}
+
+			folderContentsPrompts = folderContents.join('\n')
+		}
 
 		// user mention blocks
 		const blocks = message.mentionables.filter(
@@ -369,16 +509,60 @@ export class PromptGenerator {
 		const urls = message.mentionables.filter(
 			(m): m is MentionableUrl => m.type === 'url',
 		)
-		const urlContents = await Promise.all(
-			urls.map(async ({ url }) => ({
-				url,
-				content: await this.getWebsiteContent(url)
-			}))
-		)
+		const urlContents: Array<{ url: string, content: string }> = []
+		if (urls.length > 0) {
+			// 初始化网页读取进度
+			onQueryProgressChange?.({
+				type: 'reading-websites',
+				totalUrls: urls.length,
+				completedUrls: 0
+			})
+
+			// 确保UI有时间显示初始状态
+			await new Promise(resolve => setTimeout(resolve, 100))
+
+			let completedUrls = 0
+
+			const mcpHub = await this.getMcpHub()
+
+			for (const { url } of urls) {
+				// 更新当前正在读取的网页
+				onQueryProgressChange?.({
+					type: 'reading-websites',
+					currentUrl: url,
+					totalUrls: urls.length,
+					completedUrls: completedUrls
+				})
+
+				const [content, mcpContentPath] = await this.getWebsiteContent(url, mcpHub)
+				// 从内容中提取标题
+				const websiteTitle = this.extractTitleFromWebsiteContent(content, url)
+
+				const contentPath = mcpContentPath || await this.createMarkdownFileForContent(
+					url,
+					content,
+					true,
+					websiteTitle
+				)
+
+				completedUrls++
+				urlContents.push({ url: contentPath, content })
+				allWebsiteReadResults.push({ url: contentPath, content })
+			}
+
+			// 网页读取完成
+			onQueryProgressChange?.({
+				type: 'reading-websites-done',
+				websiteContents: urlContents
+			})
+
+			// 让用户看到完成状态
+			await new Promise(resolve => setTimeout(resolve, 200))
+		}
 		const urlContentsPrompt = urlContents.length > 0
 			? urlContents
 				.map(({ url, content }) => (
-					`<url_content url="${url}">\n${content}\n</url_content>`
+					`<file_content path="${url}">\n${content}\n</file_content>`
 				))
 				.join('\n') : undefined
 
@@ -386,9 +570,54 @@ export class PromptGenerator {
 		const currentFile = message.mentionables
 			.filter((m): m is MentionableFile => m.type === 'current-file')
 			.first()
-		const currentFileContent = currentFile && currentFile.file != null
-			? await getFileOrFolderContent(currentFile.file, this.app.vault)
-			: undefined
+		let currentFileContent: string | undefined = undefined
+		if (currentFile && currentFile.file != null) {
+			// 初始化当前文件读取进度（如果之前没有其他文件或文件夹需要读取）
+			if (files.length === 0 && folders.length === 0) {
+				onQueryProgressChange?.({
+					type: 'reading-files',
+					currentFile: currentFile.file.path,
+					totalFiles: 1,
+					completedFiles: 0
+				})
+			}
+
+			// 如果当前文件不是 md 文件且 mcpHub 存在，使用 MCP 工具转换
+			const mcpHub = await this.getMcpHub?.()
+			let currentMarkdownFilePath = ''
+			if (currentFile.file.extension !== 'md' && mcpHub?.isBuiltInServerAvailable()) {
+				const [mcpCurrFileContent, mcpCurrFileContentPath] = await this.callMcpToolConvertDocument(currentFile.file, mcpHub)
+				currentFileContent = mcpCurrFileContent
+				currentMarkdownFilePath = mcpCurrFileContentPath
+			} else {
+				currentFileContent = await getFileOrFolderContent(
+					currentFile.file,
+					this.app.vault,
+					this.app
+				)
+			}
+
+			// 为当前文件创建Markdown文件
+			currentMarkdownFilePath = currentMarkdownFilePath || await this.createMarkdownFileForContent(
+				currentFile.file.path,
+				currentFileContent,
+				false
+			)
+
+			// 添加当前文件到读取结果中
+			allFileReadResults.push({ path: currentMarkdownFilePath, content: currentFileContent })
+
+			// 当前文件读取完成（如果之前没有其他文件或文件夹需要读取）
+			if (files.length === 0 && folders.length === 0) {
+				onQueryProgressChange?.({
+					type: 'reading-files-done',
+					fileContents: [{ path: currentMarkdownFilePath, content: currentFileContent }]
+				})
+
+				// 让用户看到完成状态
+				await new Promise(resolve => setTimeout(resolve, 200))
+			}
+		}
 
 		// Check if current file content should be included
 		let shouldIncludeCurrentFile = false
@@ -436,18 +665,23 @@ export class PromptGenerator {
 			}
 		}
 		if (isOverThreshold) {
+			console.log("isOverThreshold", isOverThreshold)
 			fileContentsPrompts = files.map((file) => {
 				return `<file_content path="${file.path}">\n(Content omitted due to token limit. Relevant sections will be provided by semantic search below.)\n</file_content>`
 			}).join('\n')
-			folderContentsPrompts = folders.map(async (folder) => {
+			folderContentsPrompts = (await Promise.all(folders.map(async (folder) => {
 				const tree_content = await getFolderTreeContent(folder)
 				return `<folder_content path="${folder.path}">\n${tree_content}\n(Content omitted due to token limit. Relevant sections will be provided by semantic search below.)\n</folder_content>`
-			}).join('\n')
+			}))).join('\n')
 		}
 
 		const shouldUseRAG = useVaultSearch || isOverThreshold
 		let similaritySearchContents
 		if (shouldUseRAG) {
+			// 重置进度状态，准备进入RAG阶段
+			onQueryProgressChange?.({
+				type: 'reading-mentionables',
+			})
 			similaritySearchResults = useVaultSearch
 				? await (
 					await this.getRagEngine()
@@ -511,6 +745,8 @@ export class PromptGenerator {
 				)
 			],
 			similaritySearchResults,
+			fileReadResults: allFileReadResults.length > 0 ? allFileReadResults : undefined,
+			websiteReadResults: allWebsiteReadResults.length > 0 ? allWebsiteReadResults : undefined,
 		}
 	}
 
@@ -744,24 +980,357 @@ When writing out new markdown blocks, remember not to include "line_number|" at 
 		return linesWithNumbers.join('\n')
 	}
 
+
 	/**
 	 * TODO: Improve markdown conversion logic
 	 * - filter visually hidden elements
 	 * ...
 	 */
-	private async getWebsiteContent(url: string): Promise<string> {
+	private async getWebsiteContent(url: string, mcpHub: McpHub | null): Promise<[string, string]> {
+
+		const mcpHubAvailable = mcpHub?.isBuiltInServerAvailable()
+
+		if (mcpHubAvailable && isVideoUrl(url)) {
+			const [md, mdPath] = await this.callMcpToolConvertVideo(url, mcpHub)
+			return [md, mdPath]
+		}
+
 		if (isYoutubeUrl(url)) {
 			// TODO: pass language based on user preferences
 			const { title, transcript } =
 				await YoutubeTranscript.fetchTranscriptAndMetadata(url)
 
-			return `Title: ${title}
+			return [
+				`Title: ${title}
 Video Transcript:
-${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`
+${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`,
+				''
+			]
 		}
 
 		const response = await requestUrl({ url })
 
-		return htmlToMarkdown(response.text)
+		return [htmlToMarkdown(response.text), '']
+	}
+
+	private async callMcpToolConvertVideo(url: string, mcpHub: McpHub): Promise<[string, string]> {
+		// 首先检查缓存
+		const cachedData = await this.convertDataManager.findBySource(url)
+		if (cachedData) {
+			console.log(`Using cached video conversion for: ${url}`)
+			return [cachedData.content, cachedData.contentPath]
+		}
+
+		// 如果没有缓存，进行转换
+		const response = await mcpHub.callTool(
+			'infio-builtin-server',
+			'CONVERT_VIDEO',
+			{ url, detect_language: 'en' }
+		)
+
+		// 处理图片内容并获取图片引用
+		// @ts-ignore
+		await this.processImagesInResponse(response.content)
+
+		const textContent = response.content.find((c) => c.type === 'text')
+		// @ts-ignore
+		const md = textContent?.text as string || ''
+
+		// 创建Markdown文件
+		const websiteTitle = this.extractTitleFromWebsiteContent(md, url)
+
+		// 为网页内容创建Markdown文件
+		const mdPath = await this.createMarkdownFileForContent(
+			url,
+			md,
+			true,
+			websiteTitle,
+		)
+
+		// 异步保存到缓存（不等待，避免阻塞）
+		this.saveConvertDataToCache(url, 'CONVERT_VIDEO', md, mdPath, url).catch(error => {
+			console.error('Failed to save video conversion to cache:', error)
+		})
+
+		return [md, mdPath]
+	}
+
+	private async callMcpToolConvertDocument(file: TFile, mcpHub: McpHub): Promise<[string, string]> {
+		// 首先检查缓存
+		const cachedData = await this.convertDataManager.findBySource(file.path)
+		if (cachedData) {
+			console.log(`Using cached document conversion for: ${file.path}`)
+			return [cachedData.content, cachedData.contentPath]
+		}
+
+		// 如果没有缓存，进行转换
+		// 读取文件的二进制内容并转换为Base64
+		const fileBuffer = await this.app.vault.readBinary(file)
+
+		// 安全地转换为Base64，避免堆栈溢出
+		const uint8Array = new Uint8Array(fileBuffer)
+		let binaryString = ''
+		const chunkSize = 8192 // 处理块大小
+
+		for (let i = 0; i < uint8Array.length; i += chunkSize) {
+			const chunk = uint8Array.slice(i, i + chunkSize)
+			binaryString += String.fromCharCode.apply(null, Array.from(chunk))
+		}
+
+		const base64Content = btoa(binaryString)
+
+		// 提取文件扩展名（不带点）
+		const fileType = file.extension
+
+		const response = await mcpHub.callTool(
+			'infio-builtin-server',
+			'CONVERT_DOCUMENT',
+			{
+				file_content: base64Content,
+				file_type: fileType
+			}
+		)
+
+		// 处理图片内容并获取图片引用
+		// @ts-ignore
+		await this.processImagesInResponse(response.content)
+
+		// @ts-ignore
+		const textContent = response.content.find((c: { type: string; text?: string }) => c.type === 'text')
+		// @ts-ignore
+		const md = textContent?.text as string || ''
+
+		// 创建Markdown文件
+		const mdPath = await this.createMarkdownFileForContent(file.path, md, false, file.name)
+
+		// 异步保存到缓存
+		this.saveConvertDataToCache(file.path, 'CONVERT_DOCUMENT', md, mdPath, file.name).catch(error => {
+			console.error('Failed to save document conversion to cache:', error)
+		})
+
+		return [md, mdPath]
+	}
+
+	/**
+	 * 为文件内容创建Markdown文件
+	 */
+	private async createMarkdownFileForContent(
+		originalPath: string,
+		content: string,
+		isWebsite: boolean = false,
+		websiteTitle?: string
+	): Promise<string> {
+		try {
+			let targetPath: string
+
+			if (isWebsite) {
+				// 网页内容保存到根目录
+				const fileName = this.sanitizeFileName(websiteTitle || 'website')
+				targetPath = `${fileName}.md`
+			} else {
+				// 如果原文件已经是.md文件，直接返回原路径，不重复创建
+				if (originalPath.endsWith('.md')) {
+					return originalPath
+				}
+
+				// 文件内容保存到同路径下的.md文件
+				const pathWithoutExt = originalPath.replace(/\.[^/.]+$/, "")
+				targetPath = `${pathWithoutExt}.md`
+			}
+
+			// 处理文件名冲突
+			targetPath = await this.getUniqueFilePath(targetPath)
+
+			// 创建文件内容
+			let markdownContent = content
+			if (isWebsite) {
+				markdownContent = `# ${websiteTitle || 'Website Content'}\n\n> Source: ${originalPath}\n\n${content}`
+			} else {
+				markdownContent = `# ${originalPath}\n\n${content}`
+			}
+
+			// 创建文件
+			const file = await this.app.vault.create(targetPath, markdownContent)
+
+			// 在新标签页中打开文件
+			this.app.workspace.getLeaf('tab').openFile(file)
+
+			return file.path
+		} catch (error) {
+			console.error('Failed to create markdown file:', error)
+			return ""
+		}
+	}
+
+	/**
+	 * 清理文件名，移除不合法字符
+	 */
+	private sanitizeFileName(fileName: string): string {
+		return fileName
+			.replace(/[<>:"/\\|?*]/g, '-') // 替换不合法字符
+			.replace(/\s+/g, '-') // 替换空格
+			.replace(/-+/g, '-') // 合并连续的横线
+			.replace(/^-|-$/g, '') // 移除开头和结尾的横线
+			.substring(0, 100) // 限制长度
+	}
+
+	/**
+	 * 获取唯一的文件路径（处理重名冲突）
+	 */
+	private async getUniqueFilePath(targetPath: string): Promise<string> {
+		const normalizedPath = normalizePath(targetPath)
+
+		if (!this.app.vault.getAbstractFileByPath(normalizedPath)) {
+			return normalizedPath
+		}
+
+		const pathParts = normalizedPath.split('.')
+		const extension = pathParts.pop()
+		const basePath = pathParts.join('.')
+
+		let counter = 1
+		let uniquePath: string
+
+		do {
+			uniquePath = `${basePath}-${counter}.${extension}`
+			counter++
+		} while (this.app.vault.getAbstractFileByPath(uniquePath))
+
+		return uniquePath
+	}
+
+	/**
+	 * 从网页内容中提取标题
+	 */
+	private extractTitleFromWebsiteContent(content: string, url: string): string {
+		// 尝试从内容中提取标题
+		const titleRegex1 = /^#\s+(.+)$/m
+		const titleRegex2 = /Title:\s*(.+)$/m
+		const titleMatch = titleRegex1.exec(content) || titleRegex2.exec(content)
+		if (titleMatch && titleMatch[1]) {
+			return titleMatch[1].trim()
+		}
+
+		// 如果没有找到标题，使用域名
+		try {
+			return new URL(url).hostname
+		} catch {
+			return 'website'
+		}
+	}
+
+	/**
+	 * 处理响应中的图片内容，将base64图片保存到Obsidian资源目录
+	 */
+	private async processImagesInResponse(content: Array<{ type: string, data: string, filename: string, mimeType?: string }>): Promise<string[]> {
+		const savedImagePaths: string[] = []
+
+		for (const item of content) {
+			if (item.type === 'image' && item.data && item.filename) {
+				try {
+					const imagePath = await this.saveImageFromBase64(item.data, item.filename, item.mimeType)
+					savedImagePaths.push(imagePath)
+				} catch (error) {
+					console.error('Failed to save image:', error)
+				}
+			}
+		}
+
+		return savedImagePaths
+	}
+
+	/**
+	 * 根据 MIME 类型获取图片扩展名
+	 */
+	private getImageExtensionFromMimeType(mimeType?: string): string {
+		if (!mimeType) return 'png'
+
+		const extensionMap: Record<string, string> = {
+			'image/jpeg': 'jpg',
+			'image/jpg': 'jpg',
+			'image/png': 'png',
+			'image/gif': 'gif',
+			'image/webp': 'webp',
+			'image/svg+xml': 'svg',
+		}
+
+		return extensionMap[mimeType.toLowerCase()] || 'png'
+	}
+
+	/**
+	 * 保存转换数据到缓存
+	 */
+	private async saveConvertDataToCache(
+		source: string,
+		type: ConvertType,
+		content: string,
+		contentPath: string,
+		name?: string
+	): Promise<void> {
+		try {
+			// 生成名称
+			let displayName = name
+			if (!displayName) {
+				if (type === 'CONVERT_VIDEO') {
+					// 从URL提取名称
+					try {
+						const url = new URL(source)
+						displayName = url.hostname + url.pathname
+					} catch {
+						displayName = source
+					}
+				} else {
+					// 从文件路径提取名称
+					displayName = source.split('/').pop() || source
+				}
+			}
+
+			// 保存到数据库
+			await this.convertDataManager.createConvertData({
+				name: displayName,
+				type,
+				source,
+				contentPath,
+				content,
+			})
+
+			console.log(`Saved conversion data to cache: ${source}`)
+		} catch (error) {
+			console.error('Failed to save conversion data to cache:', error)
+			throw error
+		}
+	}
+
+	/**
+	 * 将base64图片数据保存为文件到Obsidian资源目录
+	 */
+	private async saveImageFromBase64(base64Data: string, filename: string, mimeType?: string): Promise<string> {
+		// 获取默认资源目录
+		// @ts-ignore
+		const staticResourceDir = this.app.vault.getConfig("attachmentFolderPath")
+
+		// 构建完整的文件路径
+		const targetPath = staticResourceDir ? normalizePath(`${staticResourceDir}/${filename}`) : filename
+
+		// 处理文件名冲突
+		// const uniquePath = await this.getUniqueFilePath(targetPath)
+
+		try {
+			// 将base64数据转换为ArrayBuffer
+			const binaryString = atob(base64Data)
+			const bytes = new Uint8Array(binaryString.length)
+			for (let i = 0; i < binaryString.length; i++) {
+				bytes[i] = binaryString.charCodeAt(i)
+			}
+
+			// 创建图片文件
+			await this.app.vault.createBinary(targetPath, bytes.buffer)
+
+			console.log(`Image saved: ${targetPath}`)
+			return targetPath
+		} catch (error) {
+			console.error(`Failed to save image to ${targetPath}:`, error)
+			throw error
+		}
 	}
 }

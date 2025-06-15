@@ -1,10 +1,10 @@
 import { App, TFile, View } from "obsidian";
 import {
     MAX_RESULTS,
-	truncateLine,
-	buildLineIndexs,
+    truncateLine,
+    buildLineIndexs,
     lineIndex,
-	findLineIndexBS,
+    findLineIndexBS,
     SearchResult,
     formatResults,
 } from '../search-common';
@@ -106,10 +106,10 @@ export async function matchSearchUsingCorePlugin(
                 !file || !(file instanceof TFile) ||
                 !fileMatches.content || fileMatches.content.length === 0
             ) {
-				continue;
-			}
-			const lines = fileMatches.content.split('\n');
-			const indexs = buildLineIndexs(lines);
+                continue;
+            }
+            const lines = fileMatches.content.split('\n');
+            const indexs = buildLineIndexs(lines);
 
             for (const [startOffset, endOffset] of fileMatches.result.content) {
                 if (results.length >= MAX_RESULTS) {
@@ -134,7 +134,8 @@ export async function matchSearchUsingCorePlugin(
                 const finalLines = 
                     truncateLine(match, columnStart, Math.min(columnEnd, match.length - 1)).split('\n');
                 finalLines.forEach((line, index) => {
-                    finalLines.splice(index, 1, line.trimEnd());
+                    // Clean up null bytes to prevent PostgreSQL UTF8 encoding errors
+                    finalLines.splice(index, 1, line.replace(/\0/g, '').trimEnd());
                 });
 
                 results.push({
@@ -142,23 +143,25 @@ export async function matchSearchUsingCorePlugin(
                     match: finalLines,
                     precedingContext:
                         lineIndexs[0].line > 0
-                            ? [truncateLine(lines[lineIndexs[0].line - 1].trimEnd(), 0)]
+                            // Clean up null bytes to prevent PostgreSQL UTF8 encoding errors
+                            ? [truncateLine(lines[lineIndexs[0].line - 1].replace(/\0/g, '').trimEnd(), 0)]
                             : [],
                     succeedingContext:
                         lineIndexs[1].line < lines.length - 1
-                            ? [truncateLine(lines[lineIndexs[1].line + 1].trimEnd(), 0)]
+                            // Clean up null bytes to prevent PostgreSQL UTF8 encoding errors
+                            ? [truncateLine(lines[lineIndexs[1].line + 1].replace(/\0/g, '').trimEnd(), 0)]
                             : [],
                 });
             }
         }
 
-		if (results.length === 0) {
-			return "No results found.";
-		}
+        if (results.length === 0) {
+            return "No results found.";
+        }
 
         return formatResults(results);
     } catch (error) {
-		console.error("Error during core plugin processing:", error);
-		return `An error occurred during the search: ${error}`;
-	}
+        console.error("Error during core plugin processing:", error);
+        return `An error occurred during the search: ${error}`;
+    }
 }

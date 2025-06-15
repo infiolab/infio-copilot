@@ -20,7 +20,10 @@ export default {
 			conversationNotFound: "Conversation not found",
 			fileNotFound: "File not found: {{path}}",
 			failedToApplyEditChanges: "Failed to apply edit changes",
-			failedToSearchAndReplace: "Failed to search and replace"
+			failedToSearchAndReplace: "Failed to search and replace",
+			failedToDeleteConversation: "Failed to delete conversation",
+			titleRequired: "Title is required",
+			failedToUpdateTitle: "Failed to update title"
 		},
 		apply: {
 			changesApplied: "Changes successfully applied",
@@ -30,7 +33,21 @@ export default {
 			noResultsFound: "No results found for '{{query}}'"
 		},
 		history: {
-			noConversations: "No conversations"
+			title: "Chat History",
+			description: "Manage your conversation history and switch between different chats",
+			noConversations: "No conversations",
+			noSearchResults: "No search results found",
+			noMatchingChats: "No matching chats found",
+			noChats: "No chats available",
+			newChat: "New Chat",
+			searchPlaceholder: "Search conversations...",
+			editTitle: "Edit title",
+			deleteChat: "Delete chat",
+			deleteConversation: "Delete conversation",
+			save: "Save",
+			cancel: "Cancel",
+			yesterday: "Yesterday",
+			daysAgo: "days ago"
 		},
 		shortcutInfo: {
 			editInline: "Edit inline",
@@ -39,6 +56,12 @@ export default {
 		},
 		searchResults: {
 			showReferencedDocuments: "Show Referenced Documents"
+		},
+		fileResults: {
+			showReadFiles: "Show Read Files"
+		},
+		websiteResults: {
+			showReadWebsites: "Show Website Content Files"
 		},
 		LLMResponseInfoPopover: {
 			header: "LLM response information",
@@ -53,6 +76,12 @@ export default {
 		},
 		queryProgress: {
 			readingMentionableFiles: "Reading mentioned files",
+			readingFiles: "Reading files",
+			readingFilesDone: "Files read successfully",
+			filesLoaded: "{count} files loaded",
+			readingWebsites: "Reading websites",
+			readingWebsitesDone: "Websites read successfully",
+			websitesLoaded: "{count} websites loaded",
 			indexing: "Indexing",
 			file: "file",
 			chunkIndexed: "chunk indexed",
@@ -195,14 +224,63 @@ export default {
 		// Models Section
 		ApiProvider: {
 			label: 'Api provider:',
+			labelDescription: 'Select the LLM provider you want to use. Multiple providers can be configured, and API keys are securely stored locally',
 			useCustomBaseUrl: 'Use custom base url',
+			useCustomBaseUrlDescription: 'Use custom API endpoint URL for this provider',
 			enterApiKey: 'Enter your api key',
+			enterApiKeyDescription: 'API Key can be obtained from their official website{provider_api_url}',
 			enterCustomUrl: 'Enter your custom api endpoint url',
 		},
 		Models: {
 			chatModel: 'Chat model:',
+			chatModelDescription: 'Model used for daily conversations and Q&A, handling most chat interactions',
 			autocompleteModel: 'Autocomplete model:',
+			autocompleteModelDescription: 'Model used for code and text autocompletion, providing intelligent writing suggestions',
 			embeddingModel: 'Embedding model:',
+			embeddingModelDescription: 'Model used for document vectorization and semantic search, supporting RAG functionality',
+		},
+		
+		// Model Provider Settings
+		ModelProvider: {
+			noApiKeySet: 'No API key has been set',
+			setApiKey: 'Set {provider} API Key',
+			modelSelection: 'Model Selection',
+			oneClickConfig: 'One-Click Config',
+			oneClickConfigTooltip: 'Automatically configure models to recommended models from providers with API keys set',
+			chatModelConfigured: 'Chat model configured automatically: {provider}/{model}',
+			autocompleteModelConfigured: 'Autocomplete model configured automatically: {provider}/{model}',
+			embeddingModelConfigured: 'Embedding model configured automatically: {provider}/{model}',
+			provider: 'Provider',
+			model: 'Model',
+			selectModel: 'Select model...',
+			searchOrEnterModelName: 'Search or enter model name...',
+			enterCustomModelName: 'Enter custom model name',
+			custom: 'Custom: ',
+			testConnection: {
+				testApiConnection: 'Test API Connection',
+				testingConnection: 'Testing connection...',
+				connectionSuccess: 'Connection test successful',
+				connectionFailed: 'Connection test failed',
+				notSupported: 'Testing {provider} API connection is not supported',
+				invalidApiKey: 'Invalid or missing API key',
+				invalidBaseUrl: 'Invalid base URL configuration',
+				requestTimeout: 'Request timeout, please check network connection',
+				networkError: 'Network connection failed',
+				unauthorizedError: 'API key authorization failed',
+				forbiddenError: 'Access denied, please check API key permissions',
+				rateLimitError: 'Rate limit exceeded, please try again later',
+				serverError: 'Internal server error',
+				noDefaultModel: 'No default model available for {provider}',
+				invalidResponse: 'Invalid response format',
+				// UI text
+				showApiKey: 'Show API Key',
+				hideApiKey: 'Hide API Key',
+				testConnectionTooltip: 'Test API connection',
+				testing: 'Testing',
+				success: 'Success',
+				failed: 'Failed',
+				test: 'Test',
+			},
 		},
 		
 		// Model Parameters Section

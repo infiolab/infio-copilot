@@ -35,6 +35,8 @@ export interface EmbeddingModelInfo {
 // https://docs.anthropic.com/en/docs/about-claude/models
 export type AnthropicModelId = keyof typeof anthropicModels
 export const anthropicDefaultModelId: AnthropicModelId = "claude-sonnet-4-20250514"
+export const anthropicDefaultAutoCompleteModelId: AnthropicModelId = "claude-3-5-haiku-20241022"
+export const anthropicDefaultEmbeddingModelId: AnthropicModelId = null // this is not supported embedding model
 export const anthropicModels = {
 	"claude-sonnet-4-20250514": {
 		maxTokens: 64_000, // Overridden to 8k if `enableReasoningEffort` is false.
@@ -128,7 +130,9 @@ export const anthropicModels = {
 } as const satisfies Record<string, ModelInfo> // as const assertion makes the object 
 
 // Infio
-export const infioDefaultModelId = "deepseek/deepseek-v3" // will always exist 
+export const infioDefaultModelId = "gemini/gemini-2.5-pro-preview-06-05" // for chat
+export const infioDefaultAutoCompleteModelId = "groq/llama-3.3-70b-versatile" // for auto complete
+export const infioDefaultEmbeddingModelId = "openai/text-embedding-3-small" // for embedding
 export const infioDefaultModelInfo: ModelInfo = {
 	maxTokens: 8192,
 	contextWindow: 65_536,
@@ -143,7 +147,6 @@ export const infioDefaultModelInfo: ModelInfo = {
 let infioModelsCache: Record<string, ModelInfo> | null = null;
 
 async function fetchInfioModels(apiKey?: string): Promise<Record<string, ModelInfo>> {
-	console.log("fetchInfioModels apiKey", apiKey)
 	if (infioModelsCache) {
 		return infioModelsCache;
 	}
@@ -210,7 +213,9 @@ export const infioEmbeddingModels = {
 
 // OpenRouter
 // https://openrouter.ai/models?order=newest&supported_parameters=tools
-export const openRouterDefaultModelId = "anthropic/claude-sonnet-4" // will always exist in openRouterModels
+export const openRouterDefaultModelId = "google/gemini-2.5-pro-preview" // for chat
+export const openRouterDefaultAutoCompleteModelId = "google/gemini-2.5-flash-preview-05-20" // for auto complete
+export const openRouterDefaultEmbeddingModelId = null // this is not supported embedding model
 export const openRouterDefaultModelInfo: ModelInfo = {
 	maxTokens: 8192,
 	contextWindow: 200_000,
@@ -262,7 +267,10 @@ async function fetchOpenRouterModels(): Promise<Record<string, ModelInfo>> {
 // Gemini
 // https://ai.google.dev/gemini-api/docs/models/gemini
 export type GeminiModelId = keyof typeof geminiModels
-export const geminiDefaultModelId: GeminiModelId = "gemini-2.5-flash-preview-05-20"
+export const geminiDefaultModelId: GeminiModelId = "gemini-2.5-pro-preview-05-06"
+export const geminiDefaultAutoCompleteModelId: GeminiModelId = "gemini-2.5-flash-preview-05-20"
+export const geminiDefaultEmbeddingModelId: keyof typeof geminiEmbeddingModels = "text-embedding-004"
+
 export const geminiModels = {
 	"gemini-2.5-flash-preview-05-20:thinking": {
 		maxTokens: 65_535,
@@ -489,6 +497,9 @@ export const geminiEmbeddingModels = {
 // https://openai.com/api/pricing/
 export type OpenAiNativeModelId = keyof typeof openAiNativeModels
 export const openAiNativeDefaultModelId: OpenAiNativeModelId = "gpt-4o"
+export const openAiNativeDefaultAutoCompleteModelId: OpenAiNativeModelId = "gpt-4o-mini"
+export const openAiNativeDefaultEmbeddingModelId: keyof typeof openAINativeEmbeddingModels = "text-embedding-3-small"
+
 export const openAiNativeModels = {
 	// don't support tool use yet
 	"o3-mini": {
@@ -594,6 +605,9 @@ export const openAINativeEmbeddingModels = {
 // https://api-docs.deepseek.com/quick_start/pricing
 export type DeepSeekModelId = keyof typeof deepSeekModels
 export const deepSeekDefaultModelId: DeepSeekModelId = "deepseek-chat"
+export const deepSeekDefaultAutoCompleteModelId: DeepSeekModelId = "deepseek-chat"
+export const deepSeekDefaultEmbeddingModelId = null // this is not supported embedding model
+
 export const deepSeekModels = {
 	"deepseek-chat": {
 		maxTokens: 8_000,
@@ -620,7 +634,10 @@ export const deepSeekModels = {
 // Qwen
 // https://help.aliyun.com/zh/model-studio/getting-started/
 export type QwenModelId = keyof typeof qwenModels
-export const qwenDefaultModelId: QwenModelId = "qwen-max-latest"
+export const qwenDefaultModelId: QwenModelId = "qwen3-235b-a22b"
+export const qwenDefaultAutoCompleteModelId: QwenModelId = "qwen3-32b"
+export const qwenDefaultEmbeddingModelId: keyof typeof qwenEmbeddingModels = "text-embedding-v3"
+
 export const qwenModels = {
 	"qwen3-235b-a22b": {
 		maxTokens: 129_024,
@@ -916,6 +933,9 @@ export const qwenEmbeddingModels = {
 // https://docs.siliconflow.cn/
 export type SiliconFlowModelId = keyof typeof siliconFlowModels
 export const siliconFlowDefaultModelId: SiliconFlowModelId = "deepseek-ai/DeepSeek-V3"
+export const siliconFlowDefaultAutoCompleteModelId: SiliconFlowModelId = "deepseek-ai/DeepSeek-V3"
+export const siliconFlowDefaultEmbeddingModelId: keyof typeof siliconFlowEmbeddingModels = "BAAI/bge-m3"
+
 export const siliconFlowModels = {
 	"01-ai/Yi-1.5-9B-Chat-16K": {
 		maxTokens: 8192,
@@ -1396,6 +1416,9 @@ export const siliconFlowEmbeddingModels = {
 // https://console.groq.com/docs/overview
 export type GroqModelId = keyof typeof groqModels
 export const groqDefaultModelId: GroqModelId = "llama-3.3-70b-versatile"
+export const groqDefaultAutoCompleteModelId: GroqModelId = "llama-3.3-70b-versatile"
+export const groqDefaultEmbeddingModelId = null // this is not supported embedding model
+
 export const groqModels = {
 	"meta-llama/llama-4-scout-17b-16e-instruct": {
 		maxTokens: 8192,
@@ -1554,6 +1577,9 @@ export const groqModels = {
 // https://docs.x.ai/docs/models
 export type GrokModelId = keyof typeof grokModels
 export const grokDefaultModelId: GrokModelId = "grok-3"
+export const grokDefaultAutoCompleteModelId: GrokModelId = "grok-3-mini-fast"
+export const grokDefaultEmbeddingModelId = null // this is not supported embedding model
+
 export const grokModels = {
 	"grok-3": {
 		maxTokens: 8192,
@@ -1606,18 +1632,31 @@ export const grokModels = {
 } as const satisfies Record<string, ModelInfo>
 
 /// helper functions
-// get all providers
+// get all providers, used for the provider dropdown
 export const GetAllProviders = (): ApiProvider[] => {
-	return Object.values(ApiProvider)
+	return [
+		ApiProvider.Infio,
+		ApiProvider.OpenRouter,
+		ApiProvider.Anthropic,
+		ApiProvider.OpenAI,
+		ApiProvider.Google,
+		ApiProvider.Grok,
+		ApiProvider.AlibabaQwen,
+		ApiProvider.SiliconFlow,
+		ApiProvider.Deepseek,
+		ApiProvider.Groq,
+		ApiProvider.Ollama,
+		ApiProvider.OpenAICompatible,
+	]
 }
 
 export const GetEmbeddingProviders = (): ApiProvider[] => {
 	return [
 		ApiProvider.Infio,
 		ApiProvider.OpenAI,
-		ApiProvider.SiliconFlow,
 		ApiProvider.Google,
 		ApiProvider.AlibabaQwen,
+		ApiProvider.SiliconFlow,
 		ApiProvider.OpenAICompatible,
 		ApiProvider.Ollama,
 	]
@@ -1628,7 +1667,6 @@ export const GetProviderModels = async (provider: ApiProvider, settings?: InfioS
 	switch (provider) {
 		case ApiProvider.Infio: {
 			const apiKey = settings?.infioProvider?.apiKey
-			console.log("apiKey", apiKey)
 			return await fetchInfioModels(apiKey)
 		}
 		case ApiProvider.OpenRouter:
@@ -1663,8 +1701,6 @@ export const GetProviderModelsWithSettings = async (provider: ApiProvider, setti
 	switch (provider) {
 		case ApiProvider.Infio: {
 			const apiKey = settings?.infioProvider?.apiKey
-			console.log("apiKey", apiKey)
-			console.log("settings", settings)
 			return await fetchInfioModels(apiKey)
 		}
 		case ApiProvider.OpenRouter:
@@ -1727,4 +1763,76 @@ export const GetEmbeddingProviderModelIds = (provider: ApiProvider): string[] =>
 export const GetEmbeddingModelInfo = (provider: ApiProvider, modelId: string): EmbeddingModelInfo => {
 	const models = GetEmbeddingProviderModels(provider)
 	return models[modelId]
+}
+
+// Get default model id for a provider
+export const GetDefaultModelId = (provider: ApiProvider): { chat: string, autoComplete: string, embedding: string } => {
+	switch (provider) {
+		case ApiProvider.Infio:
+			return {
+				"chat": infioDefaultModelId,
+				"autoComplete": infioDefaultAutoCompleteModelId,
+				"embedding": infioDefaultEmbeddingModelId,
+			}
+		case ApiProvider.OpenRouter:
+			return {
+				"chat": openRouterDefaultModelId,
+				"autoComplete": openRouterDefaultAutoCompleteModelId,
+				"embedding": openRouterDefaultEmbeddingModelId,
+			}
+		case ApiProvider.Anthropic:
+			return {
+				"chat": anthropicDefaultModelId,
+				"autoComplete": anthropicDefaultAutoCompleteModelId,
+				"embedding": anthropicDefaultEmbeddingModelId,
+			}
+		case ApiProvider.OpenAI:
+			return {
+				"chat": openAiNativeDefaultModelId,
+				"autoComplete": openAiNativeDefaultAutoCompleteModelId,
+				"embedding": openAiNativeDefaultEmbeddingModelId,
+			}
+		case ApiProvider.Deepseek:
+			return {
+				"chat": deepSeekDefaultModelId,
+				"autoComplete": deepSeekDefaultAutoCompleteModelId,
+				"embedding": deepSeekDefaultEmbeddingModelId,
+			}
+		case ApiProvider.Google:
+			return {
+				"chat": geminiDefaultModelId,
+				"autoComplete": geminiDefaultAutoCompleteModelId,
+				"embedding": geminiDefaultEmbeddingModelId,
+			}
+		case ApiProvider.AlibabaQwen:
+			return {
+				"chat": qwenDefaultModelId,
+				"autoComplete": qwenDefaultAutoCompleteModelId,
+				"embedding": qwenDefaultEmbeddingModelId,
+			}
+		case ApiProvider.SiliconFlow:
+			return {
+				"chat": siliconFlowDefaultModelId,
+				"autoComplete": siliconFlowDefaultAutoCompleteModelId,
+				"embedding": siliconFlowDefaultEmbeddingModelId,
+			}
+		case ApiProvider.Groq:
+			return {
+				"chat": groqDefaultModelId,
+				"autoComplete": groqDefaultAutoCompleteModelId,
+				"embedding": groqDefaultEmbeddingModelId,
+			}
+		case ApiProvider.Grok:
+			return {
+				"chat": grokDefaultModelId,
+				"autoComplete": grokDefaultAutoCompleteModelId,
+				"embedding": grokDefaultEmbeddingModelId,
+			}
+		default:
+			return {
+				"chat": null,
+				"autoComplete": null,
+				"embedding": null,
+			}
+	}
 }

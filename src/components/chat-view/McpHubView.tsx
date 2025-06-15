@@ -285,7 +285,7 @@ const McpHubView = () => {
 												{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
 											</div>
 											<span className={`infio-mcp-hub-status-indicator ${server.status === 'connected' ? 'connected' : server.status === 'connecting' ? 'connecting' : 'disconnected'} ${server.disabled ? 'disabled' : ''}`}></span>
-											<h3 className="infio-mcp-hub-name">{server.name}</h3>
+											<h3 className="infio-mcp-hub-name">{server.name.replace('infio-builtin-server', 'builtin')}</h3>
 										</div>
 
 										<div className="infio-mcp-hub-actions" onClick={(e) => e.stopPropagation()}>
