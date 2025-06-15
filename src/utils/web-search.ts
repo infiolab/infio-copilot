@@ -4,6 +4,7 @@ import { htmlToMarkdown, requestUrl } from 'obsidian';
 
 import { JINA_BASE_URL, SERPER_BASE_URL } from '../constants';
 import { RAGEngine } from '../core/rag/rag-engine';
+import { WebSearchSettings } from '../types/settings';
 
 import { isVideoUrl, getVideoProvider } from './video-detector';
 import { YoutubeTranscript, isYoutubeUrl } from './youtube-transcript';
@@ -96,9 +97,11 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 	return dotProduct / (magnitudeA * magnitudeB);
 }
 
-async function serperSearch(query: string, serperApiKey: string, serperSearchEngine: string): Promise<SearchResult[]> {
+async function serperSearch(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
 	return new Promise((resolve, reject) => {
-		const url = `${SERPER_BASE_URL}?q=${encodeURIComponent(query)}&engine=${serperSearchEngine}&api_key=${serperApiKey}&num=20`;
+		const apiKey = searchSettings.serperApiKey;
+		const searchEngine = searchSettings.serperSearchEngine;
+		const url = `${SERPER_BASE_URL}?q=${encodeURIComponent(query)}&engine=${searchEngine}&api_key=${apiKey}&num=20`;
 		https.get(url, (res: any) => {
 			let data = '';
 
@@ -137,6 +140,10 @@ async function serperSearch(query: string, serperApiKey: string, serperSearchEng
 			reject(error);
 		});
 	});
+}
+
+async function search(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
+	return serperSearch(query, searchSettings);
 }
 
 async function filterByEmbedding(query: string, results: SearchResult[], ragEngine: RAGEngine): Promise<SearchResult[]> {
@@ -211,8 +218,9 @@ async function fetchByJina(url: string, apiKey: string): Promise<string> {
 	return new Promise((resolve) => {
 		const jinaUrl = `${JINA_BASE_URL}/${url}`;
 
+		const validJinaKey = apiKey && apiKey !== '';
 		const jinaHeaders = {
-			'Authorization': `Bearer ${apiKey}`,
+			'Authorization': validJinaKey && `Bearer ${apiKey}`,
 			'X-No-Cache': 'true',
 		};
 
@@ -254,17 +262,18 @@ async function fetchByJina(url: string, apiKey: string): Promise<string> {
 	});
 }
 
-export async function fetchUrlContent(url: string, apiKey: string): Promise<string | null> {
+export async function fetchUrlContent(url: string, searchSettings: WebSearchSettings): Promise<string | null> {
 	try {
 		// 如果是视频内容，直接使用本地工具处理
 		if (isVideoUrl(url)) {
 			return await fetchByLocalTool(url);
 		}
 		let content: string | null = null;
-		const validJinaKey = apiKey && apiKey !== '';
-		if (validJinaKey) {
+		
+		const fetchBackend = searchSettings.urlFetchBackend;
+		if (fetchBackend === 'jina') {
 			try {
-				content = await fetchByJina(url, apiKey);
+				content = await fetchByJina(url, searchSettings.jinaApiKey);
 			} catch (error) {
 				console.error(`Failed to fetch URL by jina: ${url}`, error);
 				content = await fetchByLocalTool(url);
@@ -272,6 +281,7 @@ export async function fetchUrlContent(url: string, apiKey: string): Promise<stri
 		} else {
 			content = await fetchByLocalTool(url);
 		}
+
 		return content.replaceAll(/\n{2,}/g, '\n');
 	} catch (error) {
 		console.error(`Failed to fetch URL content: ${url}`, error);
@@ -281,16 +291,14 @@ export async function fetchUrlContent(url: string, apiKey: string): Promise<stri
 
 export async function webSearch(
 	query: string,
-	serperApiKey: string,
-	serperSearchEngine: string,
-	jinaApiKey: string,
+	searchSettings: WebSearchSettings,
 	ragEngine: RAGEngine
 ): Promise<string> {
 	try {
-		const results = await serperSearch(query, serperApiKey, serperSearchEngine);
+		const results = await search(query, searchSettings);
 		const filteredResults = await filterByEmbedding(query, results, ragEngine);
 		const filteredResultsWithContent = await Promise.all(filteredResults.map(async (result) => {
-			let content = await fetchUrlContent(result.link, jinaApiKey);
+			let content = await fetchUrlContent(result.link, searchSettings);
 			if (content.length === 0) {
 				content = result.snippet;
 			}
@@ -303,11 +311,11 @@ export async function webSearch(
 	}
 }
 
-export async function fetchUrlsContent(urls: string[], apiKey: string): Promise<string> {
+export async function fetchUrlsContent(urls: string[], searchSettings: WebSearchSettings): Promise<string> {
 	return new Promise((resolve) => {
 		const results = urls.map(async (url) => {
 			try {
-				const content = await fetchUrlContent(url, apiKey);
+				const content = await fetchUrlContent(url, searchSettings);
 				return `<url_content url="${url}">\n${content}\n</url_content>`;
 			} catch (error) {
 				console.error(`Failed to fetch URL content: ${url}`, error);

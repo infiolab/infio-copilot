@@ -267,11 +267,14 @@ export class InfioSettingTab extends PluginSettingTab {
 			.setClass('setting-item-heading-smaller')
 			.addText((text) => {
 				const t = text
-					.setValue(this.plugin.settings.serperApiKey)
+					.setValue(this.plugin.settings.webSearchSettings.serperApiKey)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							serperApiKey: value,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								serperApiKey: value,
+							},
 						})
 					});
 				if (t.inputEl) {
@@ -288,12 +291,35 @@ export class InfioSettingTab extends PluginSettingTab {
 					.addOption('google', t('settings.WebSearch.google'))
 					.addOption('duckduckgo', t('settings.WebSearch.duckDuckGo'))
 					.addOption('bing', t('settings.WebSearch.bing'))
-					.setValue(this.plugin.settings.serperSearchEngine)
+					.setValue(this.plugin.settings.webSearchSettings.serperSearchEngine)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							// @ts-ignore
-							serperSearchEngine: value,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								serperSearchEngine: value,
+							},
+						})
+					}),
+			)
+
+		new Setting(containerEl)
+			.setName(t('settings.WebSearch.urlFetchBackend'))
+			.setDesc(t('settings.WebSearch.urlFetchBackendDescription'))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('jina', t('settings.WebSearch.jina'))
+					.addOption('local', t('settings.WebSearch.local'))
+					.setValue(this.plugin.settings.webSearchSettings.urlFetchBackend)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								urlFetchBackend: value,
+							},
 						})
 					}),
 			)
@@ -312,11 +338,14 @@ export class InfioSettingTab extends PluginSettingTab {
 			.setClass('setting-item-heading-smaller')
 			.addText((text) => {
 				const t = text
-					.setValue(this.plugin.settings.jinaApiKey)
+					.setValue(this.plugin.settings.webSearchSettings.jinaApiKey)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							jinaApiKey: value,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								jinaApiKey: value,
+							},
 						})
 					});
 				if (t.inputEl) {

@@ -201,6 +201,20 @@ export const triggerSchema = z.object({
 	}
 });
 
+const WebSearchSettingsSchema = z.object({
+	webSearchBackend: z.enum(['local', 'serper']).catch('serper'),
+	serperApiKey: z.string().catch(''),
+	serperSearchEngine: z.enum(['google', 'duckduckgo', 'bing']).catch('google'),
+	urlFetchBackend: z.enum(['local', 'jina']).catch('jina'),
+	jinaApiKey: z.string().catch(''),
+}).catch({
+	webSearchBackend: 'serper',
+	serperApiKey: '',
+	serperSearchEngine: 'google',
+	urlFetchBackend: 'jina',
+	jinaApiKey: '',
+});
+
 const FilesSearchSettingsSchema = z.object({
 	method: z.enum(['match', 'regex', 'semantic', 'auto']).catch('auto'),
 	regexBackend: z.enum(['coreplugin', 'ripgrep']).catch('coreplugin'),
@@ -270,9 +284,7 @@ export const InfioSettingsSchema = z.object({
 	defaultMention: z.enum(['none', 'current-file', 'vault']).catch('none'),
 
 	// web search
-	serperApiKey: z.string().catch(''),
-	serperSearchEngine: z.enum(['google', 'duckduckgo', 'bing']).catch('google'),
-	jinaApiKey: z.string().catch(''),
+	webSearchSettings: WebSearchSettingsSchema,
 
 	// Files Search
 	filesSearchSettings: FilesSearchSettingsSchema,
@@ -377,6 +389,7 @@ export const InfioSettingsSchema = z.object({
 })
 
 export type InfioSettings = z.infer<typeof InfioSettingsSchema>
+export type WebSearchSettings = z.infer<typeof WebSearchSettingsSchema>
 export type FilesSearchSettings = z.infer<typeof FilesSearchSettingsSchema>
 
 type Migration = {
@@ -465,7 +478,7 @@ export function parseInfioSettings(data: unknown): InfioSettings {
 			return InfioSettingsSchema.parse(fixedData);
 		} catch (fixError) {
 			console.error("Failed to fix settings with migrated data, using default settings instead: ", fixError);
-		return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
+			return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
 		}
 	}
 }

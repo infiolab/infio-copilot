@@ -338,8 +338,12 @@ export default {
 			google: 'Google',
 			duckDuckGo: 'DuckDuckGo',
 			bing: 'Bing',
+			urlFetchBackend: 'URL content fetch backend',
+			urlFetchBackendDescription: 'Choose the backend for URL content fetching.',
+			jina: 'Jina',
+			local: 'Local',
 			jinaApiKey: 'Jina API key (Optional)',
-			jinaApiKeyDescription: 'API key for parsing web pages into markdown format. If not provided, local parsing will be used. Get your key from',
+			jinaApiKeyDescription: 'API key for higher rate limits. Get your key from',
 		},
 		
 		// RAG Section
