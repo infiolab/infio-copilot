@@ -621,7 +621,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 					const searchBackend = settings.filesSearchSettings.matchBackend
 					let results: string;
 					if (searchBackend === 'omnisearch') {
-						results = await matchSearchUsingOmnisearch(toolArgs.query, app)
+						results = await matchSearchUsingOmnisearch(toolArgs.query)
 					} else {
 						results = await matchSearchUsingCorePlugin(toolArgs.query, app)
 					}
