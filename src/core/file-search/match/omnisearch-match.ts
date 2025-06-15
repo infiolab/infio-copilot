@@ -43,7 +43,7 @@ function isOmnisearchAvailable(): boolean {
 
 /**
  * Searches using Omnisearch and builds context for each match.
- * @param query The search query for Omnisearch. Note: Omnisearch does not support full regex.
+ * @param query The search query for Omnisearch. Note: Omnisearch does not support regex.
  * @param app The Obsidian App instance.
  * @returns A formatted string of search results.
  */
@@ -80,7 +80,8 @@ export async function matchSearchUsingOmnisearch(
 
             const lines = noteResult.excerpt.split('\n');
             lines.forEach((line, index) => {
-                lines.splice(index, 1, line.trimEnd());
+				// Clean up null bytes to prevent PostgreSQL UTF8 encoding errors
+                lines.splice(index, 1, line.replace(/\0/g, '').trimEnd());
             });
 
 			results.push({
