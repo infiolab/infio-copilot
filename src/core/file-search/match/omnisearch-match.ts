@@ -1,9 +1,5 @@
-import { App, TFile  } from "obsidian";
 import {
 	MAX_RESULTS,
-	//truncateLine,
-	//buildLineIndexs,
-	//findLineIndexBS,
 	SearchResult,
 	formatResults,
 } from '../search-common';
@@ -47,10 +43,7 @@ function isOmnisearchAvailable(): boolean {
  * @param app The Obsidian App instance.
  * @returns A formatted string of search results.
  */
-export async function matchSearchUsingOmnisearch(
-	query: string,
-	app: App,
-): Promise<string> {
+export async function matchSearchUsingOmnisearch(query: string): Promise<string> {
 	try {
 		if (!isOmnisearchAvailable()) {
 			throw new Error(
@@ -78,10 +71,11 @@ export async function matchSearchUsingOmnisearch(
 				continue;
 			}
 
-            const lines = noteResult.excerpt.split('\n');
-            lines.forEach((line, index) => {
-                lines.splice(index, 1, line.trimEnd());
-            });
+			const lines = noteResult.excerpt.split('\n');
+			lines.forEach((line, index) => {
+				// Clean up null bytes to prevent PostgreSQL UTF8 encoding errors
+				lines.splice(index, 1, line.replace(/\0/g, '').trimEnd());
+			});
 
 			results.push({
 				file: noteResult.path,
