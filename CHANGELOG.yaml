@@ -1,4 +1,7 @@
 releases:
+  - version: "0.6.12"
+    features:
+      - "fix settings migration"
   - version: "0.6.10"
     features:
       - "update chat history view"

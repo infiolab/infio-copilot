@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-infio-copilot",
-	"version": "0.6.10",
+	"version": "0.6.11",
 	"description": "A Cursor-inspired AI assistant that offers smart autocomplete and interactive chat with your selected notes",
 	"main": "main.js",
 	"scripts": {
