@@ -1,5 +1,10 @@
 releases:
-  - version: "0.6.11"
+	- version: "0.6.11"
+    features:
+      - "update settings migration"
+      - "update regex search result, thanks @travertexs"
+      - "add crash reporter"
+  - version: "0.6.10"
     features:
       - "update chat history view"
       - "add vector search view"
