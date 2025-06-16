@@ -1,8 +1,9 @@
-import { App } from "obsidian";
+import { App, TFile  } from "obsidian";
 import {
 	MAX_RESULTS,
-	truncateLine,
-	findLineDetails,
+	//truncateLine,
+	//buildLineIndexs,
+	//findLineIndexBS,
 	SearchResult,
 	formatResults,
 } from '../search-common';
@@ -24,7 +25,6 @@ type ResultNoteApi = {
 
 type OmnisearchApi = {
 	search: (query: string) => Promise<ResultNoteApi[]>;
-	// ... other API methods
 };
 
 declare global {
@@ -43,7 +43,7 @@ function isOmnisearchAvailable(): boolean {
 
 /**
  * Searches using Omnisearch and builds context for each match.
- * @param query The search query for Omnisearch. Note: Omnisearch does not support full regex.
+ * @param query The search query for Omnisearch. Note: Omnisearch does not support regex.
  * @param app The Obsidian App instance.
  * @returns A formatted string of search results.
  */
@@ -61,52 +61,42 @@ export async function matchSearchUsingOmnisearch(
 		// Omnisearch is not a regex engine.
 		// The `query` will be treated as a keyword/fuzzy search by the plugin.
 		const apiResults = await window.omnisearch.search(query);
-		if (!apiResults || apiResults.length === 0) {
-			console.error("No results found.");
-			return "No results found."
+		if (!apiResults) {
+			throw new Error("Search results are not available.");
+		}
+		if (apiResults.length === 0) {
+			return "No results found.";
 		}
 
 		const results: SearchResult[] = [];
 
-		for (const result of apiResults) {
+		for (const noteResult of apiResults) {
 			if (results.length >= MAX_RESULTS) {
-				break; // Stop processing new files if we have enough results
+				break;
 			}
-			if (!result.matches || result.matches.length === 0) continue;
-
-			const fileContent = await app.vault.adapter.read(result.path);
-			const lines = fileContent.split("\n");
-
-			for (const match of result.matches) {
-				if (results.length >= MAX_RESULTS) {
-					break; // Stop processing matches if we have enough results
-				}
-
-				const { lineNumber, columnNumber, lineContent } = findLineDetails(
-					lines,
-					match.offset
-				);
-
-				if (lineNumber === -1) continue;
-
-				const searchResult: SearchResult = {
-					file: result.path,
-					line: lineNumber + 1, // ripgrep is 1-based, so we adjust
-					column: columnNumber + 1,
-					match: truncateLine(lineContent.trimEnd()),
-					beforeContext: lineNumber > 0 ? [truncateLine(lines[lineNumber - 1].trimEnd())] : [],
-					afterContext:
-						lineNumber < lines.length - 1
-							? [truncateLine(lines[lineNumber + 1].trimEnd())]
-							: [],
-				};
-				results.push(searchResult);
+			if (!noteResult.matches || noteResult.matches.length === 0) {
+				continue;
 			}
+
+            const lines = noteResult.excerpt.split('\n');
+            lines.forEach((line, index) => {
+				// Clean up null bytes to prevent PostgreSQL UTF8 encoding errors
+                lines.splice(index, 1, line.replace(/\0/g, '').trimEnd());
+            });
+
+			results.push({
+				file: noteResult.path,
+				match: lines,
+			});
 		}
 
-		return formatResults(results, ".\\");
+		if (results.length === 0) {
+			return "No results found.";
+		}
+
+		return formatResults(results);
 	} catch (error) {
 		console.error("Error during Omnisearch processing:", error);
-		return "An error occurred during the search.";
+		return `An error occurred during the search: ${error}`;
 	}
 }

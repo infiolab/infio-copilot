@@ -350,7 +350,7 @@ export const InfioSettingsSchema = z.object({
 	systemMessage: z.string().min(3, { message: "System message must be at least 3 characters long" }),
 	fewShotExamples: z.array(fewShotExampleSchema),
 	userMessageTemplate: z.string().min(3, { message: "User message template must be at least 3 characters long" }),
-	chainOfThoughRemovalRegex: z.string().refine((regex) => isRegexValid(regex), { message: "Invalid regex" }),
+	chainOfThoughtRemovalRegex: z.string().refine((regex) => isRegexValid(regex), { message: "Invalid regex" }),
 	dontIncludeDataviews: z.boolean(),
 	maxPrefixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }),
 	maxSuffixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }),
@@ -395,6 +395,26 @@ const MIGRATIONS: Migration[] = [
 			return newData
 		},
 	},
+
+	// A very inelegant fix, but whatever :/
+	// TODO: Should be rewritten in a future release
+	{
+		fromVersion: 0.4,
+		toVersion: 0.4,
+		migrate: (data) => {
+			const newData = { ...data }
+			newData.version = SETTINGS_SCHEMA_VERSION
+
+			// Replace 'chainOfThoughRemovalRegex' with 'chainOfThoughtRemovalRegex'
+			if (newData.chainOfThoughRemovalRegex) {
+				const cotRemovalRegexKey = newData.chainOfThoughRemovalRegex;
+				delete newData.chainOfThoughRemovalRegex;
+				newData.chainOfThoughtRemovalRegex = cotRemovalRegexKey;
+			}
+
+			return newData
+		},
+	},
 ]
 
 function migrateSettings(
@@ -420,10 +440,33 @@ function migrateSettings(
 }
 
 export function parseInfioSettings(data: unknown): InfioSettings {
+	const migratedData = migrateSettings(data as Record<string, unknown>);
+
 	try {
-		const migratedData = migrateSettings(data as Record<string, unknown>)
 		return InfioSettingsSchema.parse(migratedData)
-	} catch (error) {
-		return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
+	} catch {
+		// Instead of hard resetting, we can attempt to parse the migrated data
+		// and catch specific errors to fix or use defaults.
+    console.log("Failed to parse settings with migrated data, attempting to fix...");
+		const fixedData: Record<string, any> = {};
+		const defaultSettings = DEFAULT_SETTINGS;
+
+		// Iterate over the schema keys to build the fixed data
+		for (const key in InfioSettingsSchema.shape) {
+			const schema = InfioSettingsSchema[key];
+			try {
+				fixedData[key] = schema.parse(migratedData[key]);
+			} catch {
+        console.log(`Failed to parse key '${key}' with migrated data, using default key instead.`);
+				fixedData[key] = defaultSettings[key];
+			}
+		}
+
+		try {
+			return InfioSettingsSchema.parse(fixedData);
+		} catch (error) {
+			console.error("Failed to fix settings with migrated data, using default settings instead: ", error);
+			return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
+		}
 	}
 }
