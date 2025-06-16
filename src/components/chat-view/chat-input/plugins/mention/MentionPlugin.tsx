@@ -109,13 +109,13 @@ class MentionTypeaheadOption extends MenuOption {
 	constructor(result: SearchableMentionable) {
 		switch (result.type) {
 			case 'file':
-				super(result.file.path)
-				this.name = result.file.name
+				super(result.file?.path ?? 'unknown-file')
+				this.name = result.file?.name ?? 'Unknown file'
 				this.mentionable = result
 				break
 			case 'folder':
-				super(result.folder.path)
-				this.name = result.folder.name
+				super(result.folder?.path ?? 'unknown-folder')
+				this.name = result.folder?.name ?? 'Unknown folder'
 				this.mentionable = result
 				break
 			case 'vault':

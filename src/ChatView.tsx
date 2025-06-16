@@ -46,10 +46,19 @@ export class ChatView extends ItemView {
 	}
 
 	async onOpen() {
-		await this.render()
-
-		// Consume chatProps
-		this.initialChatProps = undefined
+		try {
+			await this.render()
+			
+			// Consume chatProps
+			this.initialChatProps = undefined
+		} catch (error) {
+			console.error('Failed to open ChatView:', error)
+			// Create a fallback UI
+			this.containerEl.createEl('div', {
+				text: 'Failed to load chat view. Please check console for details.',
+				cls: 'infio-error-message'
+			})
+		}
 	}
 
 	async onClose() {
@@ -57,56 +66,71 @@ export class ChatView extends ItemView {
 	}
 
 	async render() {
-		if (!this.root) {
-			this.root = createRoot(this.containerEl.children[1])
+		try {
+			if (!this.root) {
+				// Check if containerEl has the expected structure
+				if (!this.containerEl.children[1]) {
+					throw new Error('ChatView container structure is invalid')
+				}
+				this.root = createRoot(this.containerEl.children[1])
+			}
+
+			const queryClient = new QueryClient({
+				defaultOptions: {
+					queries: {
+						gcTime: 0, // Immediately garbage collect queries. It prevents memory leak on ChatView close.
+					},
+					mutations: {
+						gcTime: 0, // Immediately garbage collect mutations. It prevents memory leak on ChatView close.
+					},
+				},
+			})
+
+			this.root.render(
+				<AppProvider app={this.app}>
+					<SettingsProvider
+						settings={this.settings}
+						setSettings={(newSettings) => this.plugin.setSettings(newSettings)}
+						addSettingsChangeListener={(listener) =>
+							this.plugin.addSettingsListener(listener)
+						}
+					>
+						<DarkModeProvider>
+							<LLMProvider>
+								<DatabaseProvider
+									getDatabaseManager={() => this.plugin.getDbManager()}
+								>
+									<DiffStrategyProvider diffStrategy={this.plugin.diffStrategy}>
+										<RAGProvider getRAGEngine={() => this.plugin.getRAGEngine()}>
+											<McpHubProvider getMcpHub={() => this.plugin.getMcpHub()}>
+												<QueryClientProvider client={queryClient}>
+													<React.StrictMode>
+														<DialogProvider
+															container={this.containerEl.children[1] as HTMLElement}
+														>
+															<Chat ref={this.chatRef} {...this.initialChatProps} />
+														</DialogProvider>
+													</React.StrictMode>
+												</QueryClientProvider>
+											</McpHubProvider>
+										</RAGProvider>
+									</DiffStrategyProvider>
+								</DatabaseProvider>
+							</LLMProvider>
+						</DarkModeProvider>
+					</SettingsProvider>
+				</AppProvider>,
+			)
+		} catch (error) {
+			console.error('Failed to render ChatView:', error)
+			// Clear container and show error message
+			this.containerEl.empty()
+			this.containerEl.createEl('div', {
+				text: 'Failed to render chat view. Please restart Obsidian and check console for details.',
+				cls: 'infio-error-message'
+			})
+			throw error
 		}
-
-		const queryClient = new QueryClient({
-			defaultOptions: {
-				queries: {
-					gcTime: 0, // Immediately garbage collect queries. It prevents memory leak on ChatView close.
-				},
-				mutations: {
-					gcTime: 0, // Immediately garbage collect mutations. It prevents memory leak on ChatView close.
-				},
-			},
-		})
-
-		this.root.render(
-			<AppProvider app={this.app}>
-				<SettingsProvider
-					settings={this.settings}
-					setSettings={(newSettings) => this.plugin.setSettings(newSettings)}
-					addSettingsChangeListener={(listener) =>
-						this.plugin.addSettingsListener(listener)
-					}
-				>
-					<DarkModeProvider>
-						<LLMProvider>
-							<DatabaseProvider
-								getDatabaseManager={() => this.plugin.getDbManager()}
-							>
-								<DiffStrategyProvider diffStrategy={this.plugin.diffStrategy}>
-									<RAGProvider getRAGEngine={() => this.plugin.getRAGEngine()}>
-										<McpHubProvider getMcpHub={() => this.plugin.getMcpHub()}>
-											<QueryClientProvider client={queryClient}>
-												<React.StrictMode>
-													<DialogProvider
-														container={this.containerEl.children[1] as HTMLElement}
-													>
-														<Chat ref={this.chatRef} {...this.initialChatProps} />
-													</DialogProvider>
-												</React.StrictMode>
-											</QueryClientProvider>
-										</McpHubProvider>
-									</RAGProvider>
-								</DiffStrategyProvider>
-							</DatabaseProvider>
-						</LLMProvider>
-					</DarkModeProvider>
-				</SettingsProvider>
-			</AppProvider>,
-		)
 	}
 
 	openNewChat(selectedBlock?: MentionableBlockData) {

@@ -64,7 +64,7 @@ function FileBadge({
 						className="infio-chat-user-input-file-badge-name-icon"
 					/>
 				)}
-				<span>{mentionable.file.name}</span>
+				<span>{mentionable.file?.name ?? 'Unknown file'}</span>
 			</div>
 		</BadgeBase>
 	)
@@ -91,7 +91,7 @@ function FolderBadge({
 						className="infio-chat-user-input-file-badge-name-icon"
 					/>
 				)}
-				<span>{mentionable.folder.name}</span>
+				<span>{mentionable.folder?.name ?? 'Unknown folder'}</span>
 			</div>
 		</BadgeBase>
 	)
@@ -147,7 +147,7 @@ function CurrentFileBadge({
 						className="infio-chat-user-input-file-badge-name-icon"
 					/>
 				)}
-				<span>{mentionable.file.name}</span>
+				<span>{mentionable.file?.name ?? 'Current file'}</span>
 			</div>
 			<div className="infio-chat-user-input-file-badge-name-block-suffix">
 				{' (Current file)'}
@@ -177,7 +177,7 @@ function BlockBadge({
 						className="infio-chat-user-input-file-badge-name-block-name-icon"
 					/>
 				)}
-				<span>{mentionable.file.name}</span>
+				<span>{mentionable.file?.name ?? 'Unknown file'}</span>
 			</div>
 			<div className="infio-chat-user-input-file-badge-name-block-suffix">
 				{` (${mentionable.startLine}:${mentionable.endLine})`}

@@ -9,12 +9,12 @@ export const serializeMentionable = (
 		case 'file':
 			return {
 				type: 'file',
-				file: mentionable.file.path,
+				file: mentionable.file?.path ?? '',
 			}
 		case 'folder':
 			return {
 				type: 'folder',
-				folder: mentionable.folder.path,
+				folder: mentionable.folder?.path ?? '',
 			}
 		case 'vault':
 			return {
@@ -29,7 +29,7 @@ export const serializeMentionable = (
 			return {
 				type: 'block',
 				content: mentionable.content,
-				file: mentionable.file.path,
+				file: mentionable.file?.path ?? '',
 				startLine: mentionable.startLine,
 				endLine: mentionable.endLine,
 			}
@@ -147,15 +147,15 @@ export function getMentionableKey(mentionable: SerializedMentionable): string {
 export function getMentionableName(mentionable: Mentionable): string {
 	switch (mentionable.type) {
 		case 'file':
-			return mentionable.file.name
+			return mentionable.file?.name ?? 'Unknown file'
 		case 'folder':
-			return mentionable.folder.name
+			return mentionable.folder?.name ?? 'Unknown folder'
 		case 'vault':
 			return 'Vault'
 		case 'current-file':
 			return mentionable.file?.name ?? 'Current file'
 		case 'block':
-			return `${mentionable.file.name} (${mentionable.startLine}:${mentionable.endLine})`
+			return `${mentionable.file?.name ?? 'Unknown file'} (${mentionable.startLine}:${mentionable.endLine})`
 		case 'url':
 			return mentionable.url
 		case 'image':
