@@ -253,13 +253,161 @@ export class InfioSettingTab extends PluginSettingTab {
 			.setHeading()
 			.setName(t('settings.WebSearch.title'))
 
+    new Setting(containerEl)
+			.setName(t('settings.WebSearch.webSearchBackend'))
+			.setDesc(t('settings.WebSearch.webSearchBackendDescription'))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('serpapi', t('settings.WebSearch.serpapi'))
+					.addOption('scrapingdog', t('settings.WebSearch.scrapingdog'))
+          .addOption('serper', t('settings.WebSearch.serper'))
+          .addOption('jina', t('settings.WebSearch.jina'))
+          .addOption('duckduckgo', t('settings.WebSearch.duckduckgo'))
+          .addOption('brave', t('settings.WebSearch.brave'))
+					.setValue(this.plugin.settings.webSearchSettings.webSearchBackend)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								webSearchBackend: value,
+							},
+						})
+					}),
+			)
+
+    new Setting(containerEl)
+			.setName(t('settings.WebSearch.urlFetchBackend'))
+			.setDesc(t('settings.WebSearch.urlFetchBackendDescription'))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('jina', t('settings.WebSearch.jina'))
+					.addOption('local', t('settings.WebSearch.local'))
+					.setValue(this.plugin.settings.webSearchSettings.urlFetchBackend)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								urlFetchBackend: value,
+							},
+						})
+					}),
+			)
+
+    // SerpAPI
 		new Setting(containerEl)
-			.setName(t('settings.WebSearch.serperApiKey'))
+			.setName(t('settings.WebSearch.serpapiApiKey'))
 			.setDesc(createFragment(el => {
-				el.appendText(t('settings.WebSearch.serperApiKeyDescription') + ' ');
+				el.appendText(t('settings.WebSearch.serpapiApiKeyDescription') + ' ');
 				const a = el.createEl('a', {
 					href: 'https://serpapi.com/manage-api-key',
 					text: 'https://serpapi.com/manage-api-key'
+				});
+				a.setAttr('target', '_blank');
+				a.setAttr('rel', 'noopener');
+			}))
+			.setClass('setting-item-heading-smaller')
+			.addText((text) => {
+				const t = text
+					.setValue(this.plugin.settings.webSearchSettings.serpapiApiKey)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								serpapiApiKey: value,
+							},
+						})
+					});
+				if (t.inputEl) {
+					t.inputEl.type = "password";
+				}
+				return t;
+			})
+
+		new Setting(containerEl)
+			.setName(t('settings.WebSearch.serpapiSearchEngine'))
+			.setDesc(t('settings.WebSearch.serpapiSearchEngineDescription'))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('google', t('settings.WebSearch.google'))
+					.addOption('duckduckgo', t('settings.WebSearch.duckduckgo'))
+					.addOption('bing', t('settings.WebSearch.bing'))
+					.setValue(this.plugin.settings.webSearchSettings.serpapiSearchEngine)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								serpapiSearchEngine: value,
+							},
+						})
+					}),
+			)
+
+    // Scrapingdog
+		new Setting(containerEl)
+			.setName(t('settings.WebSearch.scrapingdogApiKey'))
+			.setDesc(createFragment(el => {
+				el.appendText(t('settings.WebSearch.scrapingdogApiKeyDescription') + ' ');
+				const a = el.createEl('a', {
+					href: 'https://www.scrapingdog.com/',
+					text: 'https://www.scrapingdog.com/'
+				});
+				a.setAttr('target', '_blank');
+				a.setAttr('rel', 'noopener');
+			}))
+			.setClass('setting-item-heading-smaller')
+			.addText((text) => {
+				const t = text
+					.setValue(this.plugin.settings.webSearchSettings.scrapingdogApiKey)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								scrapingdogApiKey: value,
+							},
+						})
+					});
+				if (t.inputEl) {
+					t.inputEl.type = "password";
+				}
+				return t;
+			})
+
+		new Setting(containerEl)
+			.setName(t('settings.WebSearch.scrapingdogSearchEngine'))
+			.setDesc(t('settings.WebSearch.scrapingdogSearchEngineDescription'))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('google', t('settings.WebSearch.google'))
+					.addOption('bing', t('settings.WebSearch.bing'))
+					.setValue(this.plugin.settings.webSearchSettings.scrapingdogSearchEngine)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								scrapingdogSearchEngine: value,
+							},
+						})
+					}),
+			)
+
+    // Serper
+		new Setting(containerEl)
+			.setName(t('settings.WebSearch.scrperApiKey'))
+			.setDesc(createFragment(el => {
+				el.appendText(t('settings.WebSearch.scrperApiKeyDescription') + ' ');
+				const a = el.createEl('a', {
+					href: 'https://serper.dev/',
+					text: 'https://serper.dev/'
 				});
 				a.setAttr('target', '_blank');
 				a.setAttr('rel', 'noopener');
@@ -283,47 +431,7 @@ export class InfioSettingTab extends PluginSettingTab {
 				return t;
 			})
 
-		new Setting(containerEl)
-			.setName(t('settings.WebSearch.searchEngine'))
-			.setDesc(t('settings.WebSearch.searchEngineDescription'))
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('google', t('settings.WebSearch.google'))
-					.addOption('duckduckgo', t('settings.WebSearch.duckDuckGo'))
-					.addOption('bing', t('settings.WebSearch.bing'))
-					.setValue(this.plugin.settings.webSearchSettings.serperSearchEngine)
-					.onChange(async (value) => {
-						await this.plugin.setSettings({
-							...this.plugin.settings,
-							webSearchSettings: {
-								...this.plugin.settings.webSearchSettings,
-								// @ts-ignore
-								serperSearchEngine: value,
-							},
-						})
-					}),
-			)
-
-		new Setting(containerEl)
-			.setName(t('settings.WebSearch.urlFetchBackend'))
-			.setDesc(t('settings.WebSearch.urlFetchBackendDescription'))
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('jina', t('settings.WebSearch.jina'))
-					.addOption('local', t('settings.WebSearch.local'))
-					.setValue(this.plugin.settings.webSearchSettings.urlFetchBackend)
-					.onChange(async (value) => {
-						await this.plugin.setSettings({
-							...this.plugin.settings,
-							webSearchSettings: {
-								...this.plugin.settings.webSearchSettings,
-								// @ts-ignore
-								urlFetchBackend: value,
-							},
-						})
-					}),
-			)
-
+    // Jina
 		new Setting(containerEl)
 			.setName(t('settings.WebSearch.jinaApiKey'))
 			.setDesc(createFragment(el => {
@@ -353,6 +461,37 @@ export class InfioSettingTab extends PluginSettingTab {
 				}
 				return t;
 			})
+
+    // Serper
+		new Setting(containerEl)
+      .setName(t('settings.WebSearch.braveApiKey'))
+      .setDesc(createFragment(el => {
+        el.appendText(t('settings.WebSearch.braveApiKeyDescription') + ' ');
+        const a = el.createEl('a', {
+          href: 'https://brave.com/search/api/',
+          text: 'https://brave.com/search/api/'
+        });
+        a.setAttr('target', '_blank');
+        a.setAttr('rel', 'noopener');
+      }))
+      .setClass('setting-item-heading-smaller')
+      .addText((text) => {
+        const t = text
+          .setValue(this.plugin.settings.webSearchSettings.braveApiKey)
+          .onChange(async (value) => {
+            await this.plugin.setSettings({
+              ...this.plugin.settings,
+              webSearchSettings: {
+                ...this.plugin.settings.webSearchSettings,
+                braveApiKey: value,
+              },
+            })
+          });
+        if (t.inputEl) {
+          t.inputEl.type = "password";
+        }
+        return t;
+      })
 	}
 
 	renderRAGSection(containerEl: HTMLElement): void {
