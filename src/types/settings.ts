@@ -202,17 +202,25 @@ export const triggerSchema = z.object({
 });
 
 const WebSearchSettingsSchema = z.object({
-	webSearchBackend: z.enum(['local', 'serper']).catch('serper'),
+	webSearchBackend: z.enum(['serpapi', 'scrapingdog', 'serper', 'jina', 'duckduckgo', 'brave']).catch('serpapi'),
+  urlFetchBackend: z.enum(['local', 'jina']).catch('jina'),
+	serpapiApiKey: z.string().catch(''),
+	serpapiSearchEngine: z.enum(['google', 'duckduckgo', 'bing']).catch('google'),
+  scrapingdogApiKey: z.string().catch(''),
+	scrapingdogSearchEngine: z.enum(['google', 'bing']).catch('google'),
 	serperApiKey: z.string().catch(''),
-	serperSearchEngine: z.enum(['google', 'duckduckgo', 'bing']).catch('google'),
-	urlFetchBackend: z.enum(['local', 'jina']).catch('jina'),
-	jinaApiKey: z.string().catch(''),
+  jinaApiKey: z.string().catch(''),
+  braveApiKey: z.string().catch(''),
 }).catch({
 	webSearchBackend: 'serper',
-	serperApiKey: '',
-	serperSearchEngine: 'google',
 	urlFetchBackend: 'jina',
-	jinaApiKey: '',
+	serpapiApiKey: '',
+	serpapiSearchEngine: 'google',
+  scrapingdogApiKey: '',
+	scrapingdogSearchEngine: 'google',
+	serperApiKey: '',
+  jinaApiKey: '',
+  braveApiKey: '',
 });
 
 const FilesSearchSettingsSchema = z.object({
