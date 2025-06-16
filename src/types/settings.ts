@@ -440,33 +440,10 @@ function migrateSettings(
 }
 
 export function parseInfioSettings(data: unknown): InfioSettings {
-	const migratedData = migrateSettings(data as Record<string, unknown>);
-
 	try {
+		const migratedData = migrateSettings(data as Record<string, unknown>)
 		return InfioSettingsSchema.parse(migratedData)
-	} catch {
-		// Instead of hard resetting, we can attempt to parse the migrated data
-		// and catch specific errors to fix or use defaults.
-    console.log("Failed to parse settings with migrated data, attempting to fix...");
-		const fixedData: Record<string, any> = {};
-		const defaultSettings = DEFAULT_SETTINGS;
-
-		// Iterate over the schema keys to build the fixed data
-		for (const key in InfioSettingsSchema.shape) {
-			const schema = InfioSettingsSchema[key];
-			try {
-				fixedData[key] = schema.parse(migratedData[key]);
-			} catch {
-        console.log(`Failed to parse key '${key}' with migrated data, using default key instead.`);
-				fixedData[key] = defaultSettings[key];
-			}
-		}
-
-		try {
-			return InfioSettingsSchema.parse(fixedData);
-		} catch (error) {
-			console.error("Failed to fix settings with migrated data, using default settings instead: ", error);
-			return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
-		}
+	} catch (error) {
+		return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
 	}
 }
