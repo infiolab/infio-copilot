@@ -1,5 +1,5 @@
 releases:
-	- version: "0.6.11"
+  - version: "0.6.11"
     features:
       - "update settings migration"
       - "update regex search result, thanks @travertexs"
