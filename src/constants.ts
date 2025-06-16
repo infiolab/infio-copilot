@@ -34,8 +34,14 @@ export const GROK_BASE_URL = 'https://api.x.ai/v1'
 export const SILICONFLOW_BASE_URL = 'https://api.siliconflow.cn/v1'
 export const ALIBABA_QWEN_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1'
 export const INFIO_BASE_URL = 'https://api.infio.app'
-export const JINA_BASE_URL = 'https://r.jina.ai'
-export const SERPER_BASE_URL = 'https://serpapi.com/search'
+export const SERPAPI_BASE_URL = 'https://serpapi.com/search'
+export const JINA_SEARCH_BASE_URL = 'https://s.jina.ai'
+export const JINA_FETCH_BASE_URL = 'https://r.jina.ai'
+export const SCRAPINGDOG_BASE_URL = 'https://api.scrapingdog.com'
+// This is confusing since Serper and SerpAPI are not the same platform
+//export const SERPER_BASE_URL = 'https://serpapi.com/search'
+export const SERPER_BASE_URL = 'https://google.serper.dev/search'
+export const BRAVE_BASE_URL = 'https://api.search.brave.com/res/v1/web/search'
 // Pricing in dollars per million tokens
 type ModelPricing = {
 	input: number

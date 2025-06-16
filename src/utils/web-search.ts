@@ -1,8 +1,19 @@
 import https from 'https';
 
 import { htmlToMarkdown, requestUrl } from 'obsidian';
+import {
+  search as ddgSearch,
+  SearchResult as DDGSearchResult,
+} from 'duck-duck-scrape';
 
-import { JINA_BASE_URL, SERPER_BASE_URL } from '../constants';
+import {
+  SERPAPI_BASE_URL,
+  JINA_SEARCH_BASE_URL,
+  SCRAPINGDOG_BASE_URL,
+  SERPER_BASE_URL,
+  JINA_FETCH_BASE_URL,
+  BRAVE_BASE_URL,
+} from '../constants';
 import { RAGEngine } from '../core/rag/rag-engine';
 import { WebSearchSettings } from '../types/settings';
 
@@ -17,11 +28,6 @@ interface SearchResult {
 	snippet_embedding: number[];
 	content?: string;
 }
-
-interface SearchResponse {
-	organic_results?: SearchResult[];
-}
-
 
 export interface EventProps {
 	[key: string]: string | number | boolean
@@ -97,11 +103,11 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 	return dotProduct / (magnitudeA * magnitudeB);
 }
 
-async function serperSearch(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
+async function serpapiSearch(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
 	return new Promise((resolve, reject) => {
-		const apiKey = searchSettings.serperApiKey;
-		const searchEngine = searchSettings.serperSearchEngine;
-		const url = `${SERPER_BASE_URL}?q=${encodeURIComponent(query)}&engine=${searchEngine}&api_key=${apiKey}&num=20`;
+		const apiKey = searchSettings.serpapiApiKey;
+		const searchEngine = searchSettings.serpapiSearchEngine;
+		const url = `${SERPAPI_BASE_URL}?q=${encodeURIComponent(query)}&engine=${searchEngine}&api_key=${apiKey}&num=20`;
 		https.get(url, (res: any) => {
 			let data = '';
 
@@ -111,7 +117,9 @@ async function serperSearch(query: string, searchSettings: WebSearchSettings): P
 
 			res.on('end', () => {
 				try {
-					let parsedData: SearchResponse;
+					let parsedData: {
+            organic_results?: SearchResult[];
+          };
 					try {
 						parsedData = JSON.parse(data);
 					} catch {
@@ -136,14 +144,298 @@ async function serperSearch(query: string, searchSettings: WebSearchSettings): P
 				}
 			});
 		}).on('error', (error: Error) => {
-			console.error("serper search error: ", error)
+			console.error("SerpAPI search error: ", error)
+			reject(error);
+		});
+	});
+}
+
+// This function is untested since I don't have Scrapingdog API lol
+async function scrapingdogSearch(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
+	return new Promise((resolve, reject) => {
+		const apiKey = searchSettings.scrapingdogApiKey;
+		const searchEngine = searchSettings.scrapingdogSearchEngine;
+
+		let url: string;
+    if (searchEngine === 'google') {
+      url = `${SCRAPINGDOG_BASE_URL}/google/api_key=${apiKey}&query=${encodeURIComponent(query)}&results=20`;
+    } else if (searchEngine === 'bing') {
+      url = `${SCRAPINGDOG_BASE_URL}/bing/search/api_key=${apiKey}&query=${encodeURIComponent(query)}&results=20`;
+    } else {
+      throw new Error(`Unsupported search engine: ${searchEngine}`);
+    }
+		https.get(url, (res: any) => {
+			let data = '';
+
+			res.on('data', (chunk: Buffer) => {
+				data += chunk.toString();
+			});
+
+			res.on('end', () => {
+				try {
+					let parsedData: {
+            organic_data?: SearchResult[];
+            bing_data?: SearchResult[];
+          };
+					try {
+						parsedData = JSON.parse(data);
+					} catch {
+						parsedData = { };
+					}
+					let results: SearchResult[];
+          if (searchEngine === 'google') {
+            results = parsedData?.organic_data;
+          } else if (searchEngine === 'bing') {
+            results = parsedData?.bing_data;
+          }
+
+					if (!results) {
+						resolve([]);
+						return;
+					}
+
+					resolve(results);
+
+					// const formattedResults = results.map((item: SearchResult) => {
+					// 	return `title: ${item.title}\nurl: ${item.link}\nsnippet: ${item.snippet}\n`;
+					// }).join('\n\n');
+
+					// resolve(formattedResults);
+				} catch (error) {
+					reject(error);
+				}
+			});
+		}).on('error', (error: Error) => {
+			console.error("Scrapingdog search error: ", error)
+			reject(error);
+		});
+	});
+}
+
+// This one is also untested :)
+async function serperSearch(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
+	return new Promise((resolve, reject) => {
+		const apiKey = searchSettings.serperApiKey;
+		const url = `${SERPER_BASE_URL}?q=${encodeURIComponent(query)}`;
+    const headers = {
+      'Content-Type': 'application/json',
+			'X-API-KEY': `${apiKey}`,
+		};
+		const options: https.RequestOptions = {
+			headers: headers,
+		};
+    
+    https.get(url, options, (res: any) => {
+			let data = '';
+
+			res.on('data', (chunk: Buffer) => {
+				data += chunk.toString();
+			});
+
+			res.on('end', () => {
+				try {
+					let parsedData: {
+            organic?: SearchResult[];
+          };
+					try {
+						parsedData = JSON.parse(data);
+					} catch {
+						parsedData = { organic: undefined };
+					}
+					const results = parsedData?.organic.slice(0, 20);
+
+					if (!results) {
+						resolve([]);
+						return;
+					}
+
+					resolve(results);
+
+					// const formattedResults = results.map((item: SearchResult) => {
+					// 	return `title: ${item.title}\nurl: ${item.link}\nsnippet: ${item.snippet}\n`;
+					// }).join('\n\n');
+
+					// resolve(formattedResults);
+				} catch (error) {
+					reject(error);
+				}
+			});
+		}).on('error', (error: Error) => {
+			console.error("Serper search error: ", error)
+			reject(error);
+		});
+	});
+}
+
+// Including this one ;)
+async function jinaSearch(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
+	return new Promise((resolve, reject) => {
+    const apiKey = searchSettings.jinaApiKey;
+    if (!apiKey || apiKey === '') {
+      reject('Jina API key is not set');
+      return;
+    }
+		const url = `${JINA_SEARCH_BASE_URL}/?q=${encodeURIComponent(query)}`;
+		const headers = {
+      'Accept': 'application/json',
+			'Authorization': `Bearer ${apiKey}`,
+			'X-Respond-With': 'no-content',
+		};
+		const options: https.RequestOptions = {
+			headers: headers,
+		};
+
+		https.get(url, options, (res) => {
+			let data = '';
+
+			res.on('data', (chunk) => {
+				data += chunk;
+			});
+
+      res.on('end', () => {
+				try {
+					let parsedData: {
+            data?: SearchResult[];
+          };
+					try {
+						parsedData = JSON.parse(data);
+					} catch {
+						parsedData = { data: undefined };
+					}
+					const results = parsedData?.data.slice(0, 20);
+
+					if (!results) {
+						resolve([]);
+						return;
+					}
+
+					resolve(results);
+
+          // const formattedResults = results.map((item: SearchResult) => {
+					// 	return `title: ${item.title}\nurl: ${item.link}\nsnippet: ${item.snippet}\n`;
+					// }).join('\n\n');
+
+					// resolve(formattedResults);
+				} catch (error) {
+					reject(error);
+				}
+			});
+		}).on('error', (error: Error) => {
+			console.error(`Jina search error: ${error.message}`);
+			reject(error);
+		});
+	});
+}
+
+async function duckduckgoSearch(query: string): Promise<SearchResult[]> {
+	return new Promise(async (resolve, reject) => {
+    try {
+      const data = await ddgSearch(query);
+
+      let results: SearchResult[];
+      data.results?.slice(0, 20).forEach((result: DDGSearchResult) => {
+        results.push({
+          title: result.title,
+          link: result.url,
+          snippet: result.description,
+          snippet_embedding: [],
+        });
+      });
+
+      if (!results) {
+        resolve([]);
+        return;
+      }
+
+      resolve(results);
+    } catch(error) {
+      console.error(`DuckDuckGo search error: ${error.message}`);
+      reject(error);
+    }
+	});
+}
+
+// Including this one ;)
+async function braveSearch(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
+	return new Promise((resolve, reject) => {
+    const apiKey = searchSettings.braveApiKey;
+    if (!apiKey || apiKey === '') {
+      reject('Brave API key is not set');
+      return;
+    }
+		const url = `${BRAVE_BASE_URL}/?q=${encodeURIComponent(query)}`;
+		const headers = {
+      'Accept': 'application/json',
+			'X-Subscription-Token': `${apiKey}`,
+		};
+		const options: https.RequestOptions = {
+			headers: headers,
+		};
+
+		https.get(url, options, (res) => {
+			let data = '';
+
+			res.on('data', (chunk) => {
+				data += chunk;
+			});
+
+      res.on('end', () => {
+				try {
+					let parsedData: SearchResult[];
+					try {
+						parsedData = JSON.parse(data);
+					} catch {
+						parsedData = [];
+					}
+					const results = parsedData;
+
+					if (!results) {
+						resolve([]);
+						return;
+					}
+
+					resolve(results);
+
+          // const formattedResults = results.map((item: SearchResult) => {
+					// 	return `title: ${item.title}\nurl: ${item.link}\nsnippet: ${item.snippet}\n`;
+					// }).join('\n\n');
+
+					// resolve(formattedResults);
+				} catch (error) {
+					reject(error);
+				}
+			});
+		}).on('error', (error: Error) => {
+			console.error(`Brave search error: ${error.message}`);
 			reject(error);
 		});
 	});
 }
 
 async function search(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
-	return serperSearch(query, searchSettings);
+  return new Promise((resolve, reject) => {
+    if (searchSettings.webSearchBackend === 'serpapi') {
+      resolve(serpapiSearch(query, searchSettings));
+      return;
+    } else if (searchSettings.webSearchBackend === 'jina') {
+      resolve(jinaSearch(query, searchSettings));
+      return;
+    } else if (searchSettings.webSearchBackend === 'scrapingdog') {
+      resolve(scrapingdogSearch(query, searchSettings));
+      return;
+    } else if (searchSettings.webSearchBackend === 'serper') {
+      resolve(serperSearch(query, searchSettings));
+      return;
+    } else if (searchSettings.webSearchBackend === 'duckduckgo') {
+      resolve(duckduckgoSearch(query));
+      return;
+    } else if (searchSettings.webSearchBackend === 'brave') {
+      resolve(braveSearch(query, searchSettings));
+      return;
+    }
+
+    reject(`Unsupported web search backend: ${searchSettings.webSearchBackend}`);
+  });
 }
 
 async function filterByEmbedding(query: string, results: SearchResult[], ragEngine: RAGEngine): Promise<SearchResult[]> {
@@ -216,7 +508,7 @@ Note: This is a video content. Please use specialized video processing tools for
 
 async function fetchByJina(url: string, apiKey: string): Promise<string> {
 	return new Promise((resolve) => {
-		const jinaUrl = `${JINA_BASE_URL}/${url}`;
+		const jinaFetchUrl = `${JINA_FETCH_BASE_URL}/${url}`;
 
 		const validJinaKey = apiKey && apiKey !== '';
 		const jinaHeaders = {
@@ -229,7 +521,7 @@ async function fetchByJina(url: string, apiKey: string): Promise<string> {
 			headers: jinaHeaders,
 		};
 
-		const req = https.request(jinaUrl, jinaOptions, (res) => {
+		const req = https.request(jinaFetchUrl, jinaOptions, (res) => {
 			let data = '';
 
 			res.on('data', (chunk) => {
@@ -241,8 +533,8 @@ async function fetchByJina(url: string, apiKey: string): Promise<string> {
 					// check if there is an error response
 					const response = JSON.parse(data);
 					if (response.code && response.message) {
-						console.error(`JINA API error: ${response.message}`);
-						resolve(`fetch jina content error: ${response.message}`);
+						console.error(`Jina API error: ${response.message}`);
+						resolve(`Fetch Jina content error: ${response.message}`);
 						return;
 					}
 					resolve(data);
@@ -255,7 +547,7 @@ async function fetchByJina(url: string, apiKey: string): Promise<string> {
 
 		req.on('error', (e) => {
 			console.error(`Error: ${e.message}`);
-			resolve(`fetch jina error: ${e.message}`);
+			resolve(`Fetch Jina error: ${e.message}`);
 		});
 
 		req.end();
