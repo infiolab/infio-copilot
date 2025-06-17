@@ -1,4 +1,8 @@
 releases:
+  - version: "0.6.13"
+    features:
+      - "fix settings migration"
+      - "update settings migration"
   - version: "0.6.12"
     features:
       - "fix settings migration"
