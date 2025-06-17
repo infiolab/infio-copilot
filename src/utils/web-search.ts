@@ -330,10 +330,10 @@ async function jinaSearch(query: string, searchSettings: WebSearchSettings): Pro
 async function duckduckgoSearch(query: string): Promise<SearchResult[]> {
 	return new Promise(async (resolve, reject) => {
     try {
-      const data = await ddgSearch(query);
+      const data = await ddgSearch(query, {}, 20);
 
       let results: SearchResult[];
-      data.results?.slice(0, 20).forEach((result: DDGSearchResult) => {
+      data.results?.forEach((result: DDGSearchResult) => {
         results.push({
           title: result.title,
           link: result.url,
@@ -412,7 +412,7 @@ async function braveSearch(query: string, searchSettings: WebSearchSettings): Pr
 	});
 }
 
-async function search(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
+async function loadSearchBackend(query: string, searchSettings: WebSearchSettings): Promise<SearchResult[]> {
   return new Promise((resolve, reject) => {
     if (searchSettings.webSearchBackend === 'serpapi') {
       resolve(serpapiSearch(query, searchSettings));
@@ -587,7 +587,7 @@ export async function webSearch(
 	ragEngine: RAGEngine
 ): Promise<string> {
 	try {
-		const results = await search(query, searchSettings);
+		const results = await loadSearchBackend(query, searchSettings);
 		const filteredResults = await filterByEmbedding(query, results, ragEngine);
 		const filteredResultsWithContent = await Promise.all(filteredResults.map(async (result) => {
 			let content = await fetchUrlContent(result.link, searchSettings);
@@ -599,7 +599,7 @@ export async function webSearch(
 		return filteredResultsWithContent.join('\n\n');
 	} catch (error) {
 		console.error(`Failed to web search: ${query}`, error);
-		return "web search error";
+		return `Failed to web search "${query}" with the following error: ${error}`;
 	}
 }
 
