@@ -6,11 +6,8 @@ import {
 	MIN_DELAY,
 	MIN_MAX_CHAR_LIMIT,
 	MIN_MAX_TOKENS,
-	azureOAIApiSettingsSchema,
 	fewShotExampleSchema,
 	modelOptionsSchema,
-	ollamaApiSettingsSchema,
-	openAIApiSettingsSchema,
 } from "../shared";
 
 import block_qoute_example from "./few-shot-examples/block-qoute-example";
@@ -28,37 +25,13 @@ import text_completion_middle from "./few-shot-examples/text-completion-middle";
 import unordered_list_pro_and_con_list from "./few-shot-examples/unordered-list-pro-and-con-list";
 import unordered_list_solid from "./few-shot-examples/unordered-list-solid";
 
-export const triggerSchema = z.object({
-	type: z.enum(['string', 'regex']),
-	value: z.string().min(1, { message: "Trigger value must be at least 1 character long" })
-}).strict().superRefine((trigger, ctx) => {
-	if (trigger.type === "regex") {
-		if (!trigger.value.endsWith("$")) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message: "Regex triggers must end with a $.",
-				path: ["value"],
-			});
-		}
-		if (!isRegexValid(trigger.value)) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message: `Invalid regex: "${trigger.value}"`,
-				path: ["value"],
-			});
-		}
-	}
-});
+import { triggerSchema, InfioSettingsSchema } from "../../../types/settings";
 
-
+// Unused code
+//----Start
 export const settingsSchema = z.object({
 	version: z.literal("1"),
-	enabled: z.boolean(),
 	advancedMode: z.boolean(),
-	apiProvider: z.enum(['azure', 'openai', "ollama"]),
-	azureOAIApiSettings: azureOAIApiSettingsSchema,
-	openAIApiSettings: openAIApiSettingsSchema,
-	ollamaApiSettings: ollamaApiSettingsSchema,
 	triggers: z.array(triggerSchema),
 	delay: z.number().int().min(MIN_DELAY, { message: "Delay must be between 0ms and 2000ms" }).max(MAX_DELAY, { message: "Delay must be between 0ms and 2000ms" }),
 	modelOptions: modelOptionsSchema,
@@ -94,29 +67,28 @@ export const settingsSchema = z.object({
 export const pluginDataSchema = z.object({
 	settings: settingsSchema,
 }).strict();
-
+//----End
 
 export const DEFAULT_SETTINGS = {
-	// version: "1",
+	// Provider
+  infioProvider: InfioSettingsSchema.shape['infioProvider'].parse({}),
+  openrouterProvider: InfioSettingsSchema.shape['openrouterProvider'].parse({}),
+  siliconflowProvider: InfioSettingsSchema.shape['siliconflowProvider'].parse({}),
+  alibabaQwenProvider: InfioSettingsSchema.shape['alibabaQwenProvider'].parse({}),
+  anthropicProvider: InfioSettingsSchema.shape['anthropicProvider'].parse({}),
+  deepseekProvider: InfioSettingsSchema.shape['deepseekProvider'].parse({}),
+	openaiProvider: InfioSettingsSchema.shape['openaiProvider'].parse({}),
+  googleProvider: InfioSettingsSchema.shape['googleProvider'].parse({}),
+	ollamaProvider: InfioSettingsSchema.shape['ollamaProvider'].parse({}),
+  groqProvider: InfioSettingsSchema.shape['groqProvider'].parse({}),
+  grokProvider: InfioSettingsSchema.shape['grokProvider'].parse({}),
+  openaicompatibleProvider: InfioSettingsSchema.shape['openaicompatibleProvider'].parse({}),
 
-	// General settings
-	autocompleteEnabled: true,
-	advancedMode: false,
-	apiProvider: "openai",
-	// API settings
-	azureOAIApiSettings: {
-		key: "",
-		url: "https://YOUR_AOI_SERVICE_NAME.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_NAME/chat/completions",
-	},
-	openAIApiSettings: {
-		key: "",
-		url: "https://api.openai.com/v1/chat/completions",
-		model: "gpt-3.5-turbo",
-	},
-	ollamaApiSettings: {
-		url: "http://localhost:11434/api/chat",
-		model: "",
-	},
+	// Web Search
+	webSearchSettings: InfioSettingsSchema.shape['webSearchSettings'].parse({}),
+
+	// File Search
+	fileSearchSettings: InfioSettingsSchema.shape['fileSearchSettings'].parse({}),
 
 	// Trigger settings
 	triggers: [
@@ -145,7 +117,6 @@ export const DEFAULT_SETTINGS = {
 		{ type: "regex", value: "\\s*(-|[0-9]+\\.) \\[.\\]\\s+$" },
 	],
 
-	delay: 500,
 	// Request settings
 	modelOptions: {
 		temperature: 1,
@@ -182,18 +153,14 @@ ANSWER: here, you write the text that should be at the location of <mask/>
 		header_example_relu,
 	].sort((a, b) => a.toString().localeCompare(b.toString())),
 	userMessageTemplate: "{{prefix}}<mask/>{{suffix}}",
-	chainOfThoughRemovalRegex: `(.|\\n)*ANSWER:`,
+	chainOfThoughtRemovalRegex: `(.|\\n)*ANSWER:`,
 	// Preprocessing settings
 	dontIncludeDataviews: true,
 	maxPrefixCharLimit: 4000,
 	maxSuffixCharLimit: 4000,
 	// Postprocessing settings
-	removeDuplicateMathBlockIndicator: true,
-	removeDuplicateCodeBlockIndicator: true,
 	ignoredFilePatterns: "**/secret/**\n",
 	ignoredTags: "",
-	cacheSuggestions: true,
-	debugMode: false,
 };
 
 export type Trigger = z.infer<typeof triggerSchema>;

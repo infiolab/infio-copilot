@@ -15,23 +15,6 @@ export const MAX_FREQUENCY_PENALTY = 2;
 export const MIN_PRESENCE_PENALTY = 0;
 export const MAX_PRESENCE_PENALTY = 2;
 
-
-export const azureOAIApiSettingsSchema = z.object({
-	key: z.string(),
-	url: z.string().url().or(z.string().max(0)),
-}).strict();
-
-export const openAIApiSettingsSchema = z.object({
-	key: z.string(),
-	url: z.string().url(),
-	model: z.string(),
-}).strict();
-
-export const ollamaApiSettingsSchema = z.object({
-	url: z.string().url(),
-	model: z.string(),
-}).strict();
-
 export const modelOptionsSchema = z.object({
 	temperature: z.number()
 		.min(MIN_TEMPERATURE, { message: `Temperature must be at least ${MIN_TEMPERATURE}` }),
