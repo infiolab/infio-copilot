@@ -1,7 +1,7 @@
-import { DEFAULT_MODELS } from '../constants'
 import { DEFAULT_SETTINGS } from '../settings/versions/v1/v1'
+import { SETTINGS_SCHEMA_VERSION } from '../settings/versions/shared'
 
-import { parseInfioSettings, SETTINGS_SCHEMA_VERSION } from './settings'
+import { parseInfioSettings } from './settings'
 
 describe('parseSmartCopilotSettings', () => {
 	it('should return default values for empty input', () => {
@@ -228,8 +228,8 @@ describe('parseSmartCopilotSettings', () => {
       // Deprecated settings
       deprecated: {
         // Active Models [compatible]
-				enabled: '',
-        activeModels: DEFAULT_MODELS,
+        enabled: '',
+        activeModels: [],
         // API Keys [compatible]
         infioApiKey: '',
         openAIApiKey: '',
@@ -510,8 +510,8 @@ describe('settings migration', () => {
       // Deprecated settings
       deprecated: {
         // Active Models [compatible]
-				enabled: '',
-        activeModels: DEFAULT_MODELS,
+        enabled: '',
+        activeModels: [],
         // API Keys [compatible]
         infioApiKey: '',
         openAIApiKey: 'openai-api-key',

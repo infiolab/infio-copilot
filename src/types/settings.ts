@@ -1,21 +1,19 @@
 import { z } from 'zod';
 
-import { DEFAULT_MODELS } from '../constants';
 import {
+  SETTINGS_SCHEMA_VERSION,
 	MAX_DELAY,
 	MAX_MAX_CHAR_LIMIT,
 	MIN_DELAY,
 	MIN_MAX_CHAR_LIMIT,
-	MIN_MAX_TOKENS,
 	fewShotExampleSchema,
-	modelOptionsSchema
+	modelOptionsSchema,
+  DeprecatedSettingsSchema,
 } from '../settings/versions/shared';
 import { DEFAULT_SETTINGS } from "../settings/versions/v1/v1";
 import { migrateSettings } from "../settings/versions/migration"
 import { ApiProvider } from '../types/llm/model';
 import { isRegexValid, isValidIgnorePattern } from '../utils/auto-complete';
-
-export const SETTINGS_SCHEMA_VERSION = 0.5
 
 const InfioProviderSchema = z.object({
 	name: z.literal('Infio'),
@@ -266,91 +264,6 @@ const FileSearchSettingsSchema = z.object({
 	ripgrepPath: '',
 });
 
-export const DeprecatedSettingsSchema = z.object({
-	// Active Models [compatible]
-  enabled: z.string().catch(''),
-	activeModels: z.array(
-		z.object({
-			name: z.string(),
-			provider: z.string(),
-			enabled: z.boolean(),
-			isEmbeddingModel: z.boolean(),
-			isBuiltIn: z.boolean(),
-			apiKey: z.string().optional(),
-			baseUrl: z.string().optional(),
-			dimension: z.number().optional(),
-		})
-	).catch(DEFAULT_MODELS),
-	// API Keys [compatible]
-	infioApiKey: z.string().catch(''),
-	openAIApiKey: z.string().catch(''),
-	anthropicApiKey: z.string().catch(''),
-	geminiApiKey: z.string().catch(''),
-	groqApiKey: z.string().catch(''),
-	deepseekApiKey: z.string().catch(''),
-  // Model settings [compatible]
-  embeddingModel: z.string().catch(''),
-  chatModel: z.string().catch(''),
-  applyModel: z.string().catch(''),
-	ollamaEmbeddingModel: z.string().catch(''),
-	ollamaChatModel: z.string().catch(''),
-	openAICompatibleChatModel: z.string().catch(''),
-	ollamaApplyModel: z.string().catch(''),
-	openAICompatibleApplyModel: z.string().catch(''),
-	// API Settings[compatible]
-  apiProvider: z.string().catch(''),
-	azureOAIApiSettings: z.string().catch(''),
-	openAIApiSettings: z.string().catch(''),
-	ollamaApiSettings: z.string().catch(''),
-  ollamaBaseUrl: z.string().catch(''),
-  // Web search settings [compatible]
-  serpapiApiKey: z.string().catch(''),
-  serpapiSearchEngine: z.string().catch(''),
-  jinaApiKey: z.string().catch(''),
-  // File search settings [compatible]
-  filesSearchSettings: z.string().catch(''),
-  filesSearchMethod: z.string().catch(''),
-  ripgrepPath: z.string().catch(''),
-  // Dics
-  chainOfThoughRemovalRegex: z.string().catch(''),
-}).catch({
-	// Active Models [compatible]
-  enabled: '',
-	activeModels: DEFAULT_MODELS,
-	// API Keys [compatible]
-	infioApiKey: '',
-	openAIApiKey: '',
-	anthropicApiKey: '',
-	geminiApiKey: '',
-	groqApiKey: '',
-	deepseekApiKey: '',
-  // Model settings [compatible]
-  embeddingModel: '',
-  chatModel: '',
-  applyModel: '',
-	ollamaEmbeddingModel: '',
-	ollamaChatModel: '',
-	openAICompatibleChatModel: '',
-	ollamaApplyModel: '',
-	openAICompatibleApplyModel: '',
-	// API Settings[compatible]
-  apiProvider: '',
-	azureOAIApiSettings: '',
-	openAIApiSettings: '',
-	ollamaApiSettings: '',
-  ollamaBaseUrl: '',
-  // Web search settings [compatible]
-  serpapiApiKey: '',
-  serpapiSearchEngine: '',
-  jinaApiKey: '',
-  // File search settings [compatible]
-  filesSearchSettings: '',
-  filesSearchMethod: '',
-  ripgrepPath: '',
-  // Disc settings [compatible]
-  chainOfThoughRemovalRegex: '',
-});
-
 export const InfioSettingsSchema = z.object({
 	// Version
 	version: z.literal(SETTINGS_SCHEMA_VERSION).catch(SETTINGS_SCHEMA_VERSION),
@@ -502,33 +415,39 @@ export type WebSearchSettings = z.infer<typeof WebSearchSettingsSchema>
 export type FileSearchSettings = z.infer<typeof FileSearchSettingsSchema>
 
 export function parseInfioSettings(data: unknown): InfioSettings {
-	const migratedData = migrateSettings(data as Record<string, unknown>)
+  try {
+    const testSchema = InfioSettingsSchema.strict();
+    return testSchema.parse(data);
+  } catch {
+    console.log(`Old/non-standard settings format detected, attempting to migrate...`);
+    const migratedData = migrateSettings(data as Record<string, unknown>);
 
-	try {
-		return InfioSettingsSchema.parse(migratedData)
-	} catch {
-		// Instead of hard resetting, we can attempt to parse the migrated data
-		// and catch specific errors to fix or use defaults.
-    console.log("Failed to parse settings with migrated data, attempting to fix...");
-		const fixedData: Record<string, any> = {};
-		const defaultSettings = DEFAULT_SETTINGS;
+    try {
+      return InfioSettingsSchema.parse(migratedData);
+    } catch {
+      // Instead of hard resetting, we can attempt to parse the migrated data
+      // and catch specific errors to fix or use defaults.
+      console.log("Failed to parse settings with migrated data, attempting to fix...");
+      const fixedData: Record<string, any> = {};
+      const defaultSettings = DEFAULT_SETTINGS;
 
-		// Iterate over the schema keys to build the fixed data
-		for (const key in InfioSettingsSchema.shape) {
-			const schema = InfioSettingsSchema.shape[key];
-			try {
-				fixedData[key] = schema.parse(migratedData[key]);
-			} catch {
-        console.log(`Failed to parse key '${key}' with migrated data, using default key instead.`);
-				fixedData[key] = defaultSettings[key];
-			}
-		}
+      // Iterate over the schema keys to build the fixed data
+      for (const key in InfioSettingsSchema.shape) {
+        const schema = InfioSettingsSchema.shape[key];
+        try {
+          fixedData[key] = schema.parse(migratedData[key]);
+        } catch {
+          console.log(`Failed to parse key '${key}' with migrated data, using default key instead.`);
+          fixedData[key] = defaultSettings[key];
+        }
+      }
 
-		try {
-			return InfioSettingsSchema.parse(fixedData);
-		} catch (error) {
-			console.error("Failed to fix settings with migrated data, using default settings instead: ", error);
-			return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
-		}
+      try {
+        return InfioSettingsSchema.parse(fixedData);
+      } catch (error) {
+        console.error("Failed to fix settings with migrated data, using default settings instead: ", error);
+        return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
+      }
+    }
 	}
 }
