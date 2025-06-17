@@ -1,7 +1,7 @@
 {
 	"id": "infio-copilot",
 	"name": "Infio Copilot",
-	"version": "0.6.11",
+	"version": "0.6.12",
 	"minAppVersion": "0.15.0",
 	"description": "A Cursor-inspired AI assistant for notes that offers smart autocomplete and interactive chat with your selected notes",
 	"author": "Felix.D",
