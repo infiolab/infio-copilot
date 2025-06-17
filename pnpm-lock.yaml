@@ -136,8 +136,8 @@ importers:
         specifier: ^2.2.3
         version: 2.2.3
       langchain:
-        specifier: ^0.3.15
-        version: 0.3.29(@langchain/core@0.3.40(openai@4.104.0(ws@8.18.3)(zod@3.24.2)))(axios@1.10.0)(handlebars@4.7.8)(openai@4.104.0(ws@8.18.3)(zod@3.24.2))(ws@8.18.3)
+        specifier: ^0.3.28
+        version: 0.3.29(@langchain/core@0.3.58(openai@4.104.0(ws@8.18.3)(zod@3.25.64)))(axios@1.10.0)(handlebars@4.7.8)(openai@4.104.0(ws@8.18.3)(zod@3.25.64))(ws@8.18.3)
       lexical:
         specifier: ^0.17.1
         version: 0.17.1
@@ -11929,7 +11929,7 @@ snapshots:
 
   kolorist@1.8.0: {}
 
-  langchain@0.3.29(@langchain/core@0.3.40(openai@4.104.0(ws@8.18.3)(zod@3.24.2)))(axios@1.10.0)(handlebars@4.7.8)(openai@4.104.0(ws@8.18.3)(zod@3.24.2))(ws@8.18.3):
+  langchain@0.3.29(@langchain/core@0.3.58(openai@4.104.0(ws@8.18.3)(zod@3.25.64)))(axios@1.10.0)(handlebars@4.7.8)(openai@4.104.0(ws@8.18.3)(zod@3.25.64))(ws@8.18.3):
     dependencies:
       '@langchain/core': 0.3.40(openai@4.104.0(ws@8.18.3)(zod@3.24.2))
       '@langchain/openai': 0.5.18(@langchain/core@0.3.40(openai@4.104.0(ws@8.18.3)(zod@3.24.2)))(ws@8.18.3)

@@ -262,7 +262,9 @@ export class InfioSettingTab extends PluginSettingTab {
 					.addOption('scrapingdog', t('settings.WebSearch.scrapingdog'))
           .addOption('serper', t('settings.WebSearch.serper'))
           .addOption('jina', t('settings.WebSearch.jina'))
-          .addOption('duckduckgo', t('settings.WebSearch.duckduckgo'))
+          // Since there're unsolved issues with `duck-duck-scrape`,
+          // we should comment out this option for now.
+          //.addOption('duckduckgo', t('settings.WebSearch.duckduckgo'))
           .addOption('brave', t('settings.WebSearch.brave'))
 					.setValue(this.plugin.settings.webSearchSettings.webSearchBackend)
 					.onChange(async (value) => {
