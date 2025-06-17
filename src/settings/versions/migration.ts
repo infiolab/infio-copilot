@@ -14,9 +14,9 @@ import {
 	settingsSchema as settingsSchemaV1
 } from "./v1/v1";
 import {
-  SETTINGS_SCHEMA_VERSION
-} from "../../types/settings"
-import { DeprecatedSettingsSchema } from "../../types/settings"
+  SETTINGS_SCHEMA_VERSION,
+  DeprecatedSettingsSchema,
+} from './shared';
 
 // The confusing unused migration codes
 //----Start
@@ -105,73 +105,69 @@ const MIGRATIONS: Migration[] = [
 			const newData = { ...data }
 			newData.version = SETTINGS_SCHEMA_VERSION
 
-      if (!newData.infioProvider && newData.infioApiKey) {
+      if (!newData.infioProvider) {
         newData.infioProvider = {
           ...DEFAULT_SETTINGS.infioProvider,
           apiKey: newData.infioApiKey,
         };
       }
-      if (!newData.anthropicProvider && newData.anthropicApiKey) {
+      if (!newData.anthropicProvider) {
         newData.anthropicProvider = {
           ...DEFAULT_SETTINGS.anthropicProvider,
           apiKey: newData.anthropicApiKey,
         };
       }
-      if (!newData.deepseekProvider && newData.deepseekApiKey) {
+      if (!newData.deepseekProvider) {
         newData.deepseekProvider = {
           ...DEFAULT_SETTINGS.deepseekProvider,
           apiKey: newData.deepseekApiKey,
         };
       }
-      if (
-        !newData.openaiProvider &&
-        (newData.openAIApiSettings || newData.openAIApiKey)
-      ) {
-        // @ts-ignore
-        const openAIApiKey = newData.openAIApiKey || newData.openAIApiSettings.key;
+      if (!newData.openaiProvider) {
+        const openAIApiKey =
+          (newData.openAIApiSettings && newData.openAIApiSettings === 'object')
+            // @ts-ignore
+            ? newData.openAIApiSettings.key
+            : newData.openAIApiKey;
         newData.openaiProvider = {
           ...DEFAULT_SETTINGS.openaiProvider,
           apiKey: openAIApiKey,
         };
       }
-      if (!newData.googleProvider && newData.geminiApiKey) {
+      if (!newData.googleProvider) {
         newData.googleProvider = {
           ...DEFAULT_SETTINGS.googleProvider,
           apiKey: newData.geminiApiKey,
         };
       }
-      if (
-        !newData.ollamaProvider &&
-        (newData.ollamaApiSettings || newData.ollamaBaseUrl)
-      ) {
-        let urlFromOldApiSettings = (
+      if (!newData.ollamaProvider) {
+        const ollamaBaseUrl =
           (newData.ollamaApiSettings && newData.ollamaApiSettings === 'object')
             // @ts-ignore
             ? newData.ollamaApiSettings.url
-            : newData.ollamaBaseUrl
-        );
-        const ollamaBaseUrl = urlFromOldApiSettings || newData.ollamaBaseUrl;
+            : newData.ollamaBaseUrl;
         newData.ollamaProvider = {
           ...DEFAULT_SETTINGS.ollamaProvider,
           baseUrl: ollamaBaseUrl,
         };
       }
-      if (!newData.groqProvider && newData.groqApiKey) {
+      if (!newData.groqProvider) {
         newData.groqProvider = {
           ...DEFAULT_SETTINGS.groqProvider,
           apiKey: newData.groqApiKey,
         };
       }
-      if (
-        !newData.openaicompatibleProvider &&
-        newData.azureOAIApiSettings
-      ) {
+      if (!newData.openaicompatibleProvider) {
+        const azureOldApiSettings =
+          (newData.azureOAIApiSettings && newData.azureOAIApiSettings === 'object')
+            ? newData.azureOAIApiSettings
+            : {};
         newData.openaicompatibleProvider = {
           ...DEFAULT_SETTINGS.openaicompatibleProvider,
           // @ts-ignore
-          apiKey: newData.azureOAIApiSettings.key,
+          apiKey: azureOldApiSettings.key || '',
           // @ts-ignore
-          baseUrl: newData.azureOAIApiSettings.url,
+          baseUrl: azureOldApiSettings.url || '',
         };
       }
 
@@ -186,13 +182,13 @@ const MIGRATIONS: Migration[] = [
 			const newData = { ...data }
 			newData.version = SETTINGS_SCHEMA_VERSION
 
-      if (!newData.embeddingModelId && newData.embeddingModel) {
+      if (!newData.embeddingModelId) {
         newData.embeddingModelId = newData.embeddingModel;
       }
-      if (!newData.chatModelId && newData.chatModel) {
+      if (!newData.chatModelId) {
         newData.chatModelId = newData.chatModel;
       }
-      if (!newData.applyModelId && newData.applyModel) {
+      if (!newData.applyModelId) {
         newData.applyModelId = newData.applyModel;
       }
 
@@ -255,10 +251,7 @@ const MIGRATIONS: Migration[] = [
 			const newData = { ...data }
 			newData.version = SETTINGS_SCHEMA_VERSION
 
-			if (
-        !newData.chainOfThoughtRemovalRegex &&
-        newData.chainOfThoughRemovalRegex
-      ) {
+			if (!newData.chainOfThoughtRemovalRegex) {
 				newData.chainOfThoughtRemovalRegex = newData.chainOfThoughRemovalRegex;
 			}
 
@@ -273,35 +266,37 @@ const MIGRATIONS: Migration[] = [
 			const newData = { ...data }
 			newData.version = SETTINGS_SCHEMA_VERSION
 
-      newData.deprecated = {
-        ...DeprecatedSettingsSchema.parse({}),
-        // Active Models [compatible]
-        enabled: newData.enabled,
-        activeModels: newData.activeModels,
-        // API Keys [compatible]
-        infioApiKey: newData.infioApiKey,
-        openAIApiKey: newData.openAIApiKey,
-        anthropicApiKey: newData.anthropicApiKey,
-        geminiApiKey: newData.geminiApiKey,
-        groqApiKey: newData.groqApiKey,
-        deepseekApiKey: newData.deepseekApiKey,
-        // Model settings [compatible]
-        embeddingModel: newData.embeddingModel,
-        chatModel: newData.chatModel,
-        applyModel: newData.applyModel,
-        // API Settings[compatible]
-        apiProvider: newData.apiProvider,
-        ollamaBaseUrl: newData.ollamaBaseUrl,
-        // Web search settings [compatible]
-        serperApiKey: newData.serperApiKey,
-        serperSearchEngine: newData.serperSearchEngine,
-        jinaApiKey: newData.jinaApiKey,
-        // File search settings [compatible]
-        filesSearchMethod: newData.filesSearchMethod,
-        ripgrepPath: newData.ripgrepPath,
-        // Disc settings [compatible]
-        chainOfThoughRemovalRegex: newData.chainOfThoughRemovalRegex,
-      };
+      if (!newData.deprecated) {
+        newData.deprecated = {
+          ...DeprecatedSettingsSchema.parse({}),
+          // Active Models [compatible]
+          enabled: newData.enabled,
+          activeModels: newData.activeModels,
+          // API Keys [compatible]
+          infioApiKey: newData.infioApiKey,
+          openAIApiKey: newData.openAIApiKey,
+          anthropicApiKey: newData.anthropicApiKey,
+          geminiApiKey: newData.geminiApiKey,
+          groqApiKey: newData.groqApiKey,
+          deepseekApiKey: newData.deepseekApiKey,
+          // Model settings [compatible]
+          embeddingModel: newData.embeddingModel,
+          chatModel: newData.chatModel,
+          applyModel: newData.applyModel,
+          // API Settings[compatible]
+          apiProvider: newData.apiProvider,
+          ollamaBaseUrl: newData.ollamaBaseUrl,
+          // Web search settings [compatible]
+          serperApiKey: newData.serperApiKey,
+          serperSearchEngine: newData.serperSearchEngine,
+          jinaApiKey: newData.jinaApiKey,
+          // File search settings [compatible]
+          filesSearchMethod: newData.filesSearchMethod,
+          ripgrepPath: newData.ripgrepPath,
+          // Disc settings [compatible]
+          chainOfThoughRemovalRegex: newData.chainOfThoughRemovalRegex,
+        };
+      }
 
 			return newData
 		},
@@ -311,38 +306,35 @@ const MIGRATIONS: Migration[] = [
 export function migrateSettings(
 	data: Record<string, unknown>,
 ): Record<string, unknown> {
-	let currentData = { ...data }
-	const currentVersion = (currentData.version as number) ?? 0
+    let currentData = { ...data }
+    const currentVersion = (currentData.version as number) ?? 0;
 
-	for (const migration of MIGRATIONS) {
-		if (
-      migration.toVersion <= SETTINGS_SCHEMA_VERSION &&
-      currentVersion <= SETTINGS_SCHEMA_VERSION
-    ) {
-      if (
-        migration.fromVersion && (
-          migration.fromVersion <= migration.toVersion &&
-          currentVersion <= migration.fromVersion
-        )
-      ) {
-        if (migration.message) {
-          console.log(migration.message)
-        } else {
-          console.log(
-            `Migrating settings from v${currentVersion} and older to v${migration.toVersion}.`,
-          )
+    for (const migration of MIGRATIONS) {
+      if (migration.toVersion <= SETTINGS_SCHEMA_VERSION) {
+        if (migration.fromVersion) {
+          if (
+            migration.fromVersion <= migration.toVersion &&
+            currentVersion <= migration.fromVersion
+          ) {
+            if (migration.message) {
+              console.log(migration.message);
+            } else {
+              console.log(
+                  `Migrating settings from v${currentVersion} and older to v${migration.toVersion}.`,
+              );
+            }
+            currentData = migration.migrate(currentData);
+          }
+        } else if (currentVersion <= migration.toVersion) {
+          if (migration.message) {
+            console.log(migration.message);
+          } else {
+            console.log(`Migrating older settings format to v${migration.toVersion} format.`);
+          }
+          currentData = migration.migrate(currentData);
         }
-        currentData = migration.migrate(currentData)
-      } else if (!migration.fromVersion && currentVersion <= migration.toVersion) {
-        if (migration.message) {
-          console.log(migration.message)
-        } else {
-          console.log(`Migrating older settings format to v${migration.toVersion} format.`)
-        }
-        currentData = migration.migrate(currentData)
       }
-		}
-	}
+    }
 
-	return currentData
+	return currentData;
 }
