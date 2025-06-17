@@ -367,7 +367,7 @@ const CustomModeView = () => {
 							{t('prompt.overrideWarning')}						<button
 								className="infio-preview-btn"
 								onClick={async () => {
-									let filesSearchMethod = settings.filesSearchSettings.method
+									let filesSearchMethod = settings.fileSearchSettings.method
 									if (filesSearchMethod === 'auto' && settings.embeddingModelId && settings.embeddingModelId !== '') {
 										filesSearchMethod = 'semantic'
 									}

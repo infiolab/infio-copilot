@@ -10,6 +10,7 @@ import {
 	modelOptionsSchema
 } from '../settings/versions/shared';
 import { DEFAULT_SETTINGS } from "../settings/versions/v1/v1";
+import { migrateSettings } from "../settings/versions/migration"
 import { ApiProvider } from '../types/llm/model';
 import { isRegexValid, isValidIgnorePattern } from '../utils/auto-complete';
 
@@ -159,17 +160,6 @@ const GrokProviderSchema = z.object({
 	useCustomUrl: false
 })
 
-const ollamaModelSchema = z.object({
-	baseUrl: z.string().catch(''),
-	model: z.string().catch(''),
-})
-
-const openAICompatibleModelSchema = z.object({
-	baseUrl: z.string().catch(''),
-	apiKey: z.string().catch(''),
-	model: z.string().catch(''),
-})
-
 const ragOptionsSchema = z.object({
 	chunkSize: z.number().catch(1000),
 	thresholdTokens: z.number().catch(8192),
@@ -212,7 +202,7 @@ const WebSearchSettingsSchema = z.object({
   jinaApiKey: z.string().catch(''),
   braveApiKey: z.string().catch(''),
 }).catch({
-	webSearchBackend: 'serper',
+	webSearchBackend: 'serpapi',
 	urlFetchBackend: 'jina',
 	serpapiApiKey: '',
 	serpapiSearchEngine: 'google',
@@ -223,7 +213,7 @@ const WebSearchSettingsSchema = z.object({
   braveApiKey: '',
 });
 
-const FilesSearchSettingsSchema = z.object({
+const FileSearchSettingsSchema = z.object({
 	method: z.enum(['match', 'regex', 'semantic', 'auto']).catch('auto'),
 	regexBackend: z.enum(['coreplugin', 'ripgrep']).catch('coreplugin'),
 	matchBackend: z.enum(['omnisearch', 'coreplugin']).catch('coreplugin'),
@@ -233,6 +223,91 @@ const FilesSearchSettingsSchema = z.object({
 	regexBackend: 'coreplugin',
 	matchBackend: 'coreplugin',
 	ripgrepPath: '',
+});
+
+export const DeprecatedSettingsSchema = z.object({
+	// Active Models [compatible]
+  enabled: z.string().catch(''),
+	activeModels: z.array(
+		z.object({
+			name: z.string(),
+			provider: z.string(),
+			enabled: z.boolean(),
+			isEmbeddingModel: z.boolean(),
+			isBuiltIn: z.boolean(),
+			apiKey: z.string().optional(),
+			baseUrl: z.string().optional(),
+			dimension: z.number().optional(),
+		})
+	).catch(DEFAULT_MODELS),
+	// API Keys [compatible]
+	infioApiKey: z.string().catch(''),
+	openAIApiKey: z.string().catch(''),
+	anthropicApiKey: z.string().catch(''),
+	geminiApiKey: z.string().catch(''),
+	groqApiKey: z.string().catch(''),
+	deepseekApiKey: z.string().catch(''),
+  // Model settings [compatible]
+  embeddingModel: z.string().catch(''),
+  chatModel: z.string().catch(''),
+  applyModel: z.string().catch(''),
+	ollamaEmbeddingModel: z.string().catch(''),
+	ollamaChatModel: z.string().catch(''),
+	openAICompatibleChatModel: z.string().catch(''),
+	ollamaApplyModel: z.string().catch(''),
+	openAICompatibleApplyModel: z.string().catch(''),
+	// API Settings[compatible]
+  apiProvider: z.string().catch(''),
+	azureOAIApiSettings: z.string().catch(''),
+	openAIApiSettings: z.string().catch(''),
+	ollamaApiSettings: z.string().catch(''),
+  ollamaBaseUrl: z.string().catch(''),
+  // Web search settings [compatible]
+  serpapiApiKey: z.string().catch(''),
+  serpapiSearchEngine: z.string().catch(''),
+  jinaApiKey: z.string().catch(''),
+  // File search settings [compatible]
+  filesSearchSettings: z.string().catch(''),
+  filesSearchMethod: z.string().catch(''),
+  ripgrepPath: z.string().catch(''),
+  // Dics
+  chainOfThoughRemovalRegex: z.string().catch(''),
+}).catch({
+	// Active Models [compatible]
+  enabled: '',
+	activeModels: DEFAULT_MODELS,
+	// API Keys [compatible]
+	infioApiKey: '',
+	openAIApiKey: '',
+	anthropicApiKey: '',
+	geminiApiKey: '',
+	groqApiKey: '',
+	deepseekApiKey: '',
+  // Model settings [compatible]
+  embeddingModel: '',
+  chatModel: '',
+  applyModel: '',
+	ollamaEmbeddingModel: '',
+	ollamaChatModel: '',
+	openAICompatibleChatModel: '',
+	ollamaApplyModel: '',
+	openAICompatibleApplyModel: '',
+	// API Settings[compatible]
+  apiProvider: '',
+	azureOAIApiSettings: '',
+	openAIApiSettings: '',
+	ollamaApiSettings: '',
+  ollamaBaseUrl: '',
+  // Web search settings [compatible]
+  serpapiApiKey: '',
+  serpapiSearchEngine: '',
+  jinaApiKey: '',
+  // File search settings [compatible]
+  filesSearchSettings: '',
+  filesSearchMethod: '',
+  ripgrepPath: '',
+  // Disc settings [compatible]
+  chainOfThoughRemovalRegex: '',
 });
 
 export const InfioSettingsSchema = z.object({
@@ -266,80 +341,34 @@ export const InfioSettingsSchema = z.object({
 	// Active Provider Tab (for UI state)
 	activeProviderTab: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 
-	// Chat Model 
+	// Chat Model
 	chatModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	chatModelId: z.string().catch(''),
-
 	// Apply Model
 	applyModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	applyModelId: z.string().catch(''),
-
 	// Embedding Model
 	embeddingModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	embeddingModelId: z.string().catch(''),
 
-	// fuzzyMatchThreshold
+	// Fuzzy Match Threshold
 	fuzzyMatchThreshold: z.number().catch(0.85),
 
-	// experimentalDiffStrategy
+	// Experimental Diff Strategy
 	experimentalDiffStrategy: z.boolean().catch(false),
 
-	// multiSearchReplaceDiffStrategy
+	// Multi Search Replace Diff Strategy
 	multiSearchReplaceDiffStrategy: z.boolean().catch(true),
 
 	// Mode
 	mode: z.string().catch('ask'),
 	defaultMention: z.enum(['none', 'current-file', 'vault']).catch('none'),
 
-	// web search
+	// Web Search
 	webSearchSettings: WebSearchSettingsSchema,
 
-	// Files Search
-	filesSearchSettings: FilesSearchSettingsSchema,
-
-	/// [compatible]
-	// activeModels [compatible]
-	activeModels: z.array(
-		z.object({
-			name: z.string(),
-			provider: z.string(),
-			enabled: z.boolean(),
-			isEmbeddingModel: z.boolean(),
-			isBuiltIn: z.boolean(),
-			apiKey: z.string().optional(),
-			baseUrl: z.string().optional(),
-			dimension: z.number().optional(),
-		})
-	).catch(DEFAULT_MODELS),
-	// API Keys [compatible]
-	infioApiKey: z.string().catch(''),
-	openAIApiKey: z.string().catch(''),
-	anthropicApiKey: z.string().catch(''),
-	geminiApiKey: z.string().catch(''),
-	groqApiKey: z.string().catch(''),
-	deepseekApiKey: z.string().catch(''),
-	ollamaEmbeddingModel: ollamaModelSchema.catch({
-		baseUrl: '',
-		model: '',
-	}),
-	ollamaChatModel: ollamaModelSchema.catch({
-		baseUrl: '',
-		model: '',
-	}),
-	openAICompatibleChatModel: openAICompatibleModelSchema.catch({
-		baseUrl: '',
-		apiKey: '',
-		model: '',
-	}),
-	ollamaApplyModel: ollamaModelSchema.catch({
-		baseUrl: '',
-		model: '',
-	}),
-	openAICompatibleApplyModel: openAICompatibleModelSchema.catch({
-		baseUrl: '',
-		apiKey: '',
-		model: '',
-	}),
+	// File Search
+	fileSearchSettings: FileSearchSettingsSchema,
 
 	// System Prompt
 	systemPrompt: z.string().catch(''),
@@ -354,28 +383,27 @@ export const InfioSettingsSchema = z.object({
 		includePatterns: [],
 	}),
 
-	// autocomplete options
-	autocompleteEnabled: z.boolean(),
-	advancedMode: z.boolean(),
+	// Autocomplete options
+	autocompleteEnabled: z.boolean().catch(true),
+	advancedMode: z.boolean().catch(false),
 
-	// [compatible]
-	apiProvider: z.enum(['azure', 'openai', "ollama"]),
-	azureOAIApiSettings: z.string().catch(''),
-	openAIApiSettings: z.string().catch(''),
-	ollamaApiSettings: z.string().catch(''),
-
+  // Trigger settings
 	triggers: z.array(triggerSchema),
-	delay: z.number().int().min(MIN_DELAY, { message: "Delay must be between 0ms and 2000ms" }).max(MAX_DELAY, { message: "Delay must be between 0ms and 2000ms" }),
-	modelOptions: modelOptionsSchema,
-	systemMessage: z.string().min(3, { message: "System message must be at least 3 characters long" }),
+	delay: z.number().int().min(MIN_DELAY, { message: "Delay must be between 0ms and 2000ms" }).max(MAX_DELAY, { message: "Delay must be between 0ms and 2000ms" }).catch(500),
+	// Request settings
+  modelOptions: modelOptionsSchema,
+	// Prompt settings
+  systemMessage: z.string().min(3, { message: "System message must be at least 3 characters long" }),
 	fewShotExamples: z.array(fewShotExampleSchema),
 	userMessageTemplate: z.string().min(3, { message: "User message template must be at least 3 characters long" }),
 	chainOfThoughtRemovalRegex: z.string().refine((regex) => isRegexValid(regex), { message: "Invalid regex" }),
-	dontIncludeDataviews: z.boolean(),
-	maxPrefixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }),
-	maxSuffixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }),
-	removeDuplicateMathBlockIndicator: z.boolean(),
-	removeDuplicateCodeBlockIndicator: z.boolean(),
+	// Preprocessing settings
+  dontIncludeDataviews: z.boolean().catch(true),
+	maxPrefixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }).catch(4000),
+	maxSuffixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }).catch(4000),
+	// Postprocessing settings
+  removeDuplicateMathBlockIndicator: z.boolean().catch(true),
+	removeDuplicateCodeBlockIndicator: z.boolean().catch(true),
 	ignoredFilePatterns: z.string().refine((value) => value
 		.split("\n")
 		.filter(s => s.trim().length > 0)
@@ -392,73 +420,16 @@ export const InfioSettingsSchema = z.object({
 		.split("\n")
 		.filter(s => s.includes(",")).length === 0, { message: "Enter each tag on a new line without commas" }
 	),
-	cacheSuggestions: z.boolean(),
-	debugMode: z.boolean(),
+	cacheSuggestions: z.boolean().catch(true),
+	debugMode: z.boolean().catch(false),
+
+  // Keep deprecated settings for compatibility.
+  deprecated: DeprecatedSettingsSchema,
 })
 
 export type InfioSettings = z.infer<typeof InfioSettingsSchema>
 export type WebSearchSettings = z.infer<typeof WebSearchSettingsSchema>
-export type FilesSearchSettings = z.infer<typeof FilesSearchSettingsSchema>
-
-type Migration = {
-	fromVersion: number
-	toVersion: number
-	migrate: (data: Record<string, unknown>) => Record<string, unknown>
-}
-
-const MIGRATIONS: Migration[] = [
-	{
-		fromVersion: 0.1,
-		toVersion: 0.4,
-		migrate: (data) => {
-			const newData = { ...data }
-			newData.version = SETTINGS_SCHEMA_VERSION
-			return newData
-		},
-	},
-
-	// A very inelegant fix, but whatever :/
-	// TODO: Should be rewritten in a future release
-	{
-		fromVersion: 0.4,
-		toVersion: 0.4,
-		migrate: (data) => {
-			const newData = { ...data }
-			newData.version = SETTINGS_SCHEMA_VERSION
-
-			// Replace 'chainOfThoughRemovalRegex' with 'chainOfThoughtRemovalRegex'
-			if (newData.chainOfThoughRemovalRegex) {
-				const cotRemovalRegexKey = newData.chainOfThoughRemovalRegex;
-				delete newData.chainOfThoughRemovalRegex;
-				newData.chainOfThoughtRemovalRegex = cotRemovalRegexKey;
-			}
-
-			return newData
-		},
-	},
-]
-
-function migrateSettings(
-	data: Record<string, unknown>,
-): Record<string, unknown> {
-	let currentData = { ...data }
-	const currentVersion = (currentData.version as number) ?? 0
-
-	for (const migration of MIGRATIONS) {
-		if (
-			currentVersion >= migration.fromVersion &&
-			currentVersion < migration.toVersion &&
-			migration.toVersion <= SETTINGS_SCHEMA_VERSION
-		) {
-			console.log(
-				`Migrating settings from ${migration.fromVersion} to ${migration.toVersion}`,
-			)
-			currentData = migration.migrate(currentData)
-		}
-	}
-
-	return currentData
-}
+export type FileSearchSettings = z.infer<typeof FileSearchSettingsSchema>
 
 export function parseInfioSettings(data: unknown): InfioSettings {
 	const migratedData = migrateSettings(data as Record<string, unknown>);
@@ -474,7 +445,7 @@ export function parseInfioSettings(data: unknown): InfioSettings {
 
 		// Iterate over the schema keys to build the fixed data
 		for (const key in InfioSettingsSchema.shape) {
-			const schema = InfioSettingsSchema[key];
+			const schema = InfioSettingsSchema.shape[key];
 			try {
 				fixedData[key] = schema.parse(migratedData[key]);
 			} catch {
