@@ -141,6 +141,8 @@ function isAnArrayPath(path: (string | number)[]): boolean {
 	return path.some(key => typeof key === 'number');
 }
 
+// Unused code
+//----Start
 export function serializeSettings(settings: Settings): PluginData {
 	return { settings: settings };
 }
@@ -162,6 +164,7 @@ export function deserializeSettings(data: JSONObject | null | undefined): Result
 
 	return parseWithSchema(settingsSchema, settings);
 }
+//----End
 
 export function isRegexValid(value: string): boolean {
 	try {

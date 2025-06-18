@@ -3,7 +3,7 @@ import * as path from 'path'
 
 import { App, normalizePath } from 'obsidian'
 
-import { FilesSearchSettings } from "../../types/settings"
+import { FileSearchSettings } from "../../types/settings"
 import {
 	CustomModePrompts,
 	Mode,
@@ -69,7 +69,7 @@ export class SystemPrompt {
 		cwd: string,
 		supportsComputerUse: boolean,
 		mode: Mode,
-		searchSettings: FilesSearchSettings,
+		searchSettings: FileSearchSettings,
 		filesSearchMethod: string,
 		mcpHub?: McpHub,
 		diffStrategy?: DiffStrategy,
@@ -151,7 +151,7 @@ ${await addCustomInstructions(this.app, promptComponent?.customInstructions || m
 		cwd: string,
 		supportsComputerUse: boolean,
 		mode: Mode = defaultModeSlug,
-		searchSettings: FilesSearchSettings,
+		searchSettings: FileSearchSettings,
 		filesSearchMethod: string = 'regex',
 		preferredLanguage?: string,
 		diffStrategy?: DiffStrategy,

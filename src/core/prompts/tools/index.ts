@@ -1,7 +1,7 @@
 import { Mode, ModeConfig, getGroupName, getModeConfig, isToolAllowedForMode } from "../../../utils/modes"
 import { DiffStrategy } from "../../diff/DiffStrategy"
 import { McpHub } from "../../mcp/McpHub"
-import { FilesSearchSettings } from "../../../types/settings"
+import { FileSearchSettings } from "../../../types/settings"
 
 import { getAccessMcpResourceDescription } from "./access-mcp-resource"
 import { getAskFollowupQuestionDescription } from "./ask-followup-question"
@@ -41,7 +41,7 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 export function getToolDescriptionsForMode(
 	mode: Mode,
 	cwd: string,
-	searchSettings: FilesSearchSettings,
+	searchSettings: FileSearchSettings,
 	searchTool: string,
 	supportsComputerUse: boolean,
 	diffStrategy?: DiffStrategy,

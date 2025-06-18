@@ -1,3 +1,8 @@
+/*
+ * This file is unused and potentially deprecated.
+ * Please refer to the new settings structure for model parameter configuration.
+ */
+
 import * as React from "react";
 
 import { InfioSettings } from '../../types/settings';
@@ -63,7 +68,9 @@ export default function ModelParametersSettings({ settings, updateSettings, erro
                 max={MAX_TOP_P}
                 step={0.05}
             />
-            {settings.apiProvider !== "ollama" && (
+            {/*This line is causing a lot of trouble, so I'm commenting it out for now. */}
+            {/*{settings.deprecated.apiProvider !== "ollama" && (*/}
+            {(
                 <>
                     <SliderSettingsItem
                         name={"Frequency penalty"}
