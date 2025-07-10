@@ -65,13 +65,6 @@ describe('parseSmartCopilotSettings', () => {
 				useCustomUrl: false,
 				models: [],
 			},
-			localproviderProvider: {
-				name: 'LocalProvider',
-				apiKey: '',
-				baseUrl: '',
-				useCustomUrl: false,
-				models: [],
-			},
 			anthropicProvider: {
 				name: 'Anthropic',
 				apiKey: '',
@@ -127,6 +120,13 @@ describe('parseSmartCopilotSettings', () => {
 				baseUrl: '',
 				useCustomUrl: true,
 				models: [],
+			},
+			localproviderProvider: {
+				name: 'LocalProvider',
+				apiKey: '',
+				baseUrl: '',
+				useCustomUrl: false,
+				models: []
 			},
       // MCP Servers
       mcpEnabled: false,

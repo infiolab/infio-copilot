@@ -2,7 +2,6 @@ import { cloneDeep, get, has, set } from "lodash";
 
 import { findEqualPaths, isRegexValid } from "../../utils/auto-complete";
 
-import { MIN_MAX_TOKENS } from "../../settings/versions/shared";
 import {
 	DEFAULT_SETTINGS_V0,
 	Settings as SettingsV0,
@@ -16,6 +15,7 @@ import {
 } from "./v1/v1";
 import {
   SETTINGS_SCHEMA_VERSION,
+	MIN_MAX_TOKENS,
   DeprecatedSettingsSchema,
 } from './shared';
 
@@ -94,16 +94,16 @@ const MIGRATIONS: Migration[] = [
 		toVersion: 0.4,
 		migrate: (data) => {
 			const newData = { ...data };
-			newData.version = SETTINGS_SCHEMA_VERSION;
+			newData.version = 0.4;
 			return newData;
 		},
 	},
 	{
 		fromVersion: 0.4,
-		toVersion: SETTINGS_SCHEMA_VERSION,
+		toVersion: 0.5,
 		migrate: (data) => {
 			const newData = { ...data }
-			newData.version = SETTINGS_SCHEMA_VERSION
+			newData.version = 0.5
 			
 			// Handle max_tokens minimum value increase from 800 to 4096
 			if (newData.modelOptions && typeof newData.modelOptions === 'object') {
