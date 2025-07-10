@@ -1,7 +1,14 @@
 
 import { z } from "zod";
 
-import { MAX_DELAY, MAX_MAX_CHAR_LIMIT, MIN_DELAY, MIN_MAX_CHAR_LIMIT, azureOAIApiSettingsSchema, fewShotExampleSchema, modelOptionsSchema, openAIApiSettingsSchema } from "../shared";
+import {
+  MAX_DELAY,
+  MAX_MAX_CHAR_LIMIT,
+  MIN_DELAY,
+  MIN_MAX_CHAR_LIMIT,
+  fewShotExampleSchema,
+  modelOptionsSchema,
+} from "../shared";
 
 import block_qoute_example from "./few-shot-examples/block-qoute-example";
 import codeblock_function_completion from "./few-shot-examples/codeblock-function-completion";
@@ -18,6 +25,22 @@ import text_completion_middle from "./few-shot-examples/text-completion-middle";
 import unordered_list_pro_and_con_list from "./few-shot-examples/unordered-list-pro-and-con-list";
 import unordered_list_solid from "./few-shot-examples/unordered-list-solid";
 
+export const azureOAIApiSettingsSchema = z.object({
+	key: z.string(),
+	url: z.string().url().or(z.string().max(0)),
+}).strict();
+
+export const openAIApiSettingsSchema = z.object({
+	key: z.string(),
+	url: z.string().url(),
+	model: z.string(),
+}).strict();
+
+export const ollamaApiSettingsSchema = z.object({
+	url: z.string().url(),
+	model: z.string(),
+}).strict();
+
 export const triggerSchema = z.object({
 	type: z.enum(['string', 'regex']),
 	value: z.string(),
@@ -26,9 +49,11 @@ export const triggerSchema = z.object({
 export const settingsSchema = z.object({
 	enabled: z.boolean(),
 	advancedMode: z.boolean(),
+  // API settings
 	apiProvider: z.enum(['azure', 'openai']),
 	azureOAIApiSettings: azureOAIApiSettingsSchema,
 	openAIApiSettings: openAIApiSettingsSchema,
+  ollamaApiSettings: ollamaApiSettingsSchema,
 	triggers: z.array(triggerSchema),
 	delay: z.number().int().min(MIN_DELAY, { message: "Delay must be between 0ms and 2000ms" }).max(MAX_DELAY, { message: "Delay must be between 0ms and 2000ms" }),
 	modelOptions: modelOptionsSchema,
@@ -49,12 +74,12 @@ export const pluginDataSchema = z.object({
 }).strict();
 
 
-export const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS_V0: Settings = {
 	// General settings
 	enabled: true,
 	advancedMode: false,
+  // API settings
 	apiProvider: "openai",
-	// API settings
 	azureOAIApiSettings: {
 		key: "",
 		url: "",
@@ -64,6 +89,10 @@ export const DEFAULT_SETTINGS: Settings = {
 		url: "https://api.openai.com/v1/chat/completions",
 		model: "gpt-3.5-turbo",
 	},
+  ollamaApiSettings: {
+		url: "http://localhost:11434/api/chat",
+		model: "",
+  },
 
 	// Trigger settings
 	triggers: [
@@ -90,8 +119,8 @@ export const DEFAULT_SETTINGS: Settings = {
 		// task list normal, sub or numbered.
 		{ type: "regex", value: "\\s*(-|[0-9]+\\.) \\[.\\]\\s+$" },
 	],
-
 	delay: 1000,
+
 	// Request settings
 	modelOptions: {
 		temperature: 1,
@@ -136,7 +165,7 @@ ANSWER: here you write the text that should be at the location of <mask/>
 };
 
 export const DEFAULT_PLUGIN_DATA: PluginData = {
-	settings: DEFAULT_SETTINGS,
+	settings: DEFAULT_SETTINGS_V0,
 }
 
 export type Settings = z.input<typeof settingsSchema>;

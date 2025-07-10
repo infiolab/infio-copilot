@@ -657,10 +657,10 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 						}
 					}
 				} else if (toolArgs.type === 'match_search_files') {
-					const searchBackend = settings.filesSearchSettings.matchBackend
+					const searchBackend = settings.fileSearchSettings.matchBackend
 					let results: string;
 					if (searchBackend === 'omnisearch') {
-						results = await matchSearchUsingOmnisearch(toolArgs.query, app)
+						results = await matchSearchUsingOmnisearch(toolArgs.query)
 					} else {
 						results = await matchSearchUsingCorePlugin(toolArgs.query, app)
 					}
@@ -679,7 +679,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 						}
 					}
 				} else if (toolArgs.type === 'regex_search_files') {
-					const searchBackend = settings.filesSearchSettings.regexBackend
+					const searchBackend = settings.fileSearchSettings.regexBackend
 					let results: string;
 					if (searchBackend === 'coreplugin') {
 						results = await regexSearchUsingCorePlugin(toolArgs.regex, app)
@@ -687,7 +687,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 						// @ts-expect-error Obsidian API type mismatch
 						const baseVaultPath = String(app.vault.adapter.getBasePath())
 						const absolutePath = path.join(baseVaultPath, toolArgs.filepath)
-						const ripgrepPath = settings.filesSearchSettings.ripgrepPath
+						const ripgrepPath = settings.fileSearchSettings.ripgrepPath
 						results = await regexSearchUsingRipgrep(absolutePath, toolArgs.regex, ripgrepPath)
 					}
 					const formattedContent = `[regex_search_files for '${toolArgs.filepath}'] Result:\n${results}\n`;
@@ -740,9 +740,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 				} else if (toolArgs.type === 'search_web') {
 					const results = await webSearch(
 						toolArgs.query,
-						settings.serperApiKey,
-						settings.serperSearchEngine,
-						settings.jinaApiKey,
+						settings.webSearchSettings,
 						(await getRAGEngine())
 					)
 					const formattedContent = `[search_web for '${toolArgs.query}'] Result:\n${results}\n`;
@@ -760,7 +758,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 						}
 					}
 				} else if (toolArgs.type === 'fetch_urls_content') {
-					const results = await fetchUrlsContent(toolArgs.urls, settings.jinaApiKey)
+					const results = await fetchUrlsContent(toolArgs.urls, settings.webSearchSettings)
 					const formattedContent = `[ fetch_urls_content ] Result:\n${results}\n`;
 					return {
 						type: 'fetch_urls_content',

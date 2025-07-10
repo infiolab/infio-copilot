@@ -156,12 +156,12 @@ export class InfioSettingTab extends PluginSettingTab {
 					.addOption('semantic', t('settings.FilesSearch.semantic'))
 					.addOption('regex', t('settings.FilesSearch.regex'))
 					.addOption('match', t('settings.FilesSearch.match'))
-					.setValue(this.plugin.settings.filesSearchSettings.method)
+					.setValue(this.plugin.settings.fileSearchSettings.method)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							filesSearchSettings: {
-								...this.plugin.settings.filesSearchSettings,
+							fileSearchSettings: {
+								...this.plugin.settings.fileSearchSettings,
 								method: value as 'match' | 'regex' | 'semantic' | 'auto',
 							}
 						})
@@ -174,12 +174,12 @@ export class InfioSettingTab extends PluginSettingTab {
 				dropdown
 					.addOption('ripgrep', t('settings.FilesSearch.ripgrep'))
 					.addOption('coreplugin', t('settings.FilesSearch.coreplugin'))
-					.setValue(this.plugin.settings.filesSearchSettings.regexBackend)
+					.setValue(this.plugin.settings.fileSearchSettings.regexBackend)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							filesSearchSettings: {
-								...this.plugin.settings.filesSearchSettings,
+							fileSearchSettings: {
+								...this.plugin.settings.fileSearchSettings,
 								regexBackend: value as 'ripgrep' | 'coreplugin',
 							}
 						})
@@ -192,12 +192,12 @@ export class InfioSettingTab extends PluginSettingTab {
 				dropdown
 					.addOption('coreplugin', t('settings.FilesSearch.coreplugin'))
 					.addOption('omnisearch', t('settings.FilesSearch.omnisearch'))
-					.setValue(this.plugin.settings.filesSearchSettings.matchBackend)
+					.setValue(this.plugin.settings.fileSearchSettings.matchBackend)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							filesSearchSettings: {
-								...this.plugin.settings.filesSearchSettings,
+							fileSearchSettings: {
+								...this.plugin.settings.fileSearchSettings,
 								matchBackend: value as 'coreplugin' | 'omnisearch',
 							}
 						})
@@ -209,12 +209,12 @@ export class InfioSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder('/opt/homebrew/bin/')
-					.setValue(this.plugin.settings.filesSearchSettings.ripgrepPath)
+					.setValue(this.plugin.settings.fileSearchSettings.ripgrepPath)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							filesSearchSettings: {
-								...this.plugin.settings.filesSearchSettings,
+							fileSearchSettings: {
+								...this.plugin.settings.fileSearchSettings,
 								ripgrepPath: value,
 							}
 						})
@@ -253,10 +253,57 @@ export class InfioSettingTab extends PluginSettingTab {
 			.setHeading()
 			.setName(t('settings.WebSearch.title'))
 
+    new Setting(containerEl)
+			.setName(t('settings.WebSearch.webSearchBackend'))
+			.setDesc(t('settings.WebSearch.webSearchBackendDescription'))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('serpapi', t('settings.WebSearch.serpapi'))
+					.addOption('scrapingdog', t('settings.WebSearch.scrapingdog'))
+          .addOption('serper', t('settings.WebSearch.serper'))
+          .addOption('jina', t('settings.WebSearch.jina'))
+          // Since there're unsolved issues with `duck-duck-scrape`,
+          // we should comment out this option for now.
+          //.addOption('duckduckgo', t('settings.WebSearch.duckduckgo'))
+          .addOption('brave', t('settings.WebSearch.brave'))
+					.setValue(this.plugin.settings.webSearchSettings.webSearchBackend)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								webSearchBackend: value,
+							},
+						})
+					}),
+			)
+
+    new Setting(containerEl)
+			.setName(t('settings.WebSearch.urlFetchBackend'))
+			.setDesc(t('settings.WebSearch.urlFetchBackendDescription'))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('jina', t('settings.WebSearch.jina'))
+					.addOption('local', t('settings.WebSearch.local'))
+					.setValue(this.plugin.settings.webSearchSettings.urlFetchBackend)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								urlFetchBackend: value,
+							},
+						})
+					}),
+			)
+
+    // SerpAPI
 		new Setting(containerEl)
-			.setName(t('settings.WebSearch.serperApiKey'))
+			.setName(t('settings.WebSearch.serpapiApiKey'))
 			.setDesc(createFragment(el => {
-				el.appendText(t('settings.WebSearch.serperApiKeyDescription') + ' ');
+				el.appendText(t('settings.WebSearch.serpapiApiKeyDescription') + ' ');
 				const a = el.createEl('a', {
 					href: 'https://serpapi.com/manage-api-key',
 					text: 'https://serpapi.com/manage-api-key'
@@ -267,11 +314,14 @@ export class InfioSettingTab extends PluginSettingTab {
 			.setClass('setting-item-heading-smaller')
 			.addText((text) => {
 				const t = text
-					.setValue(this.plugin.settings.serperApiKey)
+					.setValue(this.plugin.settings.webSearchSettings.serpapiApiKey)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							serperApiKey: value,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								serpapiApiKey: value,
+							},
 						})
 					});
 				if (t.inputEl) {
@@ -281,23 +331,109 @@ export class InfioSettingTab extends PluginSettingTab {
 			})
 
 		new Setting(containerEl)
-			.setName(t('settings.WebSearch.searchEngine'))
-			.setDesc(t('settings.WebSearch.searchEngineDescription'))
+			.setName(t('settings.WebSearch.serpapiSearchEngine'))
+			.setDesc(t('settings.WebSearch.serpapiSearchEngineDescription'))
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption('google', t('settings.WebSearch.google'))
-					.addOption('duckduckgo', t('settings.WebSearch.duckDuckGo'))
+					.addOption('duckduckgo', t('settings.WebSearch.duckduckgo'))
 					.addOption('bing', t('settings.WebSearch.bing'))
-					.setValue(this.plugin.settings.serperSearchEngine)
+					.setValue(this.plugin.settings.webSearchSettings.serpapiSearchEngine)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							// @ts-ignore
-							serperSearchEngine: value,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								serpapiSearchEngine: value,
+							},
 						})
 					}),
 			)
 
+    // Scrapingdog
+		new Setting(containerEl)
+			.setName(t('settings.WebSearch.scrapingdogApiKey'))
+			.setDesc(createFragment(el => {
+				el.appendText(t('settings.WebSearch.scrapingdogApiKeyDescription') + ' ');
+				const a = el.createEl('a', {
+					href: 'https://www.scrapingdog.com/',
+					text: 'https://www.scrapingdog.com/'
+				});
+				a.setAttr('target', '_blank');
+				a.setAttr('rel', 'noopener');
+			}))
+			.setClass('setting-item-heading-smaller')
+			.addText((text) => {
+				const t = text
+					.setValue(this.plugin.settings.webSearchSettings.scrapingdogApiKey)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								scrapingdogApiKey: value,
+							},
+						})
+					});
+				if (t.inputEl) {
+					t.inputEl.type = "password";
+				}
+				return t;
+			})
+
+		new Setting(containerEl)
+			.setName(t('settings.WebSearch.scrapingdogSearchEngine'))
+			.setDesc(t('settings.WebSearch.scrapingdogSearchEngineDescription'))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('google', t('settings.WebSearch.google'))
+					.addOption('bing', t('settings.WebSearch.bing'))
+					.setValue(this.plugin.settings.webSearchSettings.scrapingdogSearchEngine)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								// @ts-ignore
+								scrapingdogSearchEngine: value,
+							},
+						})
+					}),
+			)
+
+    // Serper
+		new Setting(containerEl)
+			.setName(t('settings.WebSearch.scrperApiKey'))
+			.setDesc(createFragment(el => {
+				el.appendText(t('settings.WebSearch.scrperApiKeyDescription') + ' ');
+				const a = el.createEl('a', {
+					href: 'https://serper.dev/',
+					text: 'https://serper.dev/'
+				});
+				a.setAttr('target', '_blank');
+				a.setAttr('rel', 'noopener');
+			}))
+			.setClass('setting-item-heading-smaller')
+			.addText((text) => {
+				const t = text
+					.setValue(this.plugin.settings.webSearchSettings.serperApiKey)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								serperApiKey: value,
+							},
+						})
+					});
+				if (t.inputEl) {
+					t.inputEl.type = "password";
+				}
+				return t;
+			})
+
+    // Jina
 		new Setting(containerEl)
 			.setName(t('settings.WebSearch.jinaApiKey'))
 			.setDesc(createFragment(el => {
@@ -312,11 +448,14 @@ export class InfioSettingTab extends PluginSettingTab {
 			.setClass('setting-item-heading-smaller')
 			.addText((text) => {
 				const t = text
-					.setValue(this.plugin.settings.jinaApiKey)
+					.setValue(this.plugin.settings.webSearchSettings.jinaApiKey)
 					.onChange(async (value) => {
 						await this.plugin.setSettings({
 							...this.plugin.settings,
-							jinaApiKey: value,
+							webSearchSettings: {
+								...this.plugin.settings.webSearchSettings,
+								jinaApiKey: value,
+							},
 						})
 					});
 				if (t.inputEl) {
@@ -324,6 +463,37 @@ export class InfioSettingTab extends PluginSettingTab {
 				}
 				return t;
 			})
+
+    // Serper
+		new Setting(containerEl)
+      .setName(t('settings.WebSearch.braveApiKey'))
+      .setDesc(createFragment(el => {
+        el.appendText(t('settings.WebSearch.braveApiKeyDescription') + ' ');
+        const a = el.createEl('a', {
+          href: 'https://brave.com/search/api/',
+          text: 'https://brave.com/search/api/'
+        });
+        a.setAttr('target', '_blank');
+        a.setAttr('rel', 'noopener');
+      }))
+      .setClass('setting-item-heading-smaller')
+      .addText((text) => {
+        const t = text
+          .setValue(this.plugin.settings.webSearchSettings.braveApiKey)
+          .onChange(async (value) => {
+            await this.plugin.setSettings({
+              ...this.plugin.settings,
+              webSearchSettings: {
+                ...this.plugin.settings.webSearchSettings,
+                braveApiKey: value,
+              },
+            })
+          });
+        if (t.inputEl) {
+          t.inputEl.type = "password";
+        }
+        return t;
+      })
 	}
 
 	renderRAGSection(containerEl: HTMLElement): void {

@@ -136,7 +136,7 @@ class AutoComplete implements AutocompleteService {
 			llm,
 			settings.systemMessage,
 			formatter,
-			settings.chainOfThoughRemovalRegex,
+			settings.chainOfThoughtRemovalRegex,
 			preProcessors,
 			postProcessors,
 			settings.fewShotExamples,

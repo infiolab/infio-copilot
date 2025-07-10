@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const SETTINGS_SCHEMA_VERSION = 0.5;
+
 export const MIN_DELAY = 0;
 export const MAX_DELAY = 2000;
 export const MIN_MAX_CHAR_LIMIT = 100;
@@ -14,23 +16,6 @@ export const MIN_FREQUENCY_PENALTY = 0;
 export const MAX_FREQUENCY_PENALTY = 2;
 export const MIN_PRESENCE_PENALTY = 0;
 export const MAX_PRESENCE_PENALTY = 2;
-
-
-export const azureOAIApiSettingsSchema = z.object({
-	key: z.string(),
-	url: z.string().url().or(z.string().max(0)),
-}).strict();
-
-export const openAIApiSettingsSchema = z.object({
-	key: z.string(),
-	url: z.string().url(),
-	model: z.string(),
-}).strict();
-
-export const ollamaApiSettingsSchema = z.object({
-	url: z.string().url(),
-	model: z.string(),
-}).strict();
 
 export const modelOptionsSchema = z.object({
 	temperature: z.number()
@@ -56,3 +41,88 @@ export const fewShotExampleSchema = z.object({
 }).strict();
 
 export type FewShotExample = z.infer<typeof fewShotExampleSchema>;
+
+export const DeprecatedSettingsSchema = z.object({
+	// Active Models [compatible]
+  enabled: z.string().catch(''),
+	activeModels: z.array(
+		z.object({
+			name: z.string(),
+			provider: z.string(),
+			enabled: z.boolean(),
+			isEmbeddingModel: z.boolean(),
+			isBuiltIn: z.boolean(),
+			apiKey: z.string().optional(),
+			baseUrl: z.string().optional(),
+			dimension: z.number().optional(),
+		})
+	).catch([]),
+	// API Keys [compatible]
+	infioApiKey: z.string().catch(''),
+	openAIApiKey: z.string().catch(''),
+	anthropicApiKey: z.string().catch(''),
+	geminiApiKey: z.string().catch(''),
+	groqApiKey: z.string().catch(''),
+	deepseekApiKey: z.string().catch(''),
+  // Model settings [compatible]
+  embeddingModel: z.string().catch(''),
+  chatModel: z.string().catch(''),
+  applyModel: z.string().catch(''),
+	ollamaEmbeddingModel: z.string().catch(''),
+	ollamaChatModel: z.string().catch(''),
+	openAICompatibleChatModel: z.string().catch(''),
+	ollamaApplyModel: z.string().catch(''),
+	openAICompatibleApplyModel: z.string().catch(''),
+	// API Settings[compatible]
+  apiProvider: z.string().catch(''),
+	azureOAIApiSettings: z.string().catch(''),
+	openAIApiSettings: z.string().catch(''),
+	ollamaApiSettings: z.string().catch(''),
+  ollamaBaseUrl: z.string().catch(''),
+  // Web search settings [compatible]
+  serpapiApiKey: z.string().catch(''),
+  serpapiSearchEngine: z.string().catch(''),
+  jinaApiKey: z.string().catch(''),
+  // File search settings [compatible]
+  filesSearchSettings: z.string().catch(''),
+  filesSearchMethod: z.string().catch(''),
+  ripgrepPath: z.string().catch(''),
+  // Dics
+  chainOfThoughRemovalRegex: z.string().catch(''),
+}).catch({
+	// Active Models [compatible]
+  enabled: '',
+	activeModels: [],
+	// API Keys [compatible]
+	infioApiKey: '',
+	openAIApiKey: '',
+	anthropicApiKey: '',
+	geminiApiKey: '',
+	groqApiKey: '',
+	deepseekApiKey: '',
+  // Model settings [compatible]
+  embeddingModel: '',
+  chatModel: '',
+  applyModel: '',
+	ollamaEmbeddingModel: '',
+	ollamaChatModel: '',
+	openAICompatibleChatModel: '',
+	ollamaApplyModel: '',
+	openAICompatibleApplyModel: '',
+	// API Settings[compatible]
+  apiProvider: '',
+	azureOAIApiSettings: '',
+	openAIApiSettings: '',
+	ollamaApiSettings: '',
+  ollamaBaseUrl: '',
+  // Web search settings [compatible]
+  serpapiApiKey: '',
+  serpapiSearchEngine: '',
+  jinaApiKey: '',
+  // File search settings [compatible]
+  filesSearchSettings: '',
+  filesSearchMethod: '',
+  ripgrepPath: '',
+  // Disc settings [compatible]
+  chainOfThoughRemovalRegex: '',
+});

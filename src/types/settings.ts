@@ -1,20 +1,19 @@
 import { z } from 'zod';
 
-import { DEFAULT_MODELS } from '../constants';
 import {
+  SETTINGS_SCHEMA_VERSION,
 	MAX_DELAY,
 	MAX_MAX_CHAR_LIMIT,
 	MIN_DELAY,
 	MIN_MAX_CHAR_LIMIT,
-	MIN_MAX_TOKENS,
 	fewShotExampleSchema,
-	modelOptionsSchema
+	modelOptionsSchema,
+  DeprecatedSettingsSchema,
 } from '../settings/versions/shared';
 import { DEFAULT_SETTINGS } from "../settings/versions/v1/v1";
+import { migrateSettings } from "../settings/versions/migration"
 import { ApiProvider } from '../types/llm/model';
 import { isRegexValid, isValidIgnorePattern } from '../utils/auto-complete';
-
-export const SETTINGS_SCHEMA_VERSION = 0.5
 
 const InfioProviderSchema = z.object({
 	name: z.literal('Infio'),
@@ -198,17 +197,6 @@ const LocalProviderSchema = z.object({
 	models: []
 })
 
-const ollamaModelSchema = z.object({
-	baseUrl: z.string().catch(''),
-	model: z.string().catch(''),
-})
-
-const openAICompatibleModelSchema = z.object({
-	baseUrl: z.string().catch(''),
-	apiKey: z.string().catch(''),
-	model: z.string().catch(''),
-})
-
 const ragOptionsSchema = z.object({
 	filesystem: z.enum(['idb', 'opfs']).catch('opfs'),
 	chunkSize: z.number().catch(500),
@@ -242,7 +230,29 @@ export const triggerSchema = z.object({
 	}
 });
 
-const FilesSearchSettingsSchema = z.object({
+const WebSearchSettingsSchema = z.object({
+	webSearchBackend: z.enum(['serpapi', 'scrapingdog', 'serper', 'jina', 'duckduckgo', 'brave']).catch('serpapi'),
+  urlFetchBackend: z.enum(['local', 'jina']).catch('jina'),
+	serpapiApiKey: z.string().catch(''),
+	serpapiSearchEngine: z.enum(['google', 'duckduckgo', 'bing']).catch('google'),
+  scrapingdogApiKey: z.string().catch(''),
+	scrapingdogSearchEngine: z.enum(['google', 'bing']).catch('google'),
+	serperApiKey: z.string().catch(''),
+  jinaApiKey: z.string().catch(''),
+  braveApiKey: z.string().catch(''),
+}).catch({
+	webSearchBackend: 'serpapi',
+	urlFetchBackend: 'jina',
+	serpapiApiKey: '',
+	serpapiSearchEngine: 'google',
+  scrapingdogApiKey: '',
+	scrapingdogSearchEngine: 'google',
+	serperApiKey: '',
+  jinaApiKey: '',
+  braveApiKey: '',
+});
+
+const FileSearchSettingsSchema = z.object({
 	method: z.enum(['match', 'regex', 'semantic', 'auto']).catch('auto'),
 	regexBackend: z.enum(['coreplugin', 'ripgrep']).catch('coreplugin'),
 	matchBackend: z.enum(['omnisearch', 'coreplugin']).catch('coreplugin'),
@@ -304,7 +314,7 @@ export const InfioSettingsSchema = z.object({
 	// Active Provider Tab (for UI state)
 	activeProviderTab: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 
-	// Chat Model 
+	// Chat Model
 	chatModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	chatModelId: z.string().catch(''),
 
@@ -315,77 +325,31 @@ export const InfioSettingsSchema = z.object({
 	// Apply Model
 	applyModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	applyModelId: z.string().catch(''),
-
 	// Embedding Model
 	embeddingModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	embeddingModelId: z.string().catch(''),
 
-	// fuzzyMatchThreshold
+	// Fuzzy Match Threshold
 	fuzzyMatchThreshold: z.number().catch(0.85),
 
-	// experimentalDiffStrategy
+	// Experimental Diff Strategy
 	experimentalDiffStrategy: z.boolean().catch(false),
 
-	// multiSearchReplaceDiffStrategy
+	// Multi Search Replace Diff Strategy
 	multiSearchReplaceDiffStrategy: z.boolean().catch(true),
 
 	// Workspace
 	workspace: z.string().catch(''),
+
 	// Mode
 	mode: z.string().catch('ask'),
 	defaultMention: z.enum(['none', 'current-file', 'vault']).catch('none'),
 
-	// web search
-	serperApiKey: z.string().catch(''),
-	serperSearchEngine: z.enum(['google', 'duckduckgo', 'bing']).catch('google'),
-	jinaApiKey: z.string().catch(''),
+	// Web Search
+	webSearchSettings: WebSearchSettingsSchema,
 
-	// Files Search
-	filesSearchSettings: FilesSearchSettingsSchema,
-
-	/// [compatible]
-	// activeModels [compatible]
-	activeModels: z.array(
-		z.object({
-			name: z.string(),
-			provider: z.string(),
-			enabled: z.boolean(),
-			isEmbeddingModel: z.boolean(),
-			isBuiltIn: z.boolean(),
-			apiKey: z.string().optional(),
-			baseUrl: z.string().optional(),
-			dimension: z.number().optional(),
-		})
-	).catch(DEFAULT_MODELS),
-	// API Keys [compatible]
-	infioApiKey: z.string().catch(''),
-	openAIApiKey: z.string().catch(''),
-	anthropicApiKey: z.string().catch(''),
-	geminiApiKey: z.string().catch(''),
-	groqApiKey: z.string().catch(''),
-	deepseekApiKey: z.string().catch(''),
-	ollamaEmbeddingModel: ollamaModelSchema.catch({
-		baseUrl: '',
-		model: '',
-	}),
-	ollamaChatModel: ollamaModelSchema.catch({
-		baseUrl: '',
-		model: '',
-	}),
-	openAICompatibleChatModel: openAICompatibleModelSchema.catch({
-		baseUrl: '',
-		apiKey: '',
-		model: '',
-	}),
-	ollamaApplyModel: ollamaModelSchema.catch({
-		baseUrl: '',
-		model: '',
-	}),
-	openAICompatibleApplyModel: openAICompatibleModelSchema.catch({
-		baseUrl: '',
-		apiKey: '',
-		model: '',
-	}),
+	// File Search
+	fileSearchSettings: FileSearchSettingsSchema,
 
 	// System Prompt
 	systemPrompt: z.string().catch(''),
@@ -402,28 +366,27 @@ export const InfioSettingsSchema = z.object({
 		includePatterns: [],
 	}),
 
-	// autocomplete options
-	autocompleteEnabled: z.boolean(),
-	advancedMode: z.boolean(),
+	// Autocomplete options
+	autocompleteEnabled: z.boolean().catch(true),
+	advancedMode: z.boolean().catch(false),
 
-	// [compatible]
-	apiProvider: z.enum(['azure', 'openai', "ollama"]),
-	azureOAIApiSettings: z.string().catch(''),
-	openAIApiSettings: z.string().catch(''),
-	ollamaApiSettings: z.string().catch(''),
-
+  // Trigger settings
 	triggers: z.array(triggerSchema),
-	delay: z.number().int().min(MIN_DELAY, { message: "Delay must be between 0ms and 2000ms" }).max(MAX_DELAY, { message: "Delay must be between 0ms and 2000ms" }),
-	modelOptions: modelOptionsSchema,
-	systemMessage: z.string().min(3, { message: "System message must be at least 3 characters long" }),
+	delay: z.number().int().min(MIN_DELAY, { message: "Delay must be between 0ms and 2000ms" }).max(MAX_DELAY, { message: "Delay must be between 0ms and 2000ms" }).catch(500),
+	// Request settings
+  modelOptions: modelOptionsSchema,
+	// Prompt settings
+  systemMessage: z.string().min(3, { message: "System message must be at least 3 characters long" }),
 	fewShotExamples: z.array(fewShotExampleSchema),
 	userMessageTemplate: z.string().min(3, { message: "User message template must be at least 3 characters long" }),
-	chainOfThoughRemovalRegex: z.string().refine((regex) => isRegexValid(regex), { message: "Invalid regex" }),
-	dontIncludeDataviews: z.boolean(),
-	maxPrefixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }),
-	maxSuffixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }),
-	removeDuplicateMathBlockIndicator: z.boolean(),
-	removeDuplicateCodeBlockIndicator: z.boolean(),
+	chainOfThoughtRemovalRegex: z.string().refine((regex) => isRegexValid(regex), { message: "Invalid regex" }),
+	// Preprocessing settings
+  dontIncludeDataviews: z.boolean().catch(true),
+	maxPrefixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }).catch(4000),
+	maxSuffixCharLimit: z.number().int().min(MIN_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at least ${MIN_MAX_CHAR_LIMIT}` }).max(MAX_MAX_CHAR_LIMIT, { message: `Max prefix char limit must be at most ${MAX_MAX_CHAR_LIMIT}` }).catch(4000),
+	// Postprocessing settings
+  removeDuplicateMathBlockIndicator: z.boolean().catch(true),
+	removeDuplicateCodeBlockIndicator: z.boolean().catch(true),
 	ignoredFilePatterns: z.string().refine((value) => value
 		.split("\n")
 		.filter(s => s.trim().length > 0)
@@ -440,78 +403,51 @@ export const InfioSettingsSchema = z.object({
 		.split("\n")
 		.filter(s => s.includes(",")).length === 0, { message: "Enter each tag on a new line without commas" }
 	),
-	cacheSuggestions: z.boolean(),
-	debugMode: z.boolean(),
+	cacheSuggestions: z.boolean().catch(true),
+	debugMode: z.boolean().catch(false),
+
+  // Keep deprecated settings for compatibility.
+  deprecated: DeprecatedSettingsSchema,
 })
 
 export type InfioSettings = z.infer<typeof InfioSettingsSchema>
-export type FilesSearchSettings = z.infer<typeof FilesSearchSettingsSchema>
-
-type Migration = {
-	fromVersion: number
-	toVersion: number
-	migrate: (data: Record<string, unknown>) => Record<string, unknown>
-}
-
-const MIGRATIONS: Migration[] = [
-	{
-		fromVersion: 0.1,
-		toVersion: 0.4,
-		migrate: (data) => {
-			const newData = { ...data }
-			newData.version = 0.4
-			return newData
-		},
-	},
-	{
-		fromVersion: 0.4,
-		toVersion: 0.5,
-		migrate: (data) => {
-			const newData = { ...data }
-			newData.version = SETTINGS_SCHEMA_VERSION
-			
-			// Handle max_tokens minimum value increase from 800 to 4096
-			if (newData.modelOptions && typeof newData.modelOptions === 'object') {
-				const modelOptions = newData.modelOptions as Record<string, any>
-				if (typeof modelOptions.max_tokens === 'number' && modelOptions.max_tokens < MIN_MAX_TOKENS) {
-					console.log(`Updating max_tokens from ${modelOptions.max_tokens} to ${MIN_MAX_TOKENS} due to minimum value change`)
-					modelOptions.max_tokens = MIN_MAX_TOKENS
-				}
-			}
-			
-			return newData
-		},
-	},
-]
-
-function migrateSettings(
-	data: Record<string, unknown>,
-): Record<string, unknown> {
-	let currentData = { ...data }
-	const currentVersion = (currentData.version as number) ?? 0
-
-	for (const migration of MIGRATIONS) {
-		if (
-			currentVersion >= migration.fromVersion &&
-			currentVersion < migration.toVersion &&
-			migration.toVersion <= SETTINGS_SCHEMA_VERSION
-		) {
-			console.debug(
-				`Migrating settings from ${migration.fromVersion} to ${migration.toVersion}`,
-			)
-			currentData = migration.migrate(currentData)
-		}
-	}
-
-	return currentData
-}
+export type WebSearchSettings = z.infer<typeof WebSearchSettingsSchema>
+export type FileSearchSettings = z.infer<typeof FileSearchSettingsSchema>
 
 export function parseInfioSettings(data: unknown): InfioSettings {
-	try {
-		const migratedData = migrateSettings(data as Record<string, unknown>)
-		return InfioSettingsSchema.parse(migratedData)
-	} catch (error) {
-		console.error("Failed to parse settings with migrated data, using default settings instead: ", error);
-		return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
+  try {
+    const testSchema = InfioSettingsSchema.strict();
+    return testSchema.parse(data);
+  } catch {
+    console.log(`Old/non-standard settings format detected, attempting to migrate...`);
+    const migratedData = migrateSettings(data as Record<string, unknown>);
+
+    try {
+      return InfioSettingsSchema.parse(migratedData);
+    } catch {
+      // Instead of hard resetting, we can attempt to parse the migrated data
+      // and catch specific errors to fix or use defaults.
+      console.log("Failed to parse settings with migrated data, attempting to fix...");
+      const fixedData: Record<string, any> = {};
+      const defaultSettings = DEFAULT_SETTINGS;
+
+      // Iterate over the schema keys to build the fixed data
+      for (const key in InfioSettingsSchema.shape) {
+        const schema = InfioSettingsSchema.shape[key];
+        try {
+          fixedData[key] = schema.parse(migratedData[key]);
+        } catch {
+          console.log(`Failed to parse key '${key}' with migrated data, using default key instead.`);
+          fixedData[key] = defaultSettings[key];
+        }
+      }
+
+      try {
+        return InfioSettingsSchema.parse(fixedData);
+      } catch (error) {
+        console.error("Failed to fix settings with migrated data, using default settings instead: ", error);
+        return InfioSettingsSchema.parse({ ...DEFAULT_SETTINGS })
+      }
+    }
 	}
 }

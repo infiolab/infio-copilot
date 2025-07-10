@@ -19,14 +19,29 @@ export default function MarkdownWebSearchBlock({
 
 	const { settings } = useSettings()
 
+  const backend = settings.webSearchSettings.webSearchBackend;
 	const handleClick = () => {
-		if (settings.serperSearchEngine === 'google') {
+		if (
+      (backend === 'serpapi' && settings.webSearchSettings.serpapiSearchEngine === 'google') ||
+      (backend === 'scrapingdog' && settings.webSearchSettings.scrapingdogSearchEngine === 'google') ||
+      (backend === 'serper')
+    ) {
 			window.open(`https://www.google.com/search?q=${query}`, '_blank')
-		} else if (settings.serperSearchEngine === 'bing') {
+		} else if (
+      (backend === 'serpapi' && settings.webSearchSettings.serpapiSearchEngine === 'bing') ||
+      (backend === 'scrapingdog' && settings.webSearchSettings.scrapingdogSearchEngine === 'bing')
+    ) {
 			window.open(`https://www.bing.com/search?q=${query}`, '_blank')
-		} else {
+		} else if (
+      (backend === 'serpapi' && settings.webSearchSettings.serpapiSearchEngine === 'duckduckgo') ||
+      (backend === 'duckduckgo')
+    ) {
 			window.open(`https://duckduckgo.com/?q=${query}`, '_blank')
-		}
+		} else if (backend === 'brave') {
+			window.open(`https://search.brave.com/search?q=${query}`, '_blank')
+		} else {
+      window.open(`https://www.google.com/search?q=${query}`, '_blank')
+    }
 	}
 
 	React.useEffect(() => {
