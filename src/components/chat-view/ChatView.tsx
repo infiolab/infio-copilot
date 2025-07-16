@@ -2,7 +2,7 @@ import * as path from 'path'
 
 import { BaseSerializedNode } from '@lexical/clipboard/clipboard'
 import { useMutation } from '@tanstack/react-query'
-import { Box, Lightbulb, CircleStop, History, NotebookPen, Plus, Search, Server, SquareSlash, Undo } from 'lucide-react'
+import { Box, CircleStop, History, Lightbulb, NotebookPen, Plus, Search, Server, SquareSlash, Undo } from 'lucide-react'
 import { App, Notice, TFile, TFolder, WorkspaceLeaf } from 'obsidian'
 import {
 	forwardRef,
@@ -42,6 +42,7 @@ import { useChatHistory } from '../../hooks/use-chat-history'
 import { useCustomModes } from '../../hooks/use-custom-mode'
 import { t } from '../../lang/helpers'
 import { PreviewView } from '../../PreviewView'
+import useChatStore from '../../stores/chat-store'
 import { ApplyStatus, ToolArgs } from '../../types/apply'
 import { ChatMessage, ChatUserMessage } from '../../types/chat'
 import {
@@ -136,6 +137,16 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		chatList,
 	} = useChatHistory()
 	const { streamResponse, chatModel } = useLLM()
+	
+	// 使用全局状态管理
+	const {
+		currentConversationId: storeConversationId,
+		setCurrentConversationId: setStoreConversationId,
+		currentTab: tab,
+		setCurrentTab: setTab,
+		shouldAutoLoadLastChat,
+		setShouldAutoLoadLastChat,
+	} = useChatStore()
 
 	const promptGenerator = useMemo(() => {
 		// @ts-expect-error TODO: Review PromptGenerator constructor parameters and types
@@ -171,8 +182,15 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 	)
 	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
 	const [focusedMessageId, setFocusedMessageId] = useState<string | null>(null)
-	const [currentConversationId, setCurrentConversationId] =
-		useState<string>(uuidv4())
+	
+	// 当前对话ID，初始化时总是生成新的
+	const [currentConversationId, setCurrentConversationId] = useState<string>(uuidv4())
+	
+	// 初始化加载状态
+	const [isInitialLoading, setIsInitialLoading] = useState<boolean>(
+		shouldAutoLoadLastChat && !!storeConversationId
+	)
+	
 	const [queryProgress, setQueryProgress] = useState<QueryProgressState>({
 		type: 'idle',
 	})
@@ -192,8 +210,6 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 			chatUserInputRefs.current.delete(id)
 		}
 	}
-
-	const [tab, setTab] = useState<'chat' | 'commands' | 'custom-mode' | 'mcp' | 'search' | 'history' | 'workspace' | 'insights'>('chat')
 
 	const [selectedSerializedNodes, setSelectedSerializedNodes] = useState<BaseSerializedNode[]>([])
 
@@ -248,7 +264,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		activeStreamAbortControllersRef.current = []
 	}
 
-	const handleLoadConversation = async (conversationId: string) => {
+	const handleLoadConversation = useCallback(async (conversationId: string) => {
 		try {
 			abortActiveStreams()
 			const conversation = await getChatMessagesById(conversationId)
@@ -256,6 +272,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 				throw new Error(String(t('chat.errors.conversationNotFound')))
 			}
 			setCurrentConversationId(conversationId)
+			setStoreConversationId(conversationId) // 同步更新到store
 			setChatMessages(conversation)
 			const newInputMessage = getNewInputMessage(app, settings.defaultMention)
 			setInputMessage(newInputMessage)
@@ -267,10 +284,15 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 			new Notice(String(t('chat.errors.failedToLoadConversation')))
 			console.error(String(t('chat.errors.failedToLoadConversation')), error)
 		}
-	}
+	}, [app, settings.defaultMention, getChatMessagesById, setStoreConversationId])
 
-	const handleNewChat = (selectedBlock?: MentionableBlockData) => {
-		setCurrentConversationId(uuidv4())
+	const handleNewChat = useCallback((selectedBlock?: MentionableBlockData) => {
+		const newConversationId = uuidv4()
+		setCurrentConversationId(newConversationId)
+		// 清除store中的对话ID，避免重新打开时自动加载之前的对话
+		setStoreConversationId(null)
+		// 结束初始化加载状态
+		setIsInitialLoading(false)
 		setChatMessages([])
 		const newInputMessage = getNewInputMessage(app, settings.defaultMention)
 		if (selectedBlock) {
@@ -292,7 +314,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 			type: 'idle',
 		})
 		abortActiveStreams()
-	}
+	}, [app, settings.defaultMention, setStoreConversationId])
 
 	const submitMutation = useMutation({
 		mutationFn: async ({
@@ -407,6 +429,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		newChatHistory: ChatMessage[],
 		useVaultSearch?: boolean,
 	) => {
+		// 当用户真正发送消息时，更新store中的conversation ID
+		setStoreConversationId(currentConversationId)
 		submitMutation.mutate({ newChatHistory, useVaultSearch })
 	}
 
@@ -868,18 +892,18 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 					try {
 						console.log("call_transformations", toolArgs)
 						// Validate that the transformation type is a valid enum member
-						const validTransformationTypes = Object.values(TransformationType) as string[]
-						if (!validTransformationTypes.includes(toolArgs.transformation)) {
-							throw new Error(`Unsupported transformation type: ${toolArgs.transformation}`);
+						const validTransformationTypes = Object.values(TransformationType)
+						const transformationType = toolArgs.transformation
+						if (!validTransformationTypes.includes(transformationType)) {
+							throw new Error(`Unsupported transformation type: ${transformationType}`);
 						}
 
-						const transformationType = toolArgs.transformation;
 						const transEngine = await getTransEngine();
 
 						// Execute the transformation using the TransEngine
 						const transformationResult = await transEngine.runTransformation({
 							filePath: toolArgs.path,
-							transformationType: transformationType as TransformationType,
+							transformationType: transformationType,
 							model: {
 								provider: settings.applyModelProvider,
 								modelId: settings.applyModelId,
@@ -1070,7 +1094,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 					}
 				} else {
 					// 处理未知的工具类型
-					throw new Error(`Unsupported tool type: ${(toolArgs as any).type || 'unknown'}`);
+					throw new Error(`Unsupported tool type: ${String(toolArgs?.type) || 'unknown'}`);
 				}
 			} catch (error) {
 				console.error('Failed to apply changes', error)
@@ -1138,6 +1162,44 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		currentActiveFileRef.current = app.workspace.getActiveFile()
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
+	
+	// 自动加载上次的聊天记录
+	useEffect(() => {
+		const autoLoadLastChat = async () => {
+			if (shouldAutoLoadLastChat && storeConversationId && chatMessages.length === 0) {
+				try {
+					// 检查聊天记录是否存在
+					const conversation = await getChatMessagesById(storeConversationId)
+					if (conversation && conversation.length > 0) {
+						await handleLoadConversation(storeConversationId)
+					} else {
+						// 如果聊天记录不存在，清除store中的ID
+						setStoreConversationId(null)
+					}
+				} catch (error) {
+					console.error('自动加载聊天记录失败:', error)
+					// 加载失败时清除store中的ID
+					setStoreConversationId(null)
+				} finally {
+					// 无论成功或失败，都结束初始化加载状态
+					setIsInitialLoading(false)
+					setShouldAutoLoadLastChat(false) // 避免重复加载
+				}
+			} else {
+				// 如果不需要自动加载，立即结束初始化加载状态
+				setIsInitialLoading(false)
+			}
+		}
+		
+		autoLoadLastChat()
+	}, [storeConversationId, shouldAutoLoadLastChat, chatMessages.length, getChatMessagesById, handleLoadConversation, setStoreConversationId, setShouldAutoLoadLastChat])
+	
+	// 组件卸载时重置shouldAutoLoadLastChat标志
+	useEffect(() => {
+		return () => {
+			setShouldAutoLoadLastChat(true)
+		}
+	}, [setShouldAutoLoadLastChat])
 
 	useEffect(() => {
 		const updateConversationAsync = async () => {
@@ -1391,11 +1453,34 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 				<>
 					<div className="infio-chat-messages" ref={chatMessagesRef}>
 						{
-							// If the chat is empty, show a message to start a new chat
-							chatMessages.length === 0 && (
+							// 如果正在初始化加载，显示加载状态
+							isInitialLoading ? (
 								<div className="infio-chat-empty-state">
-									<HelloInfo onNavigate={(tab) => setTab(tab)} />
+									<div style={{ 
+										display: 'flex', 
+										flexDirection: 'column', 
+										alignItems: 'center', 
+										gap: '16px',
+										color: 'var(--text-muted)'
+									}}>
+										<div className="infio-loading-spinner" style={{
+											width: '24px',
+											height: '24px',
+											border: '2px solid var(--background-modifier-border)',
+											borderTop: '2px solid var(--text-accent)',
+											borderRadius: '50%',
+											animation: 'spin 1s linear infinite'
+										}} />
+										<div>正在加载上次的聊天记录...</div>
+									</div>
 								</div>
+							) : (
+								// If the chat is empty, show a message to start a new chat
+								chatMessages.length === 0 && (
+									<div className="infio-chat-empty-state">
+										<HelloInfo onNavigate={(tab) => setTab(tab)} />
+									</div>
+								)
 							)
 						}
 						{chatMessages.map((message, index) =>
@@ -1510,34 +1595,36 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 							</button>
 						)}
 					</div>
-					<PromptInputWithActions
-						key={inputMessage.id}
-						ref={(ref) => registerChatUserInputRef(inputMessage.id, ref)}
-						initialSerializedEditorState={inputMessage.content}
-						onSubmit={(content, useVaultSearch) => {
-							if (editorStateToPlainText(content).trim() === '') return
-							handleSubmit(
-								[...chatMessages, { ...inputMessage, content }],
-								useVaultSearch,
-							)
-							setInputMessage(getNewInputMessage(app, settings.defaultMention))
-							preventAutoScrollRef.current = false
-							handleScrollToBottom()
-						}}
-						onFocus={() => {
-							setFocusedMessageId(inputMessage.id)
-						}}
-						onCreateCommand={handleCreateCommand}
-						mentionables={inputMessage.mentionables}
-						setMentionables={(mentionables) => {
-							setInputMessage((prevInputMessage) => ({
-								...prevInputMessage,
-								mentionables,
-							}))
-						}}
-						autoFocus
-						addedBlockKey={addedBlockKey}
-					/>
+					{!isInitialLoading && (
+						<PromptInputWithActions
+							key={inputMessage.id}
+							ref={(ref) => registerChatUserInputRef(inputMessage.id, ref)}
+							initialSerializedEditorState={inputMessage.content}
+							onSubmit={(content, useVaultSearch) => {
+								if (editorStateToPlainText(content).trim() === '') return
+								handleSubmit(
+									[...chatMessages, { ...inputMessage, content }],
+									useVaultSearch,
+								)
+								setInputMessage(getNewInputMessage(app, settings.defaultMention))
+								preventAutoScrollRef.current = false
+								handleScrollToBottom()
+							}}
+							onFocus={() => {
+								setFocusedMessageId(inputMessage.id)
+							}}
+							onCreateCommand={handleCreateCommand}
+							mentionables={inputMessage.mentionables}
+							setMentionables={(mentionables) => {
+								setInputMessage((prevInputMessage) => ({
+									...prevInputMessage,
+									mentionables,
+								}))
+							}}
+							autoFocus
+							addedBlockKey={addedBlockKey}
+						/>
+					)}
 				</>
 			) : tab === 'search' ? (
 				<div className="infio-chat-commands">

@@ -2599,6 +2599,12 @@ button.infio-chat-input-model-select {
   max-height: 80vh;
 }
 
+/* 聊天初始化加载动画 */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /*
  * JSON View Styles
  */
