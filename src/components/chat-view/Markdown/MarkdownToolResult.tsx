@@ -29,6 +29,7 @@ export default function MarkdownToolResult({
 	const { isDarkMode } = useDarkModeContext()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const [isOpen, setIsOpen] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
 
 	const { serverName, processedContent } = React.useMemo(() => processContent(content), [content]);
 
@@ -41,20 +42,24 @@ export default function MarkdownToolResult({
 	return (
 		processedContent && (
 			<div
-				className={`infio-chat-code-block-response has-filename infio-reasoning-block`}
+				className={`infio-chat-code-block-response infio-tool-result-block has-filename infio-reasoning-block`}
+				onMouseEnter={() => setIsHovered(true)}
+				onMouseLeave={() => setIsHovered(false)}
 			>
 				<div className={'infio-chat-code-block-response-header'}>
-					<div className={'infio-chat-code-block-response-header-filename'}>
-						<CheckCheck size={10} className="infio-chat-code-block-response-header-icon" />
+					<div 
+						className={'infio-chat-code-block-response-header-filename'}
+						onClick={() => setIsOpen(!isOpen)}
+						style={{ cursor: isHovered ? 'pointer' : 'default' }}
+					>
+						{isHovered ? (
+							isOpen ? <ChevronDown size={10} className="infio-chat-code-block-response-header-icon" /> : <ChevronRight size={10} className="infio-chat-code-block-response-header-icon" />
+						) : (
+							<CheckCheck size={10} className="infio-chat-code-block-response-header-icon" />
+						)}
 						{t('response_from_tool')}
 						<span className="infio-mcp-tool-server-name">{serverName}</span>
 					</div>
-					<button
-						className="clickable-icon infio-chat-list-dropdown"
-						onClick={() => setIsOpen(!isOpen)}
-					>
-						{isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-					</button>
 				</div>
 				<div
 					ref={containerRef}
@@ -184,6 +189,37 @@ export default function MarkdownToolResult({
 					font-weight: bold;
 					font-size: 13px;
 					display: inline-block;
+				}
+
+				/* Tool Result Block - Minimal styling for better integration */
+				.infio-tool-result-block {
+					border: none !important;
+					background: none !important;
+					border-radius: 0 !important;
+					margin-top: -8px !important;
+					margin-bottom: 4px !important;
+					color: var(--text-muted) !important;
+				}
+
+				.infio-tool-result-block .infio-chat-code-block-response-header {
+					background-color: transparent !important;
+					border-bottom: none !important;
+				}
+
+				.infio-tool-result-block .infio-chat-code-block-response-header-filename {
+					color: var(--text-muted) !important;
+				}
+
+				.infio-tool-result-block .infio-mcp-tool-server-name {
+					color: var(--text-muted) !important;
+				}
+
+				.infio-tool-result-block .infio-chat-code-block-response-header-filename {
+					transition: all 0.2s ease;
+				}
+
+				.infio-tool-result-block .infio-chat-code-block-response-header-filename:hover {
+					opacity: 0.7;
 				}
 					`}
 				</style>

@@ -95,7 +95,7 @@ export default function MarkdownTransformationToolBlock({
 
 	return (
 		<div
-			className={`infio-chat-code-block ${path ? 'has-filename' : ''}`}
+			className={`infio-chat-code-block infio-transformation-tool-block ${path ? 'has-filename' : ''}`}
 			onClick={handleClick}
 			style={{ cursor: path ? 'pointer' : 'default' }}
 		>

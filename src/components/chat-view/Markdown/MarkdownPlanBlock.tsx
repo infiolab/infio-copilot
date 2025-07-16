@@ -14,6 +14,7 @@ export default function MarkdownPlanBlock({
 	const { isDarkMode } = useDarkModeContext()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const [isOpen, setIsOpen] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
 
 	useEffect(() => {
 		if (containerRef.current) {
@@ -24,19 +25,23 @@ export default function MarkdownPlanBlock({
 	return (
 		planContent && (
 			<div
-				className={`infio-chat-code-block has-filename infio-reasoning-block`}
+				className={`infio-chat-code-block infio-plan-block has-filename infio-reasoning-block`}
+				onMouseEnter={() => setIsHovered(true)}
+				onMouseLeave={() => setIsHovered(false)}
 			>
 				<div className={'infio-chat-code-block-header'}>
-					<div className={'infio-chat-code-block-header-filename'}>
-						<AlignLeft size={12} className="infio-chat-code-block-header-icon" />
+					<div 
+						className={'infio-chat-code-block-header-filename'}
+						onClick={() => setIsOpen(!isOpen)}
+						style={{ cursor: isHovered ? 'pointer' : 'default' }}
+					>
+						{isHovered ? (
+							isOpen ? <ChevronDown size={12} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={12} className="infio-chat-code-block-header-icon" />
+						) : (
+							<AlignLeft size={12} className="infio-chat-code-block-header-icon" />
+						)}
 						{t('chat.reactMarkdown.plan')}
 					</div>
-					<button
-						className="clickable-icon infio-chat-list-dropdown"
-						onClick={() => setIsOpen(!isOpen)}
-					>
-						{isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-					</button>
 				</div>
 				<div
 					ref={containerRef}

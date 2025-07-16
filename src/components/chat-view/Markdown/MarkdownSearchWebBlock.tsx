@@ -40,7 +40,7 @@ export default function MarkdownWebSearchBlock({
 
 	return (
 		<div
-			className={`infio-chat-code-block has-filename`
+			className={`infio-chat-code-block infio-search-web-block has-filename`
 			}
 			onClick={handleClick}
 		>

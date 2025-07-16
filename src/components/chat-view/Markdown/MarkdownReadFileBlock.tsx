@@ -1,4 +1,4 @@
-import { ExternalLink } from 'lucide-react'
+import { Eye } from 'lucide-react'
 import React from 'react'
 
 import { useApp } from "../../../contexts/AppContext"
@@ -34,12 +34,12 @@ export default function MarkdownReadFileBlock({
 
 	return (
 		<div
-			className={`infio-chat-code-block ${path ? 'has-filename' : ''}`}
+			className={`infio-chat-code-block infio-read-file-block ${path ? 'has-filename' : ''}`}
 			onClick={handleClick}
 		>
 			<div className={'infio-chat-code-block-header'}>
 				<div className={'infio-chat-code-block-header-filename'}>
-					<ExternalLink size={10} className="infio-chat-code-block-header-icon" />
+					<Eye size={10} className="infio-chat-code-block-header-icon" />
 					{t('chat.reactMarkdown.readFile').replace('{path}', path)}
 				</div>
 			</div>

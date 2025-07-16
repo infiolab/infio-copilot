@@ -32,7 +32,7 @@ export default function MarkdownDataviewQueryBlock({
 
 	return (
 		<div 
-			className={`infio-chat-code-block has-filename`}
+			className={`infio-chat-code-block infio-dataview-query-block has-filename`}
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
 		>

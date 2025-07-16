@@ -37,7 +37,7 @@ export default function MarkdownSemanticSearchFilesBlock({
 
 	return (
 		<div
-			className={`infio-chat-code-block ${path ? 'has-filename' : ''}`}
+			className={`infio-chat-code-block infio-semantic-search-files-block ${path ? 'has-filename' : ''}`}
 			onClick={handleClick}
 		>
 			<div className={'infio-chat-code-block-header'}>

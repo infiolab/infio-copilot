@@ -805,6 +805,261 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   margin: 0;
 }
 
+/* Read File Block - Minimal styling for better integration */
+.infio-read-file-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-read-file-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-read-file-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+}
+
+/* Tool Result Block - Minimal styling for better integration */
+.infio-tool-result-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-tool-result-block .infio-chat-code-block-response-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-tool-result-block .infio-chat-code-block-response-header-filename {
+  color: var(--text-muted) !important;
+}
+
+.infio-tool-result-block .infio-mcp-tool-server-name {
+  color: var(--text-muted) !important;
+}
+
+.infio-tool-result-block .infio-chat-code-block-response-header-filename {
+  transition: all 0.2s ease;
+}
+
+.infio-tool-result-block .infio-chat-code-block-response-header-filename:hover {
+  opacity: 0.7;
+}
+
+/* Plan Block - Minimal styling for better integration */
+.infio-plan-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-plan-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-plan-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+  transition: all 0.2s ease;
+}
+
+.infio-plan-block .infio-chat-code-block-header-filename:hover {
+  opacity: 0.7;
+}
+
+/* Reasoning Content Block - Minimal styling for better integration */
+.infio-reasoning-content-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-reasoning-content-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-reasoning-content-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+  transition: all 0.2s ease;
+}
+
+.infio-reasoning-content-block .infio-chat-code-block-header-filename:hover {
+  opacity: 0.7;
+}
+
+/* List Files Block - Minimal styling for better integration */
+.infio-list-files-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-list-files-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-list-files-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+}
+
+/* Manage Files Block - Minimal styling for better integration */
+.infio-manage-files-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-manage-files-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-manage-files-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+}
+
+/* Match Search Files Block - Minimal styling for better integration */
+.infio-match-search-files-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-match-search-files-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-match-search-files-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+}
+
+/* Regex Search Files Block - Minimal styling for better integration */
+.infio-regex-search-files-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-regex-search-files-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-regex-search-files-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+}
+
+/* Search Web Block - Minimal styling for better integration */
+.infio-search-web-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-search-web-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-search-web-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+}
+
+/* Semantic Search Files Block - Minimal styling for better integration */
+.infio-semantic-search-files-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-semantic-search-files-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-semantic-search-files-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+}
+
+/* Transformation Tool Block - Minimal styling for better integration */
+.infio-transformation-tool-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-transformation-tool-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-transformation-tool-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+}
+
+/* Dataview Query Block - Minimal styling for better integration */
+.infio-dataview-query-block {
+  border: none !important;
+  background: none !important;
+  border-radius: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  color: var(--text-muted) !important;
+}
+
+.infio-dataview-query-block .infio-chat-code-block-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+.infio-dataview-query-block .infio-chat-code-block-header-filename {
+  color: var(--text-muted) !important;
+  transition: all 0.2s ease;
+}
+
+.infio-dataview-query-block .infio-chat-code-block-header-filename:hover {
+  opacity: 0.7;
+}
+
 /*
  * Lexical Content Editable
  * - Styles for the content editable area

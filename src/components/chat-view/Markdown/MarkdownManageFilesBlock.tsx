@@ -70,7 +70,7 @@ export default function MarkdownManageFilesBlock({
 	}
 
 	return (
-		<div className={`infio-chat-code-block has-filename`}>
+		<div className={`infio-chat-code-block infio-manage-files-block has-filename`}>
 			<div className={'infio-chat-code-block-header'}>
 				<div className={'infio-chat-code-block-header-filename'}>
 					<FolderPlus size={14} className="infio-chat-code-block-header-icon" />

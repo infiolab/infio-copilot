@@ -38,7 +38,7 @@ export default function MarkdownMatchSearchFilesBlock({
 
 	return (
 		<div
-			className={`infio-chat-code-block ${path ? 'has-filename' : ''}`}
+			className={`infio-chat-code-block infio-match-search-files-block ${path ? 'has-filename' : ''}`}
 			onClick={handleClick}
 		>
 			<div className={'infio-chat-code-block-header'}>
