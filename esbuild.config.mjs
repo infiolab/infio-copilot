@@ -53,6 +53,13 @@ const context = await esbuild.context({
 		'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
 	},
 	inject: [path.resolve('import-meta-url-shim.js')],
+	loader: {
+		'.woff': 'dataurl',
+		'.woff2': 'dataurl',
+		'.ttf': 'dataurl',
+		'.eot': 'dataurl',
+		'.otf': 'dataurl',
+	},
 	target: 'es2020',
 	logLevel: 'info', // 'debug' for more detailed output
 	logOverride: {

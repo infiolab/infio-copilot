@@ -26,7 +26,8 @@ import {
 	getObjectiveSection,
 	getRulesSection,
 	getSharedToolUseSection,
-	getToolUseGuidelinesSection
+	getToolUseGuidelinesSection,
+	markdownFormattingSection
 } from "./sections"
 // import { loadSystemPromptFile } from "./sections/custom-system-prompt"
 import { getToolDescriptionsForMode } from "./tools"
@@ -93,6 +94,8 @@ export class SystemPrompt {
 		])
 
 		const basePrompt = `${roleDefinition}
+
+${markdownFormattingSection()}
 
 ${getSharedToolUseSection()}
 

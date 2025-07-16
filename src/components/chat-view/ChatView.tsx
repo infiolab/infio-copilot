@@ -74,6 +74,7 @@ import FileReadResults from './FileReadResults'
 import HelloInfo from './HelloInfo'
 import InsightView from './InsightView'
 import MarkdownOptimizedReasoningBlock from './Markdown/MarkdownOptimizedReasoningBlock'
+import MarkdownToolResult from './Markdown/MarkdownToolResult'
 import McpHubView from './McpHubView'; // Moved after MarkdownReasoningBlock
 import QueryProgress, { QueryProgressState } from './QueryProgress'
 import ReactMarkdown from './ReactMarkdown'
@@ -1120,8 +1121,9 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 						role: 'assistant',
 						applyStatus: ApplyStatus.Idle,
 						isToolResult: true,
-						content: `<tool_result>${typeof result.returnMsg.promptContent === 'string' ? result.returnMsg.promptContent : ''}</tool_result>`,
+						content: '',
 						reasoningContent: '',
+						toolResultContent: typeof result.returnMsg.promptContent === 'string' ? result.returnMsg.promptContent : '',
 						metadata: {
 							usage: undefined,
 							model: undefined,
@@ -1545,21 +1547,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 							// 如果正在初始化加载，显示加载状态
 							isInitialLoading ? (
 								<div className="infio-chat-empty-state">
-									<div style={{ 
-										display: 'flex', 
-										flexDirection: 'column', 
-										alignItems: 'center', 
-										gap: '16px',
-										color: 'var(--text-muted)'
-									}}>
-										<div className="infio-loading-spinner" style={{
-											width: '24px',
-											height: '24px',
-											border: '2px solid var(--background-modifier-border)',
-											borderTop: '2px solid var(--text-accent)',
-											borderRadius: '50%',
-											animation: 'spin 1s linear infinite'
-										}} />
+									<div className="infio-chat-loading-container">
+										<div className="infio-loading-spinner" />
 										<div>正在加载上次的聊天记录...</div>
 									</div>
 								</div>
@@ -1670,13 +1659,20 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 										isFinished={!submitMutation.isPending || index !== chatMessages.length - 1}
 										blockType="thinking"
 									/>
-									<ReactMarkdownItem
-										key={"content-" + message.id}
-										handleApply={(toolArgs) => handleApply(message.id, toolArgs)}
-										applyStatus={message.applyStatus}
-									>
-										{message.content}
-									</ReactMarkdownItem>
+									{message.isToolResult && message.toolResultContent ? (
+										<MarkdownToolResult
+											key={"tool-result-" + message.id}
+											content={message.toolResultContent}
+										/>
+									) : (
+										<ReactMarkdownItem
+											key={"content-" + message.id}
+											handleApply={(toolArgs) => handleApply(message.id, toolArgs)}
+											applyStatus={message.applyStatus}
+										>
+											{message.content}
+										</ReactMarkdownItem>
+									)}
 								</div>
 							),
 						)}

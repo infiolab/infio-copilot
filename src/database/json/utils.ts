@@ -27,6 +27,7 @@ export const serializeChatMessage = (message: ChatMessage): SerializedChatMessag
 				content: message.content,
 				reasoningContent: message.reasoningContent,
 				id: message.id,
+				toolResultContent: message.toolResultContent,
 				metadata: message.metadata,
 			}
 	}
@@ -57,6 +58,7 @@ export const deserializeChatMessage = (
 				content: message.content,
 				reasoningContent: message.reasoningContent,
 				id: message.id,
+				toolResultContent: message.toolResultContent,
 				metadata: message.metadata,
 			}
 	}

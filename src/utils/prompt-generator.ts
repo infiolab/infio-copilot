@@ -231,7 +231,6 @@ export class PromptGenerator {
 		const requestMessages: RequestMessage[] = [
 			systemMessage,
 			...compiledMessages.slice(-19)
-				.filter((message) => !(message.role === 'assistant' && message.isToolResult))
 				.map((message): RequestMessage => {
 					if (message.role === 'user') {
 						return {
@@ -239,9 +238,12 @@ export class PromptGenerator {
 							content: message.promptContent ?? '',
 						}
 					} else {
+						// 对于工具结果，使用 toolResultContent，否则使用 content
 						return {
 							role: 'assistant',
-							content: message.content,
+							content: message.isToolResult && message.toolResultContent 
+								? message.toolResultContent 
+								: message.content,
 						}
 					}
 				}),

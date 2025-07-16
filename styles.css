@@ -64,6 +64,10 @@
 
 /*
  * Chat
+ *
+ * 修复了样式冲突问题：
+ * - 限制了 #infio-apply-view 中编辑器样式的作用域，防止影响到聊天消息
+ * - 移除了内联样式，改用 CSS 类
  */
 .infio-chat-header {
   display: flex;
@@ -130,12 +134,15 @@
 .infio-chat-messages {
   flex-grow: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   user-select: text;
   display: flex;
   flex-direction: column;
   gap: var(--size-4-1);
   padding: 0 var(--size-4-3) var(--size-4-5) var(--size-4-3);
   margin: var(--size-4-2) calc(var(--size-4-3) * -1) 0;
+  /* 确保内容不会超出容器 */
+  min-width: 0;
 
   .infio-chat-messages-user {
 		margin-top: 12px;
@@ -143,12 +150,18 @@
     display: flex;
     flex-direction: column;
     gap: var(--size-4-1);
+    /* 防止用户消息超出容器 */
+    min-width: 0;
+    max-width: 100%;
   }
 
   .infio-chat-messages-assistant {
 		display: flex;
     flex-direction: column;
     /* padding-bottom: var(--size-4-2); */
+    /* 防止助手消息超出容器 */
+    min-width: 0;
+    max-width: 100%;
   }
 }
 
@@ -255,6 +268,204 @@
     font-size: var(--font-ui-medium);
   }
 }
+
+/*
+ * Optimized Table Styles for RawMarkdownBlock
+ * - Responsive table container with horizontal scrolling
+ * - Improved styling with proper spacing and borders
+ * - Dark mode support
+ */
+
+.infio-markdown-table-container {
+  overflow-x: auto;
+  overflow-y: visible;
+  margin: var(--size-4-2) 0;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  max-width: 100%;
+}
+
+.infio-markdown-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--font-ui-small);
+  line-height: 1.4;
+  min-width: 100%;
+}
+
+.infio-markdown-table-head {
+  background: var(--background-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.infio-markdown-table-header {
+  padding: var(--size-2-2) var(--size-4-2);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-normal);
+  border-bottom: 2px solid var(--background-modifier-border);
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.infio-markdown-table-header:first-child {
+  border-top-left-radius: var(--radius-s);
+}
+
+.infio-markdown-table-header:last-child {
+  border-top-right-radius: var(--radius-s);
+}
+
+.infio-markdown-table-body {
+  background: var(--background-primary);
+}
+
+.infio-markdown-table-row {
+  transition: background-color 0.1s ease;
+}
+
+.infio-markdown-table-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.infio-markdown-table-row:nth-child(even) {
+  background: var(--background-secondary-alt);
+}
+
+.infio-markdown-table-row:nth-child(even):hover {
+  background: var(--background-modifier-hover);
+}
+
+.infio-markdown-table-cell {
+  padding: var(--size-2-2) var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+  color: var(--text-normal);
+  vertical-align: top;
+  word-wrap: break-word;
+  max-width: 300px;
+}
+
+.infio-markdown-table-cell:empty::before {
+  content: '-';
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Last row styling */
+.infio-markdown-table-row:last-child .infio-markdown-table-cell {
+  border-bottom: none;
+}
+
+.infio-markdown-table-row:last-child .infio-markdown-table-cell:first-child {
+  border-bottom-left-radius: var(--radius-s);
+}
+
+.infio-markdown-table-row:last-child .infio-markdown-table-cell:last-child {
+  border-bottom-right-radius: var(--radius-s);
+}
+
+/* Responsive enhancements */
+@media (max-width: 768px) {
+  .infio-markdown-table-container {
+    margin: var(--size-4-2) calc(var(--size-4-2) * -1);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .infio-markdown-table {
+    font-size: var(--font-ui-smaller);
+  }
+
+  .infio-markdown-table-header,
+  .infio-markdown-table-cell {
+    padding: var(--size-2-1) var(--size-4-1);
+    min-width: 80px;
+  }
+}
+
+/* Dark mode specific enhancements */
+.theme-dark .infio-markdown-table-container {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .infio-markdown-table-row:nth-child(even) {
+  background: var(--background-primary-alt);
+}
+
+/* Link styling within markdown tables */
+.infio-markdown-link {
+  color: var(--text-accent);
+  text-decoration: none;
+  transition: color 0.1s ease;
+  word-break: break-word;
+}
+
+.infio-markdown-link:hover {
+  color: var(--text-accent-hover);
+  text-decoration: underline;
+}
+
+/* Inline code styling within tables */
+.infio-markdown-table-cell code {
+  background: var(--background-modifier-border);
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.875em;
+  font-family: var(--font-monospace);
+  color: var(--text-normal);
+  word-break: break-word;
+}
+
+.theme-dark .infio-markdown-table-cell code {
+  background: var(--background-modifier-border-hover);
+}
+
+/* Table content text wrapping */
+.infio-markdown-table-cell p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.infio-markdown-table-cell p + p {
+  margin-top: var(--size-2-1);
+}
+
+/* Table content lists */
+.infio-markdown-table-cell ul,
+.infio-markdown-table-cell ol {
+  margin: 0;
+  padding-left: var(--size-4-2);
+}
+
+.infio-markdown-table-cell li {
+  margin-bottom: 0.125rem;
+}
+
+/* Improve table scrolling indicator */
+.infio-markdown-table-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.infio-markdown-table-container::-webkit-scrollbar-track {
+  background: var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+
+.infio-markdown-table-container::-webkit-scrollbar-thumb {
+  background: var(--background-modifier-border-hover);
+  border-radius: var(--radius-s);
+}
+
+.infio-markdown-table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
 
 /* 为后续问题添加特殊样式 */
 .infio-markdown.infio-followup-question {
@@ -695,6 +906,9 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   border-radius: var(--radius-s);
 	margin-top: 12px;
 	margin-bottom: 12px;
+  /* 防止代码块内容溢出 */
+  overflow: hidden;
+  word-wrap: break-word;
 }
 
 .infio-chat-code-block.infio-reasoning-block {
@@ -703,6 +917,9 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
 
 .infio-reasoning-content-wrapper {
   /* Height restrictions removed to show full content */
+  /* 防止推理内容溢出 */
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .infio-chat-code-block code {
@@ -1186,6 +1403,9 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   min-height: 62px;
   max-height: 500px;
   overflow-y: auto;
+  overflow-x: hidden;
+  /* 确保编辑器不会影响外部滚动 */
+  contain: size style;
 }
 
 .infio-chat-lexical-content-editable-root .mention {
@@ -1204,6 +1424,9 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   min-height: 36px;
   max-height: 500px;
   overflow-y: auto;
+  overflow-x: hidden;
+  /* 确保编辑器不会影响外部滚动 */
+  contain: size style;
 }
 
 .infio-search-lexical-content-editable-root .mention {
@@ -2177,7 +2400,42 @@ select.infio-ai-block-model-select::-ms-expand {
 #infio-apply-view {
   height: 100%;
   font-family: var(--font-interface);
+  /* 确保ApplyView不会影响外部滚动 */
+  contain: layout style;
 
+  /* 限制作用域：只应用于 ApplyView 内部的编辑器元素 */
+  > .view-content .cm-editor {
+    flex: 1 1 0;
+    min-height: 0;
+    position: relative !important;
+    box-sizing: border-box;
+    display: flex !important;
+    flex-direction: column;
+  }
+
+  > .view-content .cm-scroller {
+    padding: var(--file-margins);
+    display: flex !important;
+    align-items: flex-start !important;
+    line-height: 1.4;
+    height: 100%;
+    overflow-x: auto;
+    position: relative;
+    z-index: 0;
+  }
+
+  > .view-content .cm-sizer {
+    max-width: var(--file-line-width);
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding-bottom: 488px;
+  }
+
+  /* 确保 diff 相关样式也限制作用域 */
   .infio-diff-line {
     white-space: pre-wrap;
     word-break: break-word;
@@ -2196,7 +2454,7 @@ select.infio-ai-block-model-select::-ms-expand {
     background-color: rgba(var(--color-red-rgb), 0.2);
   }
 
-  .view-content {
+  > .view-content {
     padding: 0;
   }
 
@@ -2204,37 +2462,6 @@ select.infio-ai-block-model-select::-ms-expand {
     height: 100%;
     display: flex;
     flex-direction: column;
-  }
-
-  .cm-editor {
-    flex: 1 1 0;
-    min-height: 0;
-    position: relative !important;
-    box-sizing: border-box;
-    display: flex !important;
-    flex-direction: column;
-  }
-
-  .cm-scroller {
-    padding: var(--file-margins);
-    display: flex !important;
-    align-items: flex-start !important;
-    line-height: 1.4;
-    height: 100%;
-    overflow-x: auto;
-    position: relative;
-    z-index: 0;
-  }
-
-  .cm-sizer {
-    max-width: var(--file-line-width);
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    padding-bottom: 488px;
   }
 
   .view-header {
@@ -2431,6 +2658,23 @@ button.infio-chat-input-model-select {
   align-items: center;
   height: 100%;
   width: 100%;
+}
+
+.infio-chat-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-muted);
+}
+
+.infio-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--background-modifier-border);
+  border-top: 2px solid var(--text-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 .infio-chat-code-block-url-list {
@@ -2976,6 +3220,63 @@ button.infio-chat-input-model-select {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/*
+ * KaTeX 数学公式样式
+ * - 确保 KaTeX 数学公式的正确渲染
+ * - 隐藏 HTML 部分，只显示 MathML 部分
+ */
+.infio-markdown .katex .katex-html {
+  clip: rect(1px, 1px, 1px, 1px) !important;
+  border: 0 !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  position: absolute !important;
+  width: 1px !important;
+  white-space: nowrap !important;
+}
+
+.infio-markdown .katex .katex-mathml {
+  display: inline !important;
+  clip: auto !important;
+  border: inherit !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: inherit !important;
+  position: static !important;
+  width: auto !important;
+  white-space: inherit !important;
+}
+
+/* 确保 KaTeX 数学公式在复制时能正确处理 */
+.infio-markdown .katex {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.infio-markdown .katex-display {
+  display: block !important;
+  text-align: center;
+  margin: 0.5em 0;
+}
+
+.infio-markdown .katex-display .katex {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* 确保 KaTeX 样式不会影响到其他元素的滚动行为 */
+.infio-markdown .katex,
+.infio-markdown .katex-display {
+  overflow: visible !important;
+}
+
+.infio-markdown .katex * {
+  overflow: visible !important;
+}
+
 
 /*
  * JSON View Styles

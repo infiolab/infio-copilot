@@ -29,6 +29,7 @@ export type ChatAssistantMessage = {
 	reasoningContent: string
 	id: string
 	isToolResult?: boolean
+	toolResultContent?: string
 	metadata?: {
 		usage?: ResponseUsage
 		model?: LLMModel
@@ -57,6 +58,7 @@ export type SerializedChatAssistantMessage = {
 	content: string
 	reasoningContent: string
 	id: string
+	toolResultContent?: string
 	metadata?: {
 		usage?: ResponseUsage
 		model?: LLMModel
