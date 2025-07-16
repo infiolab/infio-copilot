@@ -1,10 +1,13 @@
-import { Sparkles } from 'lucide-react'
-import React from 'react'
+import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
+import React, { useState } from 'react'
 
 import { useApp } from "../../../contexts/AppContext"
+import { useDarkModeContext } from "../../../contexts/DarkModeContext"
 import { TransformationType } from "../../../core/transformations/trans-engine"
 import { ApplyStatus, ToolArgs } from "../../../types/apply"
 import { openMarkdownFile } from "../../../utils/obsidian"
+
+import { MemoizedSyntaxHighlighterWrapper } from "./SyntaxHighlighterWrapper"
 
 export type TransformationToolType = 'call_transformations'
 
@@ -15,6 +18,12 @@ interface MarkdownTransformationToolBlockProps {
 	path: string
 	transformation?: string
 	finish: boolean
+	toolExecutionResult?: {
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}
 }
 
 const getTransformationConfig = (transformation: string) => {
@@ -75,10 +84,14 @@ export default function MarkdownTransformationToolBlock({
 	onApply,
 	path,
 	transformation,
-	finish
+	finish,
+	toolExecutionResult
 }: MarkdownTransformationToolBlockProps) {
 	const app = useApp()
+	const { isDarkMode } = useDarkModeContext()
 	const config = getTransformationConfig(transformation || '')
+	const [isResultOpen, setIsResultOpen] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
 
 	const handleClick = () => {
 		if (path) {
@@ -105,17 +118,46 @@ export default function MarkdownTransformationToolBlock({
 	}
 
 	return (
-		<div
-			className={`infio-chat-code-block infio-transformation-tool-block ${path ? 'has-filename' : ''}`}
-			onClick={handleClick}
-			style={{ cursor: path ? 'pointer' : 'default' }}
-		>
-			<div className={'infio-chat-code-block-header'}>
-				<div className={'infio-chat-code-block-header-filename'}>
-					{config.icon}
-					<span>{getDisplayText()}</span>
+		<div>
+			<div
+				className={`infio-chat-code-block infio-transformation-tool-block ${path ? 'has-filename' : ''}`}
+				onMouseEnter={() => setIsHovered(true)}
+				onMouseLeave={() => setIsHovered(false)}
+			>
+				<div className={'infio-chat-code-block-header'}>
+					<div 
+						className={'infio-chat-code-block-header-filename'}
+						onClick={(e) => {
+							if (toolExecutionResult && isHovered) {
+								e.stopPropagation()
+								setIsResultOpen(!isResultOpen)
+							} else {
+								handleClick()
+							}
+						}}
+					>
+						{toolExecutionResult && isHovered ? (
+							isResultOpen ? <ChevronDown size={14} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={14} className="infio-chat-code-block-header-icon" />
+						) : (
+							config.icon
+						)}
+						<span>{getDisplayText()}</span>
+					</div>
 				</div>
 			</div>
+			{/* 工具执行结果显示区域 */}
+			{toolExecutionResult && isResultOpen && (
+				<div className="infio-reasoning-content-wrapper">
+					<MemoizedSyntaxHighlighterWrapper
+						isDarkMode={isDarkMode}
+						language="markdown"
+						hasFilename={false}
+						wrapLines={true}
+					>
+						{toolExecutionResult.content}
+					</MemoizedSyntaxHighlighterWrapper>
+				</div>
+			)}
 		</div>
 	)
 } 
