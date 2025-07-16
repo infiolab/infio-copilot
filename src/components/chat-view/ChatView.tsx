@@ -73,7 +73,7 @@ import CustomModeView from './CustomModeView'
 import FileReadResults from './FileReadResults'
 import HelloInfo from './HelloInfo'
 import InsightView from './InsightView'
-import MarkdownReasoningBlock from './Markdown/MarkdownReasoningBlock'
+import MarkdownOptimizedReasoningBlock from './Markdown/MarkdownOptimizedReasoningBlock'
 import McpHubView from './McpHubView'; // Moved after MarkdownReasoningBlock
 import QueryProgress, { QueryProgressState } from './QueryProgress'
 import ReactMarkdown from './ReactMarkdown'
@@ -1664,9 +1664,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 								</div>
 							) : (
 								<div key={"assistant-" + message.id} className="infio-chat-messages-assistant">
-									<MarkdownReasoningBlock
+									<MarkdownOptimizedReasoningBlock
 										key={"reasoning-" + message.id}
-										reasoningContent={message.reasoningContent} />
+										reasoningContent={message.reasoningContent}
+										isFinished={!submitMutation.isPending || index !== chatMessages.length - 1}
+										blockType="thinking"
+									/>
 									<ReactMarkdownItem
 										key={"content-" + message.id}
 										handleApply={(toolArgs) => handleApply(message.id, toolArgs)}

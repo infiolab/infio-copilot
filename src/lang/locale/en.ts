@@ -135,6 +135,7 @@ export default {
 			applying: "Applying...",
 			apply: "Apply",
 			reasoning: "Reasoning",
+			thinking: "Thinking",
 			plan: "Plan",
 			readFile: "Read file: {path}",
 			listFiles: "List files: {path}",

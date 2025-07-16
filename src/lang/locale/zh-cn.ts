@@ -136,6 +136,7 @@ export default {
 			applying: "正在应用...",
 			apply: "应用",
 			reasoning: "推理",
+			thinking: "思考",
 			plan: "规划",
 			readFile: "读取文件：{path}",
 			listFiles: "列出文件：{path}",

@@ -36,9 +36,9 @@ export default function MarkdownReasoningBlock({
 						style={{ cursor: isHovered ? 'pointer' : 'default' }}
 					>
 						{isHovered ? (
-							isOpen ? <ChevronDown size={10} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={10} className="infio-chat-code-block-header-icon" />
+							isOpen ? <ChevronDown size={14} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={14} className="infio-chat-code-block-header-icon" />
 						) : (
-							<Brain size={10} className="infio-chat-code-block-header-icon" />
+							<Brain size={14} className="infio-chat-code-block-header-icon" />
 						)}
 						{t('chat.reactMarkdown.reasoning')}
 					</div>

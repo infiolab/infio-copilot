@@ -39,7 +39,7 @@ export default function MarkdownReadFileBlock({
 		>
 			<div className={'infio-chat-code-block-header'}>
 				<div className={'infio-chat-code-block-header-filename'}>
-					<Eye size={10} className="infio-chat-code-block-header-icon" />
+					<Eye size={14} className="infio-chat-code-block-header-icon" />
 					{t('chat.reactMarkdown.readFile').replace('{path}', path)}
 				</div>
 			</div>

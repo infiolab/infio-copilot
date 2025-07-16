@@ -55,9 +55,9 @@ export default function MarkdownToolResult({
 						style={{ cursor: isHovered ? 'pointer' : 'default' }}
 					>
 						{isHovered ? (
-							isOpen ? <ChevronDown size={10} className="infio-chat-code-block-response-header-icon" /> : <ChevronRight size={10} className="infio-chat-code-block-response-header-icon" />
+							isOpen ? <ChevronDown size={14} className="infio-chat-code-block-response-header-icon" /> : <ChevronRight size={14} className="infio-chat-code-block-response-header-icon" />
 						) : (
-							<CheckCheck size={10} className="infio-chat-code-block-response-header-icon" />
+							<CheckCheck size={14} className="infio-chat-code-block-response-header-icon" />
 						)}
 						{t('response_from_tool')}
 						{toolName && <span className="infio-mcp-tool-name">{toolName}</span>}
@@ -133,10 +133,14 @@ export default function MarkdownToolResult({
 						overflow: hidden;
 						text-overflow: ellipsis;
 						white-space: nowrap;
+						display: flex;
+						align-items: center;
+						gap: var(--size-2-1);
 					}
 
 					.infio-chat-code-block-response-header-icon {
 						margin-right: 6px;
+						flex-shrink: 0;
 					}
 
 					.infio-chat-code-block-response-header-button {

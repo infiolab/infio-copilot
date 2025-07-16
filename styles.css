@@ -698,14 +698,11 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
 }
 
 .infio-chat-code-block.infio-reasoning-block {
-  max-height: 200px;
-  overflow: hidden;
+  /* Height restrictions removed to show full content */
 }
 
 .infio-reasoning-content-wrapper {
-  height: calc(100% - 28px);
-  overflow-y: auto;
-  scroll-behavior: smooth;
+  /* Height restrictions removed to show full content */
 }
 
 .infio-chat-code-block code {
@@ -754,6 +751,7 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
 
 .infio-chat-code-block-header-icon {
   margin-right: 6px;
+  flex-shrink: 0;
 }
 
 .infio-chat-code-block-header-button {
@@ -879,19 +877,19 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   opacity: 0.7;
 }
 
-/* Reasoning Content Block - Minimal styling for better integration */
+/* Reasoning Content Block - Unified styling for both loading and completed states */
 .infio-reasoning-content-block {
-  border: none !important;
-  background: none !important;
-  border-radius: 0 !important;
-  margin-top: 4px !important;
-  margin-bottom: 4px !important;
   color: var(--text-muted) !important;
+  border: 1px solid var(--background-modifier-border) !important;
+  background: var(--background-secondary) !important;
+  border-radius: var(--radius-s) !important;
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
 }
 
 .infio-reasoning-content-block .infio-chat-code-block-header {
-  background-color: transparent !important;
-  border-bottom: none !important;
+  background-color: var(--background-secondary) !important;
+  border-bottom: 1px solid var(--background-modifier-border) !important;
 }
 
 .infio-reasoning-content-block .infio-chat-code-block-header-filename {
@@ -901,6 +899,125 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
 
 .infio-reasoning-content-block .infio-chat-code-block-header-filename:hover {
   opacity: 0.7;
+}
+
+.infio-reasoning-markdown-wrapper {
+  padding: var(--size-4-2);
+  line-height: 1.5;
+  max-height: 500px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.infio-reasoning-markdown {
+  font-size: var(--font-ui-medium);
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.infio-reasoning-markdown h1, 
+.infio-reasoning-markdown h2, 
+.infio-reasoning-markdown h3, 
+.infio-reasoning-markdown h4, 
+.infio-reasoning-markdown h5, 
+.infio-reasoning-markdown h6 {
+  font-size: var(--font-ui-large);
+  margin-top: var(--size-4-3);
+  margin-bottom: var(--size-4-2);
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.infio-reasoning-markdown p {
+  margin-bottom: var(--size-4-2);
+  color: var(--text-muted);
+}
+
+.infio-reasoning-markdown ul, 
+.infio-reasoning-markdown ol {
+  margin-bottom: var(--size-4-2);
+  padding-left: var(--size-4-4);
+  color: var(--text-muted);
+}
+
+.infio-reasoning-markdown li {
+  margin-bottom: var(--size-2-1);
+  color: var(--text-muted);
+}
+
+.infio-reasoning-markdown code {
+  background-color: var(--background-modifier-border);
+  padding: var(--size-2-1) var(--size-4-1);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.infio-reasoning-markdown pre {
+  background-color: var(--background-modifier-border);
+  padding: var(--size-4-2);
+  border-radius: var(--radius-s);
+  overflow-x: auto;
+  margin-bottom: var(--size-4-2);
+  color: var(--text-muted);
+}
+
+.infio-reasoning-markdown pre code {
+  background-color: transparent;
+  padding: 0;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.infio-reasoning-markdown a {
+  color: var(--text-muted);
+  text-decoration: underline;
+  font-style: italic;
+}
+
+.infio-reasoning-markdown strong {
+  color: var(--text-muted);
+  font-style: italic;
+  font-weight: bold;
+}
+
+.infio-reasoning-markdown em {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.infio-reasoning-markdown blockquote {
+  color: var(--text-muted);
+  font-style: italic;
+  border-left: 3px solid var(--background-modifier-border);
+  padding-left: var(--size-4-2);
+  margin: var(--size-4-2) 0;
+}
+
+.infio-reasoning-markdown table {
+  color: var(--text-muted);
+  font-style: italic;
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: var(--size-4-2);
+}
+
+.infio-reasoning-markdown th,
+.infio-reasoning-markdown td {
+  color: var(--text-muted);
+  font-style: italic;
+  border: 1px solid var(--background-modifier-border);
+  padding: var(--size-2-1) var(--size-4-1);
+  text-align: left;
+}
+
+.infio-reasoning-markdown hr {
+  border: none;
+  height: 1px;
+  background-color: var(--background-modifier-border);
+  margin: var(--size-4-3) 0;
 }
 
 /* List Files Block - Minimal styling for better integration */

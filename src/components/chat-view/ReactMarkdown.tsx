@@ -14,7 +14,7 @@ import MarkdownListFilesBlock from './Markdown/MarkdownListFilesBlock'
 import MarkdownManageFilesBlock from './Markdown/MarkdownManageFilesBlock'
 import MarkdownMatchSearchFilesBlock from './Markdown/MarkdownMatchSearchFilesBlock'
 import MarkdownReadFileBlock from './Markdown/MarkdownReadFileBlock'
-import MarkdownReasoningBlock from './Markdown/MarkdownReasoningBlock'
+import MarkdownOptimizedReasoningBlock from './Markdown/MarkdownOptimizedReasoningBlock'
 import MarkdownRegexSearchFilesBlock from './Markdown/MarkdownRegexSearchFilesBlock'
 import MarkdownSearchAndReplace from './Markdown/MarkdownSearchAndReplace'
 import MarkdownSearchWebBlock from './Markdown/MarkdownSearchWebBlock'
@@ -45,9 +45,11 @@ function ReactMarkdown({
 		<>
 			{blocks.map((block, index) =>
 				block.type === 'think' ? (
-					<MarkdownReasoningBlock
+					<MarkdownOptimizedReasoningBlock
 						key={"reasoning-" + index}
 						reasoningContent={block.content}
+						isFinished={block.finish}
+						blockType="think"
 					/>
 				) : block.type === 'thinking' ? (
 					<RawMarkdownBlock

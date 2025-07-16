@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import JSON5 from 'json5'
 import { parseFragment } from 'parse5'
 
@@ -6,12 +6,14 @@ export type ParsedMsgBlock =
 	| {
 		type: 'string'
 		content: string
-	} | {
+	} 	| {
 		type: 'think'
 		content: string
+		finish: boolean
 	} | {
 		type: 'thinking'
 		content: string
+		finish: boolean
 	} | {
 		type: 'communication'
 		content: string
@@ -148,6 +150,7 @@ export function parseMsgBlocks(
 					parsedResult.push({
 						type: 'thinking',
 						content: '',
+						finish: node.sourceCodeLocation.endTag !== undefined
 					})
 				} else {
 					const innerContentStartOffset =
@@ -160,6 +163,7 @@ export function parseMsgBlocks(
 					parsedResult.push({
 						type: 'thinking',
 						content: input.slice(innerContentStartOffset, innerContentEndOffset),
+						finish: node.sourceCodeLocation.endTag !== undefined
 					})
 				}
 				lastEndOffset = endOffset
@@ -181,6 +185,7 @@ export function parseMsgBlocks(
 					parsedResult.push({
 						type: 'think',
 						content: '',
+						finish: node.sourceCodeLocation.endTag !== undefined
 					})
 				} else {
 					const innerContentStartOffset =
@@ -193,6 +198,7 @@ export function parseMsgBlocks(
 					parsedResult.push({
 						type: 'think',
 						content: input.slice(innerContentStartOffset, innerContentEndOffset),
+						finish: node.sourceCodeLocation.endTag !== undefined
 					})
 				}
 				lastEndOffset = endOffset
@@ -411,7 +417,7 @@ export function parseMsgBlocks(
 					} else if (childNode.nodeName === 'line_count' && childNode.childNodes.length > 0) {
 						// @ts-expect-error - parse5 node value type
 						const lineCountStr = childNode.childNodes[0].value
-						lineCount = lineCountStr ? parseInt(lineCountStr as string) : undefined
+						lineCount = lineCountStr ? parseInt(lineCountStr) : undefined
 					}
 				}
 				parsedResult.push({
@@ -447,7 +453,7 @@ export function parseMsgBlocks(
 						try {
 							// @ts-expect-error - parse5 node value type
 							const operationsJson = childNode.childNodes[0].value
-							const operations = JSON5.parse(operationsJson as string)
+							const operations = JSON5.parse(operationsJson)
 							if (Array.isArray(operations) && operations.length > 0) {
 								const operation = operations[0]
 								startLine = operation.start_line || 1
@@ -491,7 +497,7 @@ export function parseMsgBlocks(
 						try {
 							// @ts-expect-error - parse5 node value type
 							content = childNode.childNodes[0].value
-							operations = JSON5.parse(content as string)
+							operations = JSON5.parse(content)
 						} catch (error) {
 							console.error('Failed to parse operations JSON', error)
 						}
@@ -666,7 +672,7 @@ export function parseMsgBlocks(
 						try {
 							// @ts-expect-error - parse5 node value type
 							const urlsJson = childNode.childNodes[0].value
-							const parsedUrls = JSON5.parse(urlsJson as string)
+							const parsedUrls = JSON5.parse(urlsJson)
 							if (Array.isArray(parsedUrls)) {
 								urls = parsedUrls
 							}
@@ -713,7 +719,7 @@ export function parseMsgBlocks(
 						try {
 							// @ts-expect-error - parse5 node value type
 							const parametersJson = childNode.childNodes[0].value
-							parameters = JSON5.parse(parametersJson as string)
+							parameters = JSON5.parse(parametersJson)
 						} catch (error) {
 							console.debug('Failed to parse parameters JSON', error)
 						}
