@@ -14,7 +14,16 @@ export function ModeSelect() {
 
 	const { customModeList } = useCustomModes()
 
-	const allModes = useMemo(() => [...defaultModes, ...customModeList], [customModeList])
+	// 支持的模式列表
+	const supportedModes = ['ask', 'write', 'research']
+
+	const allModes = useMemo(() => {
+		// 过滤默认模式，只保留支持的模式
+		const filteredDefaultModes = defaultModes.filter(mode => supportedModes.includes(mode.slug))
+		// 过滤自定义模式，只保留支持的模式
+		const filteredCustomModes = customModeList.filter(mode => supportedModes.includes(mode.slug))
+		return [...filteredDefaultModes, ...filteredCustomModes]
+	}, [customModeList])
 
 	useEffect(() => {
 		onEnt(`switch_mode/${settings.mode}`)
