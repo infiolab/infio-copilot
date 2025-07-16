@@ -1,10 +1,8 @@
-import * as path from 'path'
-
 import { BaseSerializedNode } from '@lexical/clipboard/clipboard'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import { useMutation } from '@tanstack/react-query'
 import { Box, CircleStop, History, Lightbulb, NotebookPen, Plus, Search, Server, SquareSlash, Undo } from 'lucide-react'
-import { App, Notice, TFile, TFolder, WorkspaceLeaf } from 'obsidian'
-import * as Tooltip from '@radix-ui/react-tooltip'
+import { App, Notice, TFile, WorkspaceLeaf } from 'obsidian'
 import {
 	forwardRef,
 	useCallback,
@@ -16,8 +14,7 @@ import {
 } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
-import { ApplyView, ApplyViewState } from '../../ApplyView'
-import { APPLY_VIEW_TYPE } from '../../constants'
+import { ApplyView } from '../../ApplyView'
 import { useApp } from '../../contexts/AppContext'
 import { useDataview } from '../../contexts/DataviewContext'
 import { useDiffStrategy } from '../../contexts/DiffStrategyContext'
@@ -26,25 +23,20 @@ import { useMcpHub } from '../../contexts/McpHubContext'
 import { useRAG } from '../../contexts/RAGContext'
 import { useSettings } from '../../contexts/SettingsContext'
 import { useTrans } from '../../contexts/TransContext'
-import { matchSearchUsingCorePlugin } from '../../core/file-search/match/coreplugin-match'
-import { matchSearchUsingOmnisearch } from '../../core/file-search/match/omnisearch-match'
-import { regexSearchUsingCorePlugin } from '../../core/file-search/regex/coreplugin-regex'
-import { regexSearchUsingRipgrep } from '../../core/file-search/regex/ripgrep-regex'
 import {
 	LLMAPIKeyInvalidException,
 	LLMAPIKeyNotSetException,
 	LLMBaseUrlNotSetException,
 	LLMModelNotSetException,
 } from '../../core/llm/exception'
-import { TransformationType } from '../../core/transformations/trans-engine'
-import { Workspace } from '../../database/json/workspace/types'
+import { ToolManager, ToolManagerDependencies } from '../../core/tools/tool-manager'
 import { WorkspaceManager } from '../../database/json/workspace/WorkspaceManager'
 import { useChatHistory } from '../../hooks/use-chat-history'
 import { useCustomModes } from '../../hooks/use-custom-mode'
 import { t } from '../../lang/helpers'
 import { PreviewView } from '../../PreviewView'
 import useChatStore from '../../stores/chat-store'
-import { ApplyStatus, ToolArgs } from '../../types/apply'
+import { ApplyStatus, ToolArgs, ToolExecutionResult } from '../../types/apply'
 import { ChatMessage, ChatUserMessage } from '../../types/chat'
 import {
 	Mentionable,
@@ -52,17 +44,14 @@ import {
 	MentionableBlockData,
 	MentionableCurrentFile,
 } from '../../types/mentionable'
-import { ApplyEditToFile, SearchAndReplace } from '../../utils/apply'
-import { listFilesAndFolders, semanticSearchFiles } from '../../utils/glob-utils'
 import {
 	getMentionableKey,
 	serializeMentionable,
 } from '../../utils/mentionable'
-import { readTFileContent, readTFileContentPdf } from '../../utils/obsidian'
 import { openSettingsModalWithError } from '../../utils/open-settings-modal'
-import { PromptGenerator, addLineNumbers } from '../../utils/prompt-generator'
+import { PromptGenerator } from '../../utils/prompt-generator'
 // Removed empty line above, added one below for group separation
-import { fetchUrlsContent, onEnt, webSearch } from '../../utils/web-search'
+import { onEnt } from '../../utils/web-search'
 import ErrorBoundary from '../common/ErrorBoundary'
 
 import PromptInputWithActions, { ChatUserInputRef } from './chat-input/PromptInputWithActions'
@@ -158,6 +147,20 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 	const workspaceManager = useMemo(() => {
 		return new WorkspaceManager(app)
 	}, [app])
+
+	const toolManager = useMemo(() => {
+		const dependencies: ToolManagerDependencies = {
+			app,
+			settings,
+			workspaceManager,
+			diffStrategy,
+			getRAGEngine,
+			getTransEngine,
+			getMcpHub,
+			getDataviewManager: () => dataviewManager,
+		}
+		return new ToolManager(dependencies)
+	}, [app, settings, workspaceManager, diffStrategy, getRAGEngine, getTransEngine, getMcpHub, dataviewManager])
 
 	const [inputMessage, setInputMessage] = useState<ChatUserMessage>(() => {
 		const newMessage = getNewInputMessage(app, settings.defaultMention)
@@ -436,704 +439,69 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		submitMutation.mutate({ newChatHistory, useVaultSearch })
 	}
 
-	const applyMutation = useMutation<
-		{
-			type: string;
-			applyMsgId: string;
-			applyStatus: ApplyStatus;
-			returnMsg?: ChatUserMessage
-		},
-		Error,
-		{ applyMsgId: string, toolArgs: ToolArgs }
-	>({
-		mutationFn: async ({ applyMsgId, toolArgs }) => {
-			try {
-				let opFile = app.workspace.getActiveFile()
-				if ('filepath' in toolArgs && toolArgs.filepath) {
-					opFile = app.vault.getFileByPath(toolArgs.filepath)
-				}
-				if (toolArgs.type === 'write_to_file') {
-					let newFile = false
-					if (!opFile) {
-						// 确保目录结构存在
-						const dir = path.dirname(toolArgs.filepath)
-						if (dir && dir !== '.' && dir !== '/') {
-							const dirExists = await app.vault.adapter.exists(dir)
-							if (!dirExists) {
-								await app.vault.adapter.mkdir(dir)
-							}
-						}
-						opFile = await app.vault.create(toolArgs.filepath, '')
-						newFile = true
-					}
-					// return a Promise, which will be resolved after user makes a choice
-					return new Promise<{ type: string; applyMsgId: string; applyStatus: ApplyStatus; returnMsg?: ChatUserMessage }>((resolve) => {
-						app.workspace.getLeaf(true).setViewState({
-							type: APPLY_VIEW_TYPE,
-							active: true,
-							state: {
-								file: opFile.path,
-								oldContent: '',
-								newContent: toolArgs.content,
-								onClose: (applied: boolean) => {
-									const applyStatus = applied ? ApplyStatus.Applied : ApplyStatus.Rejected
-									const applyEditContent = applied ? 'Changes successfully applied'
-										: 'User rejected changes'
-									if (newFile) {
-										if (!applied) {
-											app.vault.delete(opFile) // delete the new file if user rejected changes
-										} else {
-											app.workspace.openLinkText(toolArgs.filepath, 'split', true)
-										}
-									}
-									resolve({
-										type: toolArgs.type,
-										applyMsgId,
-										applyStatus,
-										returnMsg: {
-											role: 'user',
-											applyStatus: ApplyStatus.Idle,
-											content: null,
-											promptContent: `[${toolArgs.type} for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
-											id: uuidv4(),
-											mentionables: [],
-										}
-									});
-								}
-							} satisfies ApplyViewState,
-						})
-					})
-				} else if (toolArgs.type === 'insert_content') {
-					if (!opFile) {
-						throw new Error(`File not found: ${toolArgs.filepath}`)
-					}
-					const fileContent = await readTFileContent(opFile, app.vault)
-					const appliedFileContent = await ApplyEditToFile(
-						fileContent,
-						toolArgs.content,
-						toolArgs.startLine,
-						toolArgs.endLine
-					)
-					if (!appliedFileContent) {
-						throw new Error('Failed to apply edit changes')
-					}
-					// return a Promise, which will be resolved after user makes a choice
-					return new Promise<{ type: string; applyMsgId: string; applyStatus: ApplyStatus; returnMsg?: ChatUserMessage }>((resolve) => {
-						app.workspace.getLeaf(true).setViewState({
-							type: APPLY_VIEW_TYPE,
-							active: true,
-							state: {
-								file: opFile.path,
-								oldContent: fileContent,
-								newContent: appliedFileContent,
-								onClose: (applied: boolean) => {
-									const applyStatus = applied ? ApplyStatus.Applied : ApplyStatus.Rejected
-									const applyEditContent = applied ? 'Changes successfully applied'
-										: 'User rejected changes'
-									resolve({
-										type: toolArgs.type,
-										applyMsgId,
-										applyStatus,
-										returnMsg: {
-											role: 'user',
-											applyStatus: ApplyStatus.Idle,
-											content: null,
-											promptContent: `[${toolArgs.type} for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
-											id: uuidv4(),
-											mentionables: [],
-										}
-									});
-								}
-							} satisfies ApplyViewState,
-						})
-					})
-				} else if (toolArgs.type === 'search_and_replace') {
-					if (!opFile) {
-						throw new Error(`File not found: ${toolArgs.filepath}`)
-					}
-					const fileContent = await readTFileContent(opFile, app.vault)
-					const appliedFileContent = await SearchAndReplace(
-						fileContent,
-						toolArgs.operations
-					)
-					if (!appliedFileContent) {
-						throw new Error('Failed to search_and_replace')
-					}
-					// return a Promise, which will be resolved after user makes a choice
-					return new Promise<{ type: string; applyMsgId: string; applyStatus: ApplyStatus; returnMsg?: ChatUserMessage }>((resolve) => {
-						app.workspace.getLeaf(true).setViewState({
-							type: APPLY_VIEW_TYPE,
-							active: true,
-							state: {
-								file: opFile.path,
-								oldContent: fileContent,
-								newContent: appliedFileContent,
-								onClose: (applied: boolean) => {
-									const applyStatus = applied ? ApplyStatus.Applied : ApplyStatus.Rejected
-									const applyEditContent = applied ? 'Changes successfully applied'
-										: 'User rejected changes'
-									resolve({
-										type: 'search_and_replace',
-										applyMsgId,
-										applyStatus,
-										returnMsg: {
-											role: 'user',
-											applyStatus: ApplyStatus.Idle,
-											content: null,
-											promptContent: `[search_and_replace for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
-											id: uuidv4(),
-											mentionables: [],
-										}
-									});
-								}
-							} satisfies ApplyViewState,
-						})
-					})
-				} else if (toolArgs.type === 'apply_diff') {
-					if (!opFile) {
-						throw new Error(`File not found: ${toolArgs.filepath}`)
-					}
-					const fileContent = await readTFileContent(opFile, app.vault)
-					const appliedResult = await diffStrategy.applyDiff(
-						fileContent,
-						toolArgs.diff
-					)
-					if (!appliedResult || !appliedResult.success) {
-						throw new Error(`Failed to apply_diff`)
-					}
-					// return a Promise, which will be resolved after user makes a choice
-					return new Promise<{ type: string; applyMsgId: string; applyStatus: ApplyStatus; returnMsg?: ChatUserMessage }>((resolve) => {
-						app.workspace.getLeaf(true).setViewState({
-							type: APPLY_VIEW_TYPE,
-							active: true,
-							state: {
-								file: opFile.path,
-								oldContent: fileContent,
-								newContent: appliedResult.content,
-								onClose: (applied: boolean) => {
-									const applyStatus = applied ? ApplyStatus.Applied : ApplyStatus.Rejected
-									const applyEditContent = applied ? 'Changes successfully applied'
-										: 'User rejected changes'
-									resolve({
-										type: 'apply_diff',
-										applyMsgId,
-										applyStatus,
-										returnMsg: {
-											role: 'user',
-											applyStatus: ApplyStatus.Idle,
-											content: null,
-											promptContent: `[apply_diff for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
-											id: uuidv4(),
-											mentionables: [],
-										}
-									});
-								}
-							} satisfies ApplyViewState,
-						})
-					})
-				} else if (toolArgs.type === 'read_file') {
-					if (!opFile) {
-						throw new Error(`File not found: ${toolArgs.filepath}`)
-					}
-					const fileContent = await readTFileContentPdf(opFile, app.vault, app)
-					const formattedContent = `[read_file for '${toolArgs.filepath}'] Result:\n${addLineNumbers(fileContent)}\n`;
-					return {
-						type: 'read_file',
-						applyMsgId,
-						applyStatus: ApplyStatus.Applied,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					};
-				} else if (toolArgs.type === 'list_files') {
-					// 获取当前工作区
-					let currentWorkspace: Workspace | null = null
-					if (settings.workspace && settings.workspace !== 'vault') {
-						currentWorkspace = await workspaceManager.findByName(String(settings.workspace))
-					}
-
-					const files = await listFilesAndFolders(
-						app.vault,
-						toolArgs.filepath,
-						toolArgs.recursive,
-						currentWorkspace || undefined,
-						app
-					)
-
-					const contextInfo = currentWorkspace
-						? `workspace '${currentWorkspace.name}'`
-						: toolArgs.filepath || 'vault root'
-					const formattedContent = `[list_files for '${contextInfo}'] Result:\n${files.join('\n')}\n`;
-					return {
-						type: 'list_files',
-						applyMsgId,
-						applyStatus: ApplyStatus.Applied,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					}
-				} else if (toolArgs.type === 'match_search_files') {
-					const searchBackend = settings.filesSearchSettings.matchBackend
-					let results: string;
-					if (searchBackend === 'omnisearch') {
-						results = await matchSearchUsingOmnisearch(toolArgs.query, app)
-					} else {
-						results = await matchSearchUsingCorePlugin(toolArgs.query, app)
-					}
-					const formattedContent = `[match_search_files for '${toolArgs.filepath}'] Result:\n${results}\n`;
-					return {
-						type: 'match_search_files',
-						applyMsgId,
-						applyStatus: ApplyStatus.Applied,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					}
-				} else if (toolArgs.type === 'regex_search_files') {
-					const searchBackend = settings.filesSearchSettings.regexBackend
-					let results: string;
-					if (searchBackend === 'coreplugin') {
-						results = await regexSearchUsingCorePlugin(toolArgs.regex, app)
-					} else {
-						// @ts-expect-error Obsidian API type mismatch
-						const baseVaultPath = String(app.vault.adapter.getBasePath())
-						const absolutePath = path.join(baseVaultPath, toolArgs.filepath)
-						const ripgrepPath = settings.filesSearchSettings.ripgrepPath
-						results = await regexSearchUsingRipgrep(absolutePath, toolArgs.regex, ripgrepPath)
-					}
-					const formattedContent = `[regex_search_files for '${toolArgs.filepath}'] Result:\n${results}\n`;
-					return {
-						type: 'regex_search_files',
-						applyMsgId,
-						applyStatus: ApplyStatus.Applied,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					}
-				} else if (toolArgs.type === 'semantic_search_files') {
-					// 获取当前工作区
-					let currentWorkspace: Workspace | null = null
-					if (settings.workspace && settings.workspace !== 'vault') {
-						currentWorkspace = await workspaceManager.findByName(String(settings.workspace))
-					}
-
-					const snippets = await semanticSearchFiles(
-						await getRAGEngine(),
-						toolArgs.query,
-						toolArgs.filepath,
-						currentWorkspace || undefined,
-						app,
-						await getTransEngine()
-					)
-
-					const contextInfo = currentWorkspace
-						? `workspace '${currentWorkspace.name}'`
-						: toolArgs.filepath || 'vault'
-					const formattedContent = `[semantic_search_files for '${contextInfo}'] Result:\n${snippets}\n`;
-					return {
-						type: 'semantic_search_files',
-						applyMsgId,
-						applyStatus: ApplyStatus.Applied,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					}
-				} else if (toolArgs.type === 'search_web') {
-					const results = await webSearch(
-						toolArgs.query,
-						settings.serperApiKey,
-						settings.serperSearchEngine,
-						settings.jinaApiKey,
-						(await getRAGEngine())
-					)
-					const formattedContent = `[search_web for '${toolArgs.query}'] Result:\n${results}\n`;
-					return {
-						type: 'search_web',
-						applyMsgId,
-						applyStatus: ApplyStatus.Applied,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					}
-				} else if (toolArgs.type === 'fetch_urls_content') {
-					const results = await fetchUrlsContent(toolArgs.urls, settings.jinaApiKey)
-					const formattedContent = `[ fetch_urls_content ] Result:\n${results}\n`;
-					return {
-						type: 'fetch_urls_content',
-						applyMsgId,
-						applyStatus: ApplyStatus.Applied,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					}
-				} else if (toolArgs.type === 'switch_mode') {
-					setSettings({
-						...settings,
-						mode: toolArgs.mode,
-					})
-					const formattedContent = `[switch_mode to ${toolArgs.mode}] Result: successfully switched to ${toolArgs.mode}\n`
-					return {
-						type: 'switch_mode',
-						applyMsgId,
-						applyStatus: ApplyStatus.Applied,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					}
-				} else if (toolArgs.type === 'use_mcp_tool') {
-					const mcpHub = await getMcpHub()
-					if (!mcpHub) {
-						throw new Error('MCP hub not found')
-					}
-					const toolResult = await mcpHub.callTool(toolArgs.server_name, toolArgs.tool_name, toolArgs.parameters)
-					const toolResultPretty =
-						(toolResult?.isError ? "Error:\n" : "") +
-						toolResult?.content
-							.map((item) => {
-								if (item.type === "text") {
-									return item.text
-								}
-								if (item.type === "resource") {
-									// eslint-disable-next-line @typescript-eslint/no-unused-vars
-									const { blob, ...rest } = item.resource
-									return JSON.stringify(rest, null, 2)
-								}
-								return ""
-							})
-							.filter(Boolean)
-							.join("\n\n") || "(No response)"
-
-					const formattedContent = `[use_mcp_tool for '${toolArgs.server_name}'] Result:\n${toolResultPretty}\n`;
-					return {
-						type: 'use_mcp_tool',
-						applyMsgId,
-						applyStatus: ApplyStatus.Applied,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					}
-				} else if (toolArgs.type === 'dataview_query') {
-					if (!dataviewManager) {
-						throw new Error('DataviewManager 未初始化')
-					}
-
-					if (!dataviewManager.isDataviewAvailable()) {
-						throw new Error('Dataview 插件未安装或未启用，请先安装并启用 Dataview 插件')
-					}
-
-					// 执行 Dataview 查询
-					const result = await dataviewManager.executeQuery(toolArgs.query)
-
-					let formattedContent: string;
-					if (result.success) {
-						formattedContent = `[dataview_query] 查询成功:\n${result.data}`;
-					} else {
-						formattedContent = `[dataview_query] 查询失败:\n${result.error}`;
-					}
-
-					return {
-						type: 'dataview_query',
-						applyMsgId,
-						applyStatus: result.success ? ApplyStatus.Applied : ApplyStatus.Failed,
-						returnMsg: {
-							role: 'user',
-							applyStatus: ApplyStatus.Idle,
-							content: null,
-							promptContent: formattedContent,
-							id: uuidv4(),
-							mentionables: [],
-						}
-					}
-				} else if (toolArgs.type === 'call_transformations') {
-					// Handling for the unified transformations tool
-					try {
-						console.log("call_transformations", toolArgs)
-						// Validate that the transformation type is a valid enum member
-						const validTransformationTypes = Object.values(TransformationType)
-						const transformationType = toolArgs.transformation
-						if (!validTransformationTypes.includes(transformationType)) {
-							throw new Error(`Unsupported transformation type: ${transformationType}`);
-						}
-
-						const transEngine = await getTransEngine();
-
-						// Execute the transformation using the TransEngine
-						const transformationResult = await transEngine.runTransformation({
-							filePath: toolArgs.path,
-							transformationType: transformationType,
-							model: {
-								provider: settings.applyModelProvider,
-								modelId: settings.applyModelId,
-							},
-							saveToDatabase: true
-						});
-
-						if (!transformationResult.success) {
-							throw new Error(transformationResult.error || 'Transformation failed');
-						}
-
-						// Build the result message
-						let formattedContent = `[${toolArgs.transformation}] transformation complete:\n\n${transformationResult.result}`;
-
-						if (transformationResult.truncated) {
-							formattedContent += `\n\n*Note: The original content was too long (${transformationResult.originalTokens} tokens) and was truncated to ${transformationResult.processedTokens} tokens for processing.*`;
-						}
-
-						return {
-							type: toolArgs.type,
-							applyMsgId,
-							applyStatus: ApplyStatus.Applied,
-							returnMsg: {
-								role: 'user',
-								applyStatus: ApplyStatus.Idle,
-								content: null,
-								promptContent: formattedContent,
-								id: uuidv4(),
-								mentionables: [],
-							}
-						};
-					} catch (error) {
-						console.error(`Transformation failed (${toolArgs.transformation}):`, error);
-						return {
-							type: toolArgs.type,
-							applyMsgId,
-							applyStatus: ApplyStatus.Failed,
-							returnMsg: {
-								role: 'user',
-								applyStatus: ApplyStatus.Idle,
-								content: null,
-								promptContent: `[${toolArgs.transformation}] transformation failed: ${error instanceof Error ? error.message : String(error)}`,
-								id: uuidv4(),
-								mentionables: [],
-							}
-						};
-					}
-				} else if (toolArgs.type === 'manage_files') {
-					try {
-						const results: string[] = [];
-
-						// 处理每个文件操作
-						for (const operation of toolArgs.operations) {
-							switch (operation.action) {
-								case 'create_folder':
-									if (operation.path) {
-										const folderExists = await app.vault.adapter.exists(operation.path);
-										if (!folderExists) {
-											await app.vault.adapter.mkdir(operation.path);
-											results.push(`✅ 成功创建文件夹: ${operation.path}`);
-										} else {
-											results.push(`⚠️ 文件夹已存在: ${operation.path}`);
-										}
-									}
-									break;
-
-								case 'move':
-									if (operation.source_path && operation.destination_path) {
-										// 使用 getAbstractFileByPath 而不是 getFileByPath，这样可以获取文件和文件夹
-										const sourceFile = app.vault.getAbstractFileByPath(operation.source_path);
-										if (sourceFile) {
-											// 确保目标目录存在
-											const destDir = path.dirname(operation.destination_path);
-											if (destDir && destDir !== '.' && destDir !== '/') {
-												const dirExists = await app.vault.adapter.exists(destDir);
-												if (!dirExists) {
-													await app.vault.adapter.mkdir(destDir);
-												}
-											}
-											await app.vault.rename(sourceFile, operation.destination_path);
-											const itemType = sourceFile instanceof TFile ? '文件' : '文件夹';
-											results.push(`✅ 成功移动${itemType}: ${operation.source_path} → ${operation.destination_path}`);
-										} else {
-											results.push(`❌ 源文件或文件夹不存在: ${operation.source_path}`);
-										}
-									}
-									break;
-
-								case 'delete':
-									if (operation.path) {
-										// 使用 getAbstractFileByPath 而不是 getFileByPath
-										const fileOrFolder = app.vault.getAbstractFileByPath(operation.path);
-										if (fileOrFolder) {
-											try {
-												const isFolder = fileOrFolder instanceof TFolder;
-												// 使用 trash 方法将文件/文件夹移到回收站，更安全
-												// system: true 尝试使用系统回收站，失败则使用 Obsidian 本地回收站
-												await app.vault.trash(fileOrFolder, true);
-												const itemType = isFolder ? '文件夹' : '文件';
-												results.push(`✅ 成功将${itemType}移到回收站: ${operation.path}`);
-											} catch (error) {
-												console.error('删除失败:', error);
-												results.push(`❌ 删除失败: ${operation.path} - ${error.message}`);
-											}
-										} else {
-											results.push(`❌ 文件或文件夹不存在: ${operation.path}`);
-										}
-									}
-									break;
-
-								case 'copy':
-									if (operation.source_path && operation.destination_path) {
-										// 文件夹复制比较复杂，需要递归处理
-										const sourceFile = app.vault.getAbstractFileByPath(operation.source_path);
-										if (sourceFile) {
-											if (sourceFile instanceof TFile) {
-												// 文件复制
-												const destDir = path.dirname(operation.destination_path);
-												if (destDir && destDir !== '.' && destDir !== '/') {
-													const dirExists = await app.vault.adapter.exists(destDir);
-													if (!dirExists) {
-														await app.vault.adapter.mkdir(destDir);
-													}
-												}
-												const content = await app.vault.read(sourceFile);
-												await app.vault.create(operation.destination_path, content);
-												results.push(`✅ 成功复制文件: ${operation.source_path} → ${operation.destination_path}`);
-											} else if (sourceFile instanceof TFolder) {
-												// 文件夹复制需要递归处理
-												results.push(`❌ 文件夹复制功能暂未实现: ${operation.source_path}`);
-											}
-										} else {
-											results.push(`❌ 源文件或文件夹不存在: ${operation.source_path}`);
-										}
-									}
-									break;
-
-								case 'rename':
-									if (operation.path && operation.new_name) {
-										// 使用 getAbstractFileByPath 而不是 getFileByPath
-										const file = app.vault.getAbstractFileByPath(operation.path);
-										if (file) {
-											const newPath = path.join(path.dirname(operation.path), operation.new_name);
-											await app.vault.rename(file, newPath);
-											const itemType = file instanceof TFile ? '文件' : '文件夹';
-											results.push(`✅ 成功重命名${itemType}: ${operation.path} → ${newPath}`);
-										} else {
-											results.push(`❌ 文件或文件夹不存在: ${operation.path}`);
-										}
-									}
-									break;
-
-								default:
-									results.push(`❌ 不支持的操作类型: ${String(operation.action)}`);
-							}
-						}
-
-						const formattedContent = `[manage_files] 文件管理操作结果:\n${results.join('\n')}`;
-
-						return {
-							type: 'manage_files',
-							applyMsgId,
-							applyStatus: ApplyStatus.Applied,
-							returnMsg: {
-								role: 'user',
-								applyStatus: ApplyStatus.Idle,
-								content: null,
-								promptContent: formattedContent,
-								id: uuidv4(),
-								mentionables: [],
-							}
-						};
-					} catch (error) {
-						console.error('文件管理操作失败:', error);
-						return {
-							type: 'manage_files',
-							applyMsgId,
-							applyStatus: ApplyStatus.Failed,
-							returnMsg: {
-								role: 'user',
-								applyStatus: ApplyStatus.Idle,
-								content: null,
-								promptContent: `[manage_files] 文件管理操作失败: ${error instanceof Error ? error.message : String(error)}`,
-								id: uuidv4(),
-								mentionables: [],
-							}
-						};
-					}
-				} else {
-					// 处理未知的工具类型
-					throw new Error(`Unsupported tool type: ${String((toolArgs as any)?.type) || 'unknown'}`);
-				}
-			} catch (error) {
-				console.error('Failed to apply changes', error)
-				throw error
-			}
-		},
-		onSuccess: (result) => {
-			if (result.applyMsgId || result.returnMsg) {
-				let newChatMessages = [...chatMessages];
-
-				if (result.applyMsgId) {
-					newChatMessages = newChatMessages.map((message) =>
-						message.role === 'assistant' && message.id === result.applyMsgId ? {
-							...message,
-							applyStatus: result.applyStatus
-						} : message,
-					);
-				}
-				if (result.returnMsg) {
-					newChatMessages.push({
-						id: uuidv4(),
-						role: 'assistant',
+	const applyMutation = useMutation<ToolExecutionResult, Error, { applyMsgId: string, toolArgs: ToolArgs }>({
+		mutationFn: async ({ applyMsgId, toolArgs }: { applyMsgId: string, toolArgs: ToolArgs }): Promise<ToolExecutionResult> => {
+			// 处理 switch_mode 工具的特殊情况，因为它需要访问 setSettings
+			if (toolArgs.type === 'switch_mode') {
+				setSettings({
+					...settings,
+					mode: toolArgs.mode,
+				})
+				const formattedContent = `[switch_mode to ${toolArgs.mode}] Result: successfully switched to ${toolArgs.mode}\n`
+				return {
+					type: 'switch_mode',
+					applyMsgId,
+					applyStatus: ApplyStatus.Applied,
+					toolResultContent: formattedContent,
+					returnMsg: {
+						role: 'user' as const,
 						applyStatus: ApplyStatus.Idle,
-						isToolResult: true,
-						content: '',
-						reasoningContent: '',
-						toolResultContent: typeof result.returnMsg.promptContent === 'string' ? result.returnMsg.promptContent : '',
-						metadata: {
-							usage: undefined,
-							model: undefined,
-						},
-					})
+						content: null,
+						promptContent: formattedContent,
+						id: uuidv4(),
+						mentionables: [],
+					}
 				}
+			}
+			
+			// 使用工具管理器处理其他所有工具
+			return await toolManager.executeTool(toolArgs, applyMsgId)
+		},
+		onSuccess: (result: ToolExecutionResult) => {
+			if (result.applyMsgId) {
+				let newChatMessages: ChatMessage[] = [...chatMessages];
+
+				// 更新原始 assistant 消息的状态和工具执行结果
+				newChatMessages = newChatMessages.map((message) => {
+					if (message.role === 'assistant' && message.id === result.applyMsgId) {
+						const toolExecutionResult = {
+							type: result.type,
+							status: result.applyStatus,
+							content: result.toolResultContent || result.error || '',
+							timestamp: Date.now(),
+						};
+
+						return {
+							...message,
+							applyStatus: result.applyStatus,
+							toolExecutionResults: [
+								...(message.toolExecutionResults || []),
+								toolExecutionResult,
+							],
+						};
+					}
+					return message;
+				});
+
 				setChatMessages(newChatMessages);
 
+				// 如果有 returnMsg，继续提交新的用户消息
 				if (result.returnMsg) {
-					handleSubmit([...newChatMessages, result.returnMsg], false);
+					const userMessage: ChatUserMessage = {
+						...result.returnMsg,
+						role: 'user' as const,
+					};
+					handleSubmit([...newChatMessages, userMessage], false);
 				}
 			}
 		},
@@ -1669,6 +1037,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 											key={"content-" + message.id}
 											handleApply={(toolArgs) => handleApply(message.id, toolArgs)}
 											applyStatus={message.applyStatus}
+											toolExecutionResults={message.toolExecutionResults}
 										>
 											{message.content}
 										</ReactMarkdownItem>
@@ -1777,17 +1146,24 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 function ReactMarkdownItem({
 	handleApply,
 	applyStatus,
-	// applyMutation,
+	toolExecutionResults,
 	children,
 }: {
 	handleApply: (toolArgs: ToolArgs) => void
 	applyStatus: ApplyStatus
+	toolExecutionResults?: Array<{
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}>
 	children: string
 }) {
 	return (
 		<ReactMarkdown
 			applyStatus={applyStatus}
 			onApply={handleApply}
+			toolExecutionResults={toolExecutionResults}
 		>
 			{children}
 		</ReactMarkdown>

@@ -2,7 +2,11 @@
  * 用于指定插入内容的工具参数
  */
 
+import { v4 as uuidv4 } from 'uuid';
+
 import { TransformationType } from '../core/transformations/trans-engine';
+
+import { ChatUserMessage } from './chat';
 
 export enum ApplyStatus {
 	Idle = 0,
@@ -134,3 +138,81 @@ export type ManageFilesToolArgs = {
 }
 
 export type ToolArgs = ReadFileToolArgs | WriteToFileToolArgs | InsertContentToolArgs | SearchAndReplaceToolArgs | ListFilesToolArgs | MatchSearchFilesToolArgs | RegexSearchFilesToolArgs | SemanticSearchFilesToolArgs | SearchWebToolArgs | FetchUrlsContentToolArgs | SwitchModeToolArgs | ApplyDiffToolArgs | UseMcpToolArgs | DataviewQueryToolArgs | CallTransformationsToolArgs | ManageFilesToolArgs;
+
+// 工具执行结果的统一接口
+export interface ToolExecutionResult {
+	type: string;
+	applyMsgId: string;
+	applyStatus: ApplyStatus;
+	returnMsg?: ChatUserMessage;
+	error?: string;
+	// 工具执行结果内容，将直接附加到 assistant 消息上
+	toolResultContent?: string;
+}
+
+// 工具执行成功结果
+export interface ToolExecutionSuccess extends ToolExecutionResult {
+	applyStatus: ApplyStatus.Applied;
+	returnMsg?: ChatUserMessage;
+}
+
+// 工具执行失败结果
+export interface ToolExecutionFailure extends ToolExecutionResult {
+	applyStatus: ApplyStatus.Failed;
+	error: string;
+}
+
+// 工具执行被拒绝结果
+export interface ToolExecutionRejected extends ToolExecutionResult {
+	applyStatus: ApplyStatus.Rejected;
+	returnMsg?: ChatUserMessage;
+}
+
+// 工具执行器抽象类
+export abstract class ToolExecutor {
+	abstract execute(toolArgs: ToolArgs, applyMsgId: string): Promise<ToolExecutionResult>;
+	
+	// 创建成功结果的工具方法
+	protected createSuccessResult(
+		type: string,
+		applyMsgId: string,
+		promptContent: string,
+		id?: string
+	): ToolExecutionSuccess {
+		return {
+			type,
+			applyMsgId,
+			applyStatus: ApplyStatus.Applied,
+			returnMsg: {
+				role: 'user',
+				applyStatus: ApplyStatus.Idle,
+				content: null,
+				promptContent,
+				id: id || uuidv4(),
+				mentionables: [],
+			}
+		};
+	}
+	
+	// 创建失败结果的工具方法
+	protected createFailureResult(
+		type: string,
+		applyMsgId: string,
+		error: string
+	): ToolExecutionFailure {
+		return {
+			type,
+			applyMsgId,
+			applyStatus: ApplyStatus.Failed,
+			error,
+			returnMsg: {
+				role: 'user',
+				applyStatus: ApplyStatus.Idle,
+				content: null,
+				promptContent: `[${type}] 执行失败: ${error}`,
+				id: uuidv4(),
+				mentionables: [],
+			}
+		};
+	}
+}

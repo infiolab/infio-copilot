@@ -29,10 +29,17 @@ import UseMcpToolBlock from './Markdown/UseMcpToolBlock'
 function ReactMarkdown({
 	applyStatus,
 	onApply,
+	toolExecutionResults,
 	children,
 }: {
 	applyStatus: ApplyStatus
 	onApply: (toolArgs: ToolArgs) => void
+	toolExecutionResults?: Array<{
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}>
 	children: string
 }) {
 
@@ -40,6 +47,11 @@ function ReactMarkdown({
 		() => parseMsgBlocks(children),
 		[children],
 	)
+
+	// Helper function to find tool execution result by type
+	const findToolExecutionResult = (toolType: string) => {
+		return toolExecutionResults?.find(result => result.type === toolType)
+	}
 
 	return (
 		<>
@@ -64,6 +76,7 @@ function ReactMarkdown({
 						onApply={onApply}
 						path={block.path}
 						startLine={1}
+						toolExecutionResult={findToolExecutionResult('write_to_file')}
 					>
 						{block.content}
 					</MarkdownEditFileBlock>
@@ -76,6 +89,7 @@ function ReactMarkdown({
 						path={block.path}
 						startLine={block.startLine}
 						endLine={block.startLine} // 插入内容时，endLine 和 startLine 相同
+						toolExecutionResult={findToolExecutionResult('insert_content')}
 					>
 						{block.content}
 					</MarkdownEditFileBlock>
@@ -96,6 +110,7 @@ function ReactMarkdown({
 							regexFlags: op.regex_flags,
 						}))}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('search_and_replace')}
 					/>
 				) : block.type === 'apply_diff' ? (
 					<MarkdownApplyDiffBlock
@@ -106,6 +121,7 @@ function ReactMarkdown({
 						path={block.path}
 						diff={block.diff}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('apply_diff')}
 					/>
 				) : block.type === 'read_file' ? (
 					<MarkdownReadFileBlock
@@ -114,6 +130,7 @@ function ReactMarkdown({
 						onApply={onApply}
 						path={block.path}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('read_file')}
 					/>
 				) : block.type === 'list_files' ? (
 					<MarkdownListFilesBlock
@@ -123,6 +140,7 @@ function ReactMarkdown({
 						path={block.path}
 						recursive={block.recursive}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('list_files')}
 					/>
 				) : block.type === 'match_search_files' ? (
 					<MarkdownMatchSearchFilesBlock
@@ -132,6 +150,7 @@ function ReactMarkdown({
 						path={block.path}
 						query={block.query}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('match_search_files')}
 					/>
 				) : block.type === 'regex_search_files' ? (
 					<MarkdownRegexSearchFilesBlock
@@ -141,6 +160,7 @@ function ReactMarkdown({
 						path={block.path}
 						regex={block.regex}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('regex_search_files')}
 					/>
 				) : block.type === 'semantic_search_files' ? (
 					<MarkdownSemanticSearchFilesBlock
@@ -150,6 +170,7 @@ function ReactMarkdown({
 						path={block.path}
 						query={block.query}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('semantic_search_files')}
 					/>
 				) : block.type === 'attempt_completion' ? (
 					<MarkdownWithIcons
@@ -179,6 +200,7 @@ function ReactMarkdown({
 						mode={block.mode}
 						reason={block.reason}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('switch_mode')}
 					/>
 				) : block.type === 'search_web' ? (
 					<MarkdownSearchWebBlock
@@ -187,6 +209,7 @@ function ReactMarkdown({
 						onApply={onApply}
 						query={block.query}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('search_web')}
 					/>
 				) : block.type === 'fetch_urls_content' ? (
 					<MarkdownFetchUrlsContentBlock
@@ -195,6 +218,7 @@ function ReactMarkdown({
 						onApply={onApply}
 						urls={block.urls}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('fetch_urls_content')}
 					/>
 				) : block.type === 'use_mcp_tool' ? (
 					<UseMcpToolBlock
@@ -205,6 +229,7 @@ function ReactMarkdown({
 						toolName={block.tool_name}
 						parameters={block.parameters}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('use_mcp_tool')}
 					/>
 				) : block.type === 'dataview_query' ? (
 					<MarkdownDataviewQueryBlock
@@ -214,6 +239,7 @@ function ReactMarkdown({
 						query={block.query}
 						outputFormat={block.outputFormat}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('dataview_query')}
 					/>
 				) : block.type === 'call_transformations' ? (
 					<MarkdownTransformationToolBlock
@@ -224,6 +250,7 @@ function ReactMarkdown({
 						path={block.path}
 						transformation={block.transformation}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('call_transformations')}
 					/>
 				) : block.type === 'manage_files' ? (
 					<MarkdownManageFilesBlock
@@ -232,6 +259,7 @@ function ReactMarkdown({
 						onApply={onApply}
 						operations={block.operations}
 						finish={block.finish}
+						toolExecutionResult={findToolExecutionResult('manage_files')}
 					/>
 				) : block.type === 'tool_result' ? (
 					<MarkdownToolResult

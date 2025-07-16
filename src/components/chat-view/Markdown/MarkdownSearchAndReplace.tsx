@@ -1,5 +1,5 @@
-import { Check, Loader2, Replace, X } from 'lucide-react'
-import React from 'react'
+import { Check, ChevronDown, ChevronRight, Loader2, Replace, X } from 'lucide-react'
+import React, { useState } from 'react'
 
 import { useApp } from '../../../contexts/AppContext'
 import { useDarkModeContext } from '../../../contexts/DarkModeContext'
@@ -15,7 +15,8 @@ export default function MarkdownSearchAndReplace({
 	path,
 	content,
 	operations,
-	finish
+	finish,
+	toolExecutionResult
 }: {
 	applyStatus: ApplyStatus
 	onApply: (args: SearchAndReplaceToolArgs) => void
@@ -23,11 +24,19 @@ export default function MarkdownSearchAndReplace({
 	content: string,
 	operations: SearchAndReplaceToolArgs['operations'],
 	finish: boolean
+	toolExecutionResult?: {
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}
 }) {
 	const app = useApp()
 	const { isDarkMode } = useDarkModeContext()
 
 	const [applying, setApplying] = React.useState(false)
+	const [isResultOpen, setIsResultOpen] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
 
 	const handleClick = () => {
 		openMarkdownFile(app, path)
@@ -46,15 +55,31 @@ export default function MarkdownSearchAndReplace({
 	}
 
 	return (
-		<div
-			className={`infio-chat-code-block ${path ? 'has-filename' : ''}  infio-reasoning-block`}
-			onClick={handleClick}
-		>
-			<div className={'infio-chat-code-block-header'}>
-				<div className={'infio-chat-code-block-header-filename'}>
-					<Replace size={10} className="infio-chat-code-block-header-icon" />
-					{t('chat.reactMarkdown.searchAndReplaceInPath').replace('{path}', path)}
-				</div>
+		<div>
+			<div
+				className={`infio-chat-code-block ${path ? 'has-filename' : ''}  infio-reasoning-block`}
+				onMouseEnter={() => setIsHovered(true)}
+				onMouseLeave={() => setIsHovered(false)}
+			>
+				<div className={'infio-chat-code-block-header'}>
+					<div 
+						className={'infio-chat-code-block-header-filename'}
+						onClick={(e) => {
+							if (toolExecutionResult && isHovered) {
+								e.stopPropagation()
+								setIsResultOpen(!isResultOpen)
+							} else {
+								handleClick()
+							}
+						}}
+					>
+						{toolExecutionResult && isHovered ? (
+							isResultOpen ? <ChevronDown size={10} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={10} className="infio-chat-code-block-header-icon" />
+						) : (
+							<Replace size={10} className="infio-chat-code-block-header-icon" />
+						)}
+						{t('chat.reactMarkdown.searchAndReplaceInPath').replace('{path}', path)}
+					</div>
 				<div className={'infio-chat-code-block-header-button'}>
 					<button
 						onClick={handleApply}
@@ -84,16 +109,30 @@ export default function MarkdownSearchAndReplace({
 					</button>
 				</div>
 			</div>
-			<div className="infio-reasoning-content-wrapper">
-				<MemoizedSyntaxHighlighterWrapper
-					isDarkMode={isDarkMode}
-					language="markdown"
-					hasFilename={!!path}
-					wrapLines={true}
-				>
-					{content}
-				</MemoizedSyntaxHighlighterWrapper>
+				<div className="infio-reasoning-content-wrapper">
+					<MemoizedSyntaxHighlighterWrapper
+						isDarkMode={isDarkMode}
+						language="markdown"
+						hasFilename={!!path}
+						wrapLines={true}
+					>
+						{content}
+					</MemoizedSyntaxHighlighterWrapper>
+				</div>
 			</div>
+			{/* 工具执行结果显示区域 */}
+			{toolExecutionResult && isResultOpen && (
+				<div className="infio-reasoning-content-wrapper">
+					<MemoizedSyntaxHighlighterWrapper
+						isDarkMode={isDarkMode}
+						language="markdown"
+						hasFilename={false}
+						wrapLines={true}
+					>
+						{toolExecutionResult.content}
+					</MemoizedSyntaxHighlighterWrapper>
+				</div>
+			)}
 		</div>
 	)
 } 

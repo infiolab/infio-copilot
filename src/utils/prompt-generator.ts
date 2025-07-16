@@ -71,69 +71,7 @@ async function getFolderTreeContent(path: TFolder): Promise<string> {
 	}
 }
 
-async function getFileOrFolderContent(
-	path: TAbstractFile,
-	vault: Vault,
-	app?: App
-): Promise<string> {
-	try {
-		if (path instanceof TFile) {
-			if (path.extension === 'pdf') {
-				// Handle PDF files without line numbers
-				if (app) {
-					return await parsePdfContent(path, app)
-				}
-				return "(PDF file, app context required for processing)"
-			}
-			if (path.extension != 'md') {
-				return "(Binary file, unable to display content)"
-			}
-			return addLineNumbers(await readTFileContent(path, vault))
-		} else if (path instanceof TFolder) {
-			const entries = path.children
-			let folderContent = ""
-			const fileContentPromises: Promise<string | undefined>[] = []
-			entries.forEach((entry, index) => {
-				const isLast = index === entries.length - 1
-				const linePrefix = isLast ? "└── " : "├── "
-				if (entry instanceof TFile) {
-					folderContent += `${linePrefix}${entry.name}\n`
-					fileContentPromises.push(
-						(async () => {
-							try {
-								if (entry.extension === 'pdf') {
-									// Handle PDF files in folders
-									if (app) {
-										const content = await parsePdfContent(entry, app)
-										return `<file_content path="${entry.path}">\n${content}\n</file_content>`
-									}
-									return `<file_content path="${entry.path}">\n(PDF file, app context required for processing)\n</file_content>`
-								}
-								if (entry.extension != 'md') {
-									return undefined
-								}
-								const content = addLineNumbers(await readTFileContent(entry, vault))
-								return `<file_content path="${entry.path}">\n${content}\n</file_content>`
-							} catch (error) {
-								return undefined
-							}
-						})(),
-					)
-				} else if (entry instanceof TFolder) {
-					folderContent += `${linePrefix}${entry.name}/\n`
-				} else {
-					folderContent += `${linePrefix}${entry.name}\n`
-				}
-			})
-			const fileContents = (await Promise.all(fileContentPromises)).filter((content) => content)
-			return `${folderContent}\n${fileContents.join("\n\n")}`.trim()
-		} else {
-			return `(Failed to read contents of ${path.path})`
-		}
-	} catch (error) {
-		throw new Error(`Failed to access path "${path.path}": ${error.message}`)
-	}
-}
+
 
 function formatSection(title: string, content: string | null | undefined): string {
 	if (!content || content.trim() === '') {
@@ -231,6 +169,13 @@ export class PromptGenerator {
 		const requestMessages: RequestMessage[] = [
 			systemMessage,
 			...compiledMessages.slice(-19)
+				.filter((message): message is ChatMessage => {
+					// 过滤掉工具结果消息，这些消息不应该发送给 AI
+					if (message.role === 'assistant' && message.isToolResult) {
+						return false
+					}
+					return true
+				})
 				.map((message): RequestMessage => {
 					if (message.role === 'user') {
 						return {
@@ -238,12 +183,10 @@ export class PromptGenerator {
 							content: message.promptContent ?? '',
 						}
 					} else {
-						// 对于工具结果，使用 toolResultContent，否则使用 content
+						// 助手消息（已经过滤掉工具结果）
 						return {
 							role: 'assistant',
-							content: message.isToolResult && message.toolResultContent 
-								? message.toolResultContent 
-								: message.content,
+							content: message.content,
 						}
 					}
 				}),
@@ -1151,12 +1094,12 @@ ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`,
 		)
 
 		// 处理图片内容并获取图片引用
-		// @ts-ignore
+		// @ts-expect-error response.content type is not fully defined
 		await this.processImagesInResponse(response.content)
 
 		const textContent = response.content.find((c) => c.type === 'text')
-		// @ts-ignore
-		const md = textContent?.text as string || ''
+		// @ts-expect-error textContent type is not fully defined
+		const md = textContent?.text || ''
 
 		// 创建Markdown文件
 		const websiteTitle = this.extractTitleFromWebsiteContent(md, url)
@@ -1214,13 +1157,13 @@ ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`,
 		)
 
 		// 处理图片内容并获取图片引用
-		// @ts-ignore
+		// @ts-expect-error response.content type is not fully defined
 		await this.processImagesInResponse(response.content)
 
-		// @ts-ignore
+		// @ts-expect-error response.content type is not fully defined
 		const textContent = response.content.find((c: { type: string; text?: string }) => c.type === 'text')
-		// @ts-ignore
-		const md = textContent?.text as string || ''
+		// @ts-expect-error textContent type is not fully defined
+		const md = textContent?.text || ''
 
 		// 创建Markdown文件
 		const mdPath = await this.createMarkdownFileForContent(file.path, md, false, file.name)
@@ -1350,7 +1293,7 @@ ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`,
 		for (const item of content) {
 			if (item.type === 'image' && item.data && item.filename) {
 				try {
-					const imagePath = await this.saveImageFromBase64(item.data, item.filename, item.mimeType)
+					const imagePath = await this.saveImageFromBase64(item.data, item.filename)
 					savedImagePaths.push(imagePath)
 				} catch (error) {
 					console.error('Failed to save image:', error)
@@ -1361,23 +1304,7 @@ ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`,
 		return savedImagePaths
 	}
 
-	/**
-	 * 根据 MIME 类型获取图片扩展名
-	 */
-	private getImageExtensionFromMimeType(mimeType?: string): string {
-		if (!mimeType) return 'png'
 
-		const extensionMap: Record<string, string> = {
-			'image/jpeg': 'jpg',
-			'image/jpg': 'jpg',
-			'image/png': 'png',
-			'image/gif': 'gif',
-			'image/webp': 'webp',
-			'image/svg+xml': 'svg',
-		}
-
-		return extensionMap[mimeType.toLowerCase()] || 'png'
-	}
 
 	/**
 	 * 保存转换数据到缓存
@@ -1426,9 +1353,9 @@ ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`,
 	/**
 	 * 将base64图片数据保存为文件到Obsidian资源目录
 	 */
-	private async saveImageFromBase64(base64Data: string, filename: string, mimeType?: string): Promise<string> {
+	private async saveImageFromBase64(base64Data: string, filename: string): Promise<string> {
 		// 获取默认资源目录
-		// @ts-ignore
+		// @ts-expect-error getConfig method is not fully typed
 		const staticResourceDir = this.app.vault.getConfig("attachmentFolderPath")
 
 		// 构建完整的文件路径

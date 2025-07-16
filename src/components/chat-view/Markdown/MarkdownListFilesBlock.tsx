@@ -1,25 +1,38 @@
-import { FolderOpen } from 'lucide-react'
-import React from 'react'
+import { ChevronDown, ChevronRight, FolderOpen } from 'lucide-react'
+import React, { useState } from 'react'
 
 import { useApp } from "../../../contexts/AppContext"
+import { useDarkModeContext } from "../../../contexts/DarkModeContext"
 import { t } from '../../../lang/helpers'
 import { ApplyStatus, ListFilesToolArgs } from "../../../types/apply"
 import { openMarkdownFile } from "../../../utils/obsidian"
+
+import { MemoizedSyntaxHighlighterWrapper } from "./SyntaxHighlighterWrapper"
 
 export default function MarkdownListFilesBlock({
 	applyStatus,
 	onApply,
 	path,
 	recursive,
-	finish
+	finish,
+	toolExecutionResult
 }: {
 	applyStatus: ApplyStatus
 	onApply: (args: ListFilesToolArgs) => void
 	path: string,
 	recursive: boolean,
 	finish: boolean
+	toolExecutionResult?: {
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}
 }) {
 	const app = useApp()
+	const { isDarkMode } = useDarkModeContext()
+	const [isResultOpen, setIsResultOpen] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
 
 	const handleClick = () => {
 		openMarkdownFile(app, path)
@@ -36,16 +49,47 @@ export default function MarkdownListFilesBlock({
 	}, [finish])
 
 	return (
-		<div
-			className={`infio-chat-code-block infio-list-files-block ${path ? 'has-filename' : ''}`}
-			onClick={handleClick}
-		>
-			<div className={'infio-chat-code-block-header'}>
-				<div className={'infio-chat-code-block-header-filename'}>
-					<FolderOpen size={14} className="infio-chat-code-block-header-icon" />
-					{t('chat.reactMarkdown.listFiles').replace('{path}', path)}
+		<div>
+			<div
+				className={`infio-chat-code-block infio-list-files-block ${path ? 'has-filename' : ''}`}
+				onMouseEnter={() => setIsHovered(true)}
+				onMouseLeave={() => setIsHovered(false)}
+			>
+				<div className={'infio-chat-code-block-header'}>
+					<div 
+						className={'infio-chat-code-block-header-filename'}
+						onClick={(e) => {
+							if (toolExecutionResult && isHovered) {
+								e.stopPropagation()
+								setIsResultOpen(!isResultOpen)
+							} else {
+								handleClick()
+							}
+						}}
+						style={{ cursor: 'pointer' }}
+					>
+						{toolExecutionResult && isHovered ? (
+							isResultOpen ? <ChevronDown size={14} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={14} className="infio-chat-code-block-header-icon" />
+						) : (
+							<FolderOpen size={14} className="infio-chat-code-block-header-icon" />
+						)}
+						{t('chat.reactMarkdown.listFiles').replace('{path}', path)}
+					</div>
 				</div>
 			</div>
+			{/* 工具执行结果显示区域 */}
+			{toolExecutionResult && isResultOpen && (
+				<div style={{ marginTop: '8px' }}>
+					<MemoizedSyntaxHighlighterWrapper
+						isDarkMode={isDarkMode}
+						language="markdown"
+						hasFilename={false}
+						wrapLines={true}
+					>
+						{toolExecutionResult.content}
+					</MemoizedSyntaxHighlighterWrapper>
+				</div>
+			)}
 		</div>
 	)
 } 

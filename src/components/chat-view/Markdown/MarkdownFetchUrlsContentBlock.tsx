@@ -1,22 +1,35 @@
 import { Check, ChevronDown, ChevronRight, Globe, Loader2, X } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
+import { useDarkModeContext } from "../../../contexts/DarkModeContext"
 import { t } from '../../../lang/helpers'
 import { ApplyStatus, FetchUrlsContentToolArgs } from "../../../types/apply"
+
+import { MemoizedSyntaxHighlighterWrapper } from "./SyntaxHighlighterWrapper"
 
 export default function MarkdownFetchUrlsContentBlock({
 	applyStatus,
 	onApply,
 	urls,
-	finish
+	finish,
+	toolExecutionResult
 }: {
 	applyStatus: ApplyStatus
 	onApply: (args: FetchUrlsContentToolArgs) => void
 	urls: string[],
 	finish: boolean
+	toolExecutionResult?: {
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}
 }) {
 	const containerRef = useRef<HTMLDivElement>(null)
+	const { isDarkMode } = useDarkModeContext()
 	const [isOpen, setIsOpen] = useState(false)
+	const [isResultOpen, setIsResultOpen] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
 
 	React.useEffect(() => {
 		if (finish && applyStatus === ApplyStatus.Idle) {
@@ -35,12 +48,25 @@ export default function MarkdownFetchUrlsContentBlock({
 
 	return (
 		urls.length > 0 && (
-			<div className="infio-chat-code-block has-filename infio-reasoning-block">
-				<div className="infio-chat-code-block-header">
-					<div className="infio-chat-code-block-header-filename">
-						<Globe size={10} className="infio-chat-code-block-header-icon" />
-						{t('chat.reactMarkdown.fetchUrlsContent')}
-					</div>
+			<div>
+				<div 
+					className="infio-chat-code-block has-filename infio-reasoning-block"
+					onMouseEnter={() => setIsHovered(true)}
+					onMouseLeave={() => setIsHovered(false)}
+				>
+					<div className="infio-chat-code-block-header">
+						<div 
+							className="infio-chat-code-block-header-filename"
+							onClick={() => toolExecutionResult && setIsResultOpen(!isResultOpen)}
+							style={{ cursor: toolExecutionResult && isHovered ? 'pointer' : 'default' }}
+						>
+							{toolExecutionResult && isHovered ? (
+								isResultOpen ? <ChevronDown size={10} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={10} className="infio-chat-code-block-header-icon" />
+							) : (
+								<Globe size={10} className="infio-chat-code-block-header-icon" />
+							)}
+							{t('chat.reactMarkdown.fetchUrlsContent')}
+						</div>
 					<div className="infio-chat-code-block-header-button">
 						<button
 							className="infio-chat-code-block-status-button"
@@ -90,6 +116,20 @@ export default function MarkdownFetchUrlsContentBlock({
 					</ul>
 				</div>
 			</div>
+			{/* 工具执行结果显示区域 */}
+			{toolExecutionResult && isResultOpen && (
+				<div className="infio-reasoning-content-wrapper">
+					<MemoizedSyntaxHighlighterWrapper
+						isDarkMode={isDarkMode}
+						language="markdown"
+						hasFilename={false}
+						wrapLines={true}
+					>
+						{toolExecutionResult.content}
+					</MemoizedSyntaxHighlighterWrapper>
+				</div>
+			)}
+		</div>
 		)
 	)
 } 

@@ -1,10 +1,11 @@
-import { Check, CopyIcon, Edit, Loader2, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, CopyIcon, Edit, Loader2, X } from 'lucide-react'
 import { PropsWithChildren, useMemo, useState } from 'react'
 
 import { useDarkModeContext } from "../../../contexts/DarkModeContext"
 import { t } from '../../../lang/helpers'
 import { ApplyStatus, ToolArgs } from "../../../types/apply"
 
+import MarkdownToolResult from "./MarkdownToolResult"
 import { MemoizedSyntaxHighlighterWrapper } from "./SyntaxHighlighterWrapper"
 
 export default function MarkdownEditFileBlock({
@@ -15,6 +16,7 @@ export default function MarkdownEditFileBlock({
 	path,
 	startLine,
 	endLine,
+	toolExecutionResult,
 	children,
 }: PropsWithChildren<{
 	mode: string
@@ -24,9 +26,17 @@ export default function MarkdownEditFileBlock({
 	path?: string
 	startLine?: number
 	endLine?: number
+	toolExecutionResult?: {
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}
 }>) {
 	const [copied, setCopied] = useState(false)
 	const [applying, setApplying] = useState(false)
+	const [isResultOpen, setIsResultOpen] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
 	const { isDarkMode } = useDarkModeContext()
 
 	const wrapLines = useMemo(() => {
@@ -59,11 +69,23 @@ export default function MarkdownEditFileBlock({
 	}
 
 	return (
-		<div className={`infio-chat-code-block ${path ? 'has-filename' : ''} infio-reasoning-block`}>
+		<div 
+			className={`infio-chat-code-block ${path ? 'has-filename' : ''} infio-reasoning-block`}
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
+		>
 			<div className={'infio-chat-code-block-header'}>
 				{path && (
-					<div className={'infio-chat-code-block-header-filename'}>
-						<Edit size={10} className="infio-chat-code-block-header-icon" />
+					<div 
+						className={'infio-chat-code-block-header-filename'}
+						onClick={() => toolExecutionResult && setIsResultOpen(!isResultOpen)}
+						style={{ cursor: toolExecutionResult && isHovered ? 'pointer' : 'default' }}
+					>
+						{toolExecutionResult && isHovered ? (
+							isResultOpen ? <ChevronDown size={10} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={10} className="infio-chat-code-block-header-icon" />
+						) : (
+							<Edit size={10} className="infio-chat-code-block-header-icon" />
+						)}
 						{t('chat.reactMarkdown.editOrApplyDiff').replace('{mode}', mode).replace('{path}', path)}
 					</div>
 				)}
@@ -118,6 +140,15 @@ export default function MarkdownEditFileBlock({
 					{String(children)}
 				</MemoizedSyntaxHighlighterWrapper>
 			</div>
+			{/* 工具执行结果显示区域 */}
+			{toolExecutionResult && isResultOpen && (
+				<div style={{ marginTop: '8px' }}>
+					<MarkdownToolResult
+						content={toolExecutionResult.content}
+						toolName={toolExecutionResult.type}
+					/>
+				</div>
+			)}
 		</div>
 	)
 }

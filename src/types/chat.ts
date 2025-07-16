@@ -30,6 +30,13 @@ export type ChatAssistantMessage = {
 	id: string
 	isToolResult?: boolean
 	toolResultContent?: string
+	// 工具执行结果，直接附加到 assistant 消息上
+	toolExecutionResults?: Array<{
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}>
 	metadata?: {
 		usage?: ResponseUsage
 		model?: LLMModel
@@ -59,6 +66,13 @@ export type SerializedChatAssistantMessage = {
 	reasoningContent: string
 	id: string
 	toolResultContent?: string
+	// 工具执行结果，直接附加到 assistant 消息上
+	toolExecutionResults?: Array<{
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}>
 	metadata?: {
 		usage?: ResponseUsage
 		model?: LLMModel
