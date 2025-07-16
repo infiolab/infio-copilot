@@ -1,14 +1,20 @@
-import { History, Lightbulb, NotebookPen, Search, Server, SquareSlash } from 'lucide-react';
+import { Box, History, Lightbulb, Search } from 'lucide-react';
 import React from 'react';
 
 import { t } from '../../lang/helpers';
 
 interface HelloInfoProps {
-	onNavigate: (tab: 'commands' | 'custom-mode' | 'mcp' | 'search' | 'history' | 'insights') => void;
+	onNavigate: (tab: 'commands' | 'custom-mode' | 'mcp' | 'search' | 'history' | 'insights' | 'workspace') => void;
 }
 
 const HelloInfo: React.FC<HelloInfoProps> = ({ onNavigate }) => {
 	const navigationItems = [
+		{
+			label: t('workspace.shortTitle'),
+			description: t('workspace.description'),
+			icon: <Box size={20} />,
+			action: () => onNavigate('workspace'),
+		},
 		{
 			label: t('chat.navigation.history'),
 			description: t('chat.navigation.historyDesc'),
