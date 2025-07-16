@@ -1,5 +1,30 @@
 import { MentionableImage } from '../types/mentionable'
 
+// 文件扩展名到 MIME 类型的映射
+export function getImageMimeType(extension: string): string {
+	const ext = extension.toLowerCase()
+	switch (ext) {
+		case 'jpg':
+		case 'jpeg':
+			return 'image/jpeg'
+		case 'png':
+			return 'image/png'
+		case 'gif':
+			return 'image/gif'
+		case 'svg':
+			return 'image/svg+xml'
+		case 'webp':
+			return 'image/webp'
+		case 'bmp':
+			return 'image/bmp'
+		case 'tiff':
+		case 'tif':
+			return 'image/tiff'
+		default:
+			return `image/${ext}`
+	}
+}
+
 export function parseImageDataUrl(dataUrl: string): {
 	mimeType: string
 	base64Data: string

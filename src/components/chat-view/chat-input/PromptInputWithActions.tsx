@@ -1,6 +1,6 @@
 import { BaseSerializedNode } from '@lexical/clipboard/clipboard'
 import { useQuery } from '@tanstack/react-query'
-import { $getRoot, $nodesOfType, $setSelection, $createRangeSelection, LexicalEditor, SerializedEditorState } from 'lexical'
+import { $getRoot, $nodesOfType, LexicalEditor, SerializedEditorState } from 'lexical'
 import {
 	forwardRef,
 	useCallback,
@@ -26,7 +26,7 @@ import {
 	getMentionableKey,
 	serializeMentionable,
 } from '../../../utils/mentionable'
-import { openMarkdownFile, readTFileContent } from '../../../utils/obsidian'
+import { readTFileContent } from '../../../utils/obsidian'
 import { MemoizedSyntaxHighlighterWrapper } from '../Markdown/SyntaxHighlighterWrapper'
 
 import { ImageUploadButton } from './ImageUploadButton'
@@ -48,7 +48,7 @@ const isEditorStateEmpty = (editorState: SerializedEditorState): boolean => {
 		if (!root || !root.children) return true
 		
 		// 检查是否有实际内容
-		const hasContent = root.children.some((child: { type: string; children?: any[] }) => {
+		const hasContent = root.children.some((child: { type: string; children?: unknown[] }) => {
 			if (child.type === 'paragraph') {
 				return child.children && child.children.length > 0
 			}
@@ -122,9 +122,9 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 
 		// 添加快捷键监听器
 		useEffect(() => {
-			const handleKeyDown = (event: KeyboardEvent) => {
-				// 检查是否在输入框中
-				const isInInputArea = contentEditableRef.current?.contains(event.target as Node)
+					const handleKeyDown = (event: KeyboardEvent) => {
+			// 检查是否在输入框中
+			const isInInputArea = contentEditableRef.current?.contains(event.target instanceof Node ? event.target : null)
 				
 				if (isInInputArea && !event.ctrlKey && !event.shiftKey && !event.metaKey && !event.altKey) {
 					// 处理历史记录导航
@@ -353,11 +353,6 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 
 		return (
 			<div className="infio-chat-user-input-container" ref={containerRef}>
-				{placeholder && isEmpty && (
-					<div className="infio-input-placeholder">
-						{placeholder}
-					</div>
-				)}
 				{mentionables.length > 0 && (
 					<div className="infio-chat-user-input-files">
 						{mentionables.map((m) => (
@@ -369,20 +364,12 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 									const mentionableKey = getMentionableKey(
 										serializeMentionable(m),
 									)
-									if (
-										(m.type === 'current-file' ||
-											m.type === 'file' ||
-											m.type === 'block') &&
-										m.file &&
-										mentionableKey === displayedMentionableKey
-									) {
-										// open file on click again
-										openMarkdownFile(
-											app,
-											m.file.path,
-											m.type === 'block' ? m.startLine : undefined,
-										)
+									
+									// 如果当前已经展开了这个mentionable，再次点击应该关闭
+									if (mentionableKey === displayedMentionableKey) {
+										setDisplayedMentionableKey(null)
 									} else {
+										// 如果没有展开，则展开这个mentionable
 										setDisplayedMentionableKey(mentionableKey)
 									}
 								}}
@@ -399,8 +386,15 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 					displayedMentionableKey={displayedMentionableKey}
 					mentionables={mentionables}
 				/>
+				
+				<div className="infio-chat-user-input-editor-container">
+					{placeholder && isEmpty && (
+						<div className="infio-input-placeholder">
+							{placeholder}
+						</div>
+					)}
 
-				<LexicalContentEditable
+					<LexicalContentEditable
 					initialEditorState={(editor) => {
 						if (initialSerializedEditorState) {
 							editor.setEditorState(
@@ -428,6 +422,7 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 						},
 					}}
 				/>
+				</div>
 
 				<div className="infio-chat-user-input-controls">
 					<div className="infio-chat-user-input-controls__model-select-container">
@@ -441,6 +436,14 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 				</div>
 				<style>
 					{`
+					.infio-chat-user-input-container {
+						position: relative;
+					}
+					
+					.infio-chat-user-input-editor-container {
+						position: relative;
+					}
+					
 					.infio-input-placeholder {
 						position: absolute;
 						color: var(--text-muted);
@@ -448,6 +451,10 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 						z-index: 1;
 						padding: calc(var(--size-2-2) + 1px) var(--size-4-2);
 						font-size: var(--font-ui-small);
+						left: 0;
+						right: 0;
+						top: 0;
+						/* 始终作为输入提示，重叠在编辑器上方 */
 					}
 					`}
 				</style>
