@@ -8,6 +8,8 @@ export default {
 			subtitle: "探索不同模式来提升您的生产力"
 		},
 		navigation: {
+			newChat: "新建聊天",
+			newChatDesc: "创建新的聊天对话",
 			history: "聊天记录",
 			historyDesc: "查看和管理您的对话历史记录",
 			insights: "AI 洞察",
@@ -18,6 +20,8 @@ export default {
 			commandsDesc: "创建和管理用于快速操作的自定义命令",
 			customMode: "自定义模式",
 			customModeDesc: "定义具有特定行为的个性化 AI 模式",
+			workspace: "工作区",
+			workspaceDesc: "管理和切换不同的工作区",
 			mcp: "MCP",
 			mcpDesc: "管理模型上下文协议集成"
 		},

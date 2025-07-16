@@ -7,6 +7,8 @@ export default {
 			subtitle: "Explore different modes to boost your productivity"
 		},
 		navigation: {
+			newChat: "New Chat",
+			newChatDesc: "Create a new chat conversation",
 			history: "Chat History",
 			historyDesc: "View and manage your conversation history",
 			insights: "AI Insights",
@@ -17,6 +19,8 @@ export default {
 			commandsDesc: "Create and manage custom commands for quick actions",
 			customMode: "Custom Mode",
 			customModeDesc: "Define personalized AI modes with specific behaviors",
+			workspace: "Workspace",
+			workspaceDesc: "Manage and switch between different workspaces",
 			mcp: "MCP",
 			mcpDesc: "Manage Model Context Protocol integrations"
 		},

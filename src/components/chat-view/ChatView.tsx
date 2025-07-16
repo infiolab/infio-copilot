@@ -4,6 +4,7 @@ import { BaseSerializedNode } from '@lexical/clipboard/clipboard'
 import { useMutation } from '@tanstack/react-query'
 import { Box, CircleStop, History, Lightbulb, NotebookPen, Plus, Search, Server, SquareSlash, Undo } from 'lucide-react'
 import { App, Notice, TFile, TFolder, WorkspaceLeaf } from 'obsidian'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import {
 	forwardRef,
 	useCallback,
@@ -1351,101 +1352,189 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 					<WorkspaceSelect />
 				</div>
 				<div className="infio-chat-header-buttons">
-					<button
-						onClick={() => {
-							setTab('chat')
-							handleNewChat()
-						}}
-						className="infio-chat-list-dropdown"
-					>
-						<Plus size={18} />
-					</button>
-					<button
-						onClick={() => {
-							if (tab === 'history') {
-								setTab('chat')
-							} else {
-								setTab('history')
-							}
-						}}
-						className="infio-chat-list-dropdown"
-					>
-						<History size={18} color={tab === 'history' ? 'var(--text-accent)' : 'var(--text-color)'} />
-					</button>
-					<button
-						onClick={() => {
-							if (tab === 'search') {
-								setTab('chat')
-							} else {
-								setTab('search')
-							}
-						}}
-						className="infio-chat-list-dropdown"
-					>
-						<Search size={18} color={tab === 'search' ? 'var(--text-accent)' : 'var(--text-color)'} />
-					</button>
-					<button
-						onClick={() => {
-							if (tab === 'insights') {
-								setTab('chat')
-							} else {
-								setTab('insights')
-							}
-						}}
-						className="infio-chat-list-dropdown"
-					>
-						<Lightbulb size={18} color={tab === 'insights' ? 'var(--text-accent)' : 'var(--text-color)'} />
-					</button>
-					<button
-						onClick={() => {
-							if (tab === 'workspace') {
-								setTab('chat')
-							} else {
-								setTab('workspace')
-							}
-						}}
-						className="infio-chat-list-dropdown"
-					>
-						<Box size={18} color={tab === 'workspace' ? 'var(--text-accent)' : 'var(--text-color)'} />
-					</button>
-					<button
-						onClick={() => {
-							// switch between chat and prompts
-							if (tab === 'commands') {
-								setTab('chat')
-							} else {
-								setTab('commands')
-							}
-						}}
-						className="infio-chat-list-dropdown"
-					>
-						<SquareSlash size={18} color={tab === 'commands' ? 'var(--text-accent)' : 'var(--text-color)'} />
-					</button>
-					<button
-						onClick={() => {
-							// switch between chat and prompts
-							if (tab === 'custom-mode') {
-								setTab('chat')
-							} else {
-								setTab('custom-mode')
-							}
-						}}
-						className="infio-chat-list-dropdown"
-					>
-						<NotebookPen size={18} color={tab === 'custom-mode' ? 'var(--text-accent)' : 'var(--text-color)'} />
-					</button>
-					<button
-						onClick={() => {
-							if (tab === 'mcp') {
-								setTab('chat')
-							} else {
-								setTab('mcp')
-							}
-						}}
-						className="infio-chat-list-dropdown"
-					>
-						<Server size={18} color={tab === 'mcp' ? 'var(--text-accent)' : 'var(--text-color)'} />
-					</button>
+					<Tooltip.Provider delayDuration={0}>
+						<Tooltip.Root>
+							<Tooltip.Trigger asChild>
+								<button
+									onClick={() => {
+										setTab('chat')
+										handleNewChat()
+									}}
+									className="infio-chat-list-dropdown"
+								>
+									<Plus size={18} />
+								</button>
+							</Tooltip.Trigger>
+							<Tooltip.Portal>
+								<Tooltip.Content className="infio-tooltip-content">
+									{t('chat.navigation.newChat')}
+								</Tooltip.Content>
+							</Tooltip.Portal>
+						</Tooltip.Root>
+					</Tooltip.Provider>
+					<Tooltip.Provider delayDuration={0}>
+						<Tooltip.Root>
+							<Tooltip.Trigger asChild>
+								<button
+									onClick={() => {
+										if (tab === 'history') {
+											setTab('chat')
+										} else {
+											setTab('history')
+										}
+									}}
+									className="infio-chat-list-dropdown"
+								>
+									<History size={18} color={tab === 'history' ? 'var(--text-accent)' : 'var(--text-color)'} />
+								</button>
+							</Tooltip.Trigger>
+							<Tooltip.Portal>
+								<Tooltip.Content className="infio-tooltip-content">
+									{t('chat.navigation.history')}
+								</Tooltip.Content>
+							</Tooltip.Portal>
+						</Tooltip.Root>
+					</Tooltip.Provider>
+					<Tooltip.Provider delayDuration={0}>
+						<Tooltip.Root>
+							<Tooltip.Trigger asChild>
+								<button
+									onClick={() => {
+										if (tab === 'search') {
+											setTab('chat')
+										} else {
+											setTab('search')
+										}
+									}}
+									className="infio-chat-list-dropdown"
+								>
+									<Search size={18} color={tab === 'search' ? 'var(--text-accent)' : 'var(--text-color)'} />
+								</button>
+							</Tooltip.Trigger>
+							<Tooltip.Portal>
+								<Tooltip.Content className="infio-tooltip-content">
+									{t('chat.navigation.search')}
+								</Tooltip.Content>
+							</Tooltip.Portal>
+						</Tooltip.Root>
+					</Tooltip.Provider>
+					<Tooltip.Provider delayDuration={0}>
+						<Tooltip.Root>
+							<Tooltip.Trigger asChild>
+								<button
+									onClick={() => {
+										if (tab === 'insights') {
+											setTab('chat')
+										} else {
+											setTab('insights')
+										}
+									}}
+									className="infio-chat-list-dropdown"
+								>
+									<Lightbulb size={18} color={tab === 'insights' ? 'var(--text-accent)' : 'var(--text-color)'} />
+								</button>
+							</Tooltip.Trigger>
+							<Tooltip.Portal>
+								<Tooltip.Content className="infio-tooltip-content">
+									{t('chat.navigation.insights')}
+								</Tooltip.Content>
+							</Tooltip.Portal>
+						</Tooltip.Root>
+					</Tooltip.Provider>
+					<Tooltip.Provider delayDuration={0}>
+						<Tooltip.Root>
+							<Tooltip.Trigger asChild>
+								<button
+									onClick={() => {
+										if (tab === 'workspace') {
+											setTab('chat')
+										} else {
+											setTab('workspace')
+										}
+									}}
+									className="infio-chat-list-dropdown"
+								>
+									<Box size={18} color={tab === 'workspace' ? 'var(--text-accent)' : 'var(--text-color)'} />
+								</button>
+							</Tooltip.Trigger>
+							<Tooltip.Portal>
+								<Tooltip.Content className="infio-tooltip-content">
+									{t('chat.navigation.workspace')}
+								</Tooltip.Content>
+							</Tooltip.Portal>
+						</Tooltip.Root>
+					</Tooltip.Provider>
+					<Tooltip.Provider delayDuration={0}>
+						<Tooltip.Root>
+							<Tooltip.Trigger asChild>
+								<button
+									onClick={() => {
+										// switch between chat and prompts
+										if (tab === 'commands') {
+											setTab('chat')
+										} else {
+											setTab('commands')
+										}
+									}}
+									className="infio-chat-list-dropdown"
+								>
+									<SquareSlash size={18} color={tab === 'commands' ? 'var(--text-accent)' : 'var(--text-color)'} />
+								</button>
+							</Tooltip.Trigger>
+							<Tooltip.Portal>
+								<Tooltip.Content className="infio-tooltip-content">
+									{t('chat.navigation.commands')}
+								</Tooltip.Content>
+							</Tooltip.Portal>
+						</Tooltip.Root>
+					</Tooltip.Provider>
+					<Tooltip.Provider delayDuration={0}>
+						<Tooltip.Root>
+							<Tooltip.Trigger asChild>
+								<button
+									onClick={() => {
+										// switch between chat and prompts
+										if (tab === 'custom-mode') {
+											setTab('chat')
+										} else {
+											setTab('custom-mode')
+										}
+									}}
+									className="infio-chat-list-dropdown"
+								>
+									<NotebookPen size={18} color={tab === 'custom-mode' ? 'var(--text-accent)' : 'var(--text-color)'} />
+								</button>
+							</Tooltip.Trigger>
+							<Tooltip.Portal>
+								<Tooltip.Content className="infio-tooltip-content">
+									{t('chat.navigation.customMode')}
+								</Tooltip.Content>
+							</Tooltip.Portal>
+						</Tooltip.Root>
+					</Tooltip.Provider>
+					<Tooltip.Provider delayDuration={0}>
+						<Tooltip.Root>
+							<Tooltip.Trigger asChild>
+								<button
+									onClick={() => {
+										if (tab === 'mcp') {
+											setTab('chat')
+										} else {
+											setTab('mcp')
+										}
+									}}
+									className="infio-chat-list-dropdown"
+								>
+									<Server size={18} color={tab === 'mcp' ? 'var(--text-accent)' : 'var(--text-color)'} />
+								</button>
+							</Tooltip.Trigger>
+							<Tooltip.Portal>
+								<Tooltip.Content className="infio-tooltip-content">
+									{t('chat.navigation.mcp')}
+								</Tooltip.Content>
+							</Tooltip.Portal>
+						</Tooltip.Root>
+					</Tooltip.Provider>
 				</div>
 			</div>
 			{/* main view */}

@@ -23,8 +23,10 @@ const processContent = (content: string): { serverName: string; processedContent
 
 export default function MarkdownToolResult({
 	content,
+	toolName,
 }: PropsWithChildren<{
 	content: string
+	toolName?: string
 }>) {
 	const { isDarkMode } = useDarkModeContext()
 	const containerRef = useRef<HTMLDivElement>(null)
@@ -58,7 +60,8 @@ export default function MarkdownToolResult({
 							<CheckCheck size={10} className="infio-chat-code-block-response-header-icon" />
 						)}
 						{t('response_from_tool')}
-						<span className="infio-mcp-tool-server-name">{serverName}</span>
+						{toolName && <span className="infio-mcp-tool-name">{toolName}</span>}
+						{serverName && <span className="infio-mcp-tool-server-name">{serverName}</span>}
 					</div>
 				</div>
 				<div
@@ -191,6 +194,16 @@ export default function MarkdownToolResult({
 					display: inline-block;
 				}
 
+				.infio-mcp-tool-name {
+					color: var(--text-accent);
+					border-radius: 4px;
+					margin-left: 4px;
+					margin-right: 4px;
+					font-weight: bold;
+					font-size: 13px;
+					display: inline-block;
+				}
+
 				/* Tool Result Block - Minimal styling for better integration */
 				.infio-tool-result-block {
 					border: none !important;
@@ -211,6 +224,10 @@ export default function MarkdownToolResult({
 				}
 
 				.infio-tool-result-block .infio-mcp-tool-server-name {
+					color: var(--text-muted) !important;
+				}
+
+				.infio-tool-result-block .infio-mcp-tool-name {
 					color: var(--text-muted) !important;
 				}
 
