@@ -1,6 +1,6 @@
 import { BaseSerializedNode } from '@lexical/clipboard/clipboard'
 import { useQuery } from '@tanstack/react-query'
-import { $nodesOfType, LexicalEditor, SerializedEditorState } from 'lexical'
+import { $getRoot, $nodesOfType, $setSelection, $createRangeSelection, LexicalEditor, SerializedEditorState } from 'lexical'
 import {
 	forwardRef,
 	useCallback,
@@ -14,6 +14,7 @@ import {
 import { useApp } from '../../../contexts/AppContext'
 import { useDarkModeContext } from '../../../contexts/DarkModeContext'
 import { useSettings } from '../../../contexts/SettingsContext'
+import useChatInputStore from '../../../stores/chat-input-store'
 import {
 	Mentionable,
 	MentionableImage,
@@ -40,6 +41,26 @@ export type ChatUserInputRef = {
 	focus: () => void
 }
 
+// 检查编辑器状态是否为空
+const isEditorStateEmpty = (editorState: SerializedEditorState): boolean => {
+	try {
+		const root = editorState.root
+		if (!root || !root.children) return true
+		
+		// 检查是否有实际内容
+		const hasContent = root.children.some((child: { type: string; children?: any[] }) => {
+			if (child.type === 'paragraph') {
+				return child.children && child.children.length > 0
+			}
+			return true
+		})
+		
+		return !hasContent
+	} catch (error) {
+		return true
+	}
+}
+
 export type ChatUserInputProps = {
 	initialSerializedEditorState: SerializedEditorState | null
 	onChange?: (content: SerializedEditorState) => void
@@ -50,6 +71,7 @@ export type ChatUserInputProps = {
 	setMentionables: (mentionables: Mentionable[]) => void
 	autoFocus?: boolean
 	addedBlockKey?: string | null
+	placeholder?: string
 }
 
 const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
@@ -64,11 +86,20 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 			setMentionables,
 			autoFocus = false,
 			addedBlockKey,
+			placeholder = '',
 		},
 		ref,
 	) => {
 		const app = useApp()
 		const { settings, setSettings } = useSettings()
+		const {
+			addToHistory,
+			getPreviousHistory,
+			getNextHistory,
+			resetHistoryIndex,
+			setCurrentInput,
+			currentHistoryIndex,
+		} = useChatInputStore()
 
 		const editorRef = useRef<LexicalEditor | null>(null)
 		const contentEditableRef = useRef<HTMLDivElement>(null)
@@ -77,6 +108,11 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 		const [displayedMentionableKey, setDisplayedMentionableKey] = useState<
 			string | null
 		>(addedBlockKey ?? null)
+
+		// 追踪编辑器是否为空
+		const [isEmpty, setIsEmpty] = useState(() => 
+			initialSerializedEditorState ? isEditorStateEmpty(initialSerializedEditorState) : true
+		)
 
 		useEffect(() => {
 			if (addedBlockKey) {
@@ -87,6 +123,59 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 		// 添加快捷键监听器
 		useEffect(() => {
 			const handleKeyDown = (event: KeyboardEvent) => {
+				// 检查是否在输入框中
+				const isInInputArea = contentEditableRef.current?.contains(event.target as Node)
+				
+				if (isInInputArea && !event.ctrlKey && !event.shiftKey && !event.metaKey && !event.altKey) {
+					// 处理历史记录导航
+					if (event.key === 'ArrowUp') {
+						event.preventDefault()
+						// 只有在第一次按up键时才保存当前输入（currentHistoryIndex === -1）
+						if (currentHistoryIndex === -1) {
+							const currentEditorState = editorRef.current?.getEditorState()?.toJSON()
+							setCurrentInput(currentEditorState || null)
+						}
+						const previousHistory = getPreviousHistory()
+						if (previousHistory && editorRef.current) {
+							editorRef.current.setEditorState(
+								editorRef.current.parseEditorState(previousHistory)
+							)
+							// 重新聚焦并将光标定位到文档末尾
+							editorRef.current.focus()
+							editorRef.current.update(() => {
+								const root = $getRoot()
+								root.selectEnd()
+							})
+						}
+						return
+					}
+					
+					if (event.key === 'ArrowDown') {
+						event.preventDefault()
+						const nextHistory = getNextHistory()
+						if (nextHistory && editorRef.current) {
+							editorRef.current.setEditorState(
+								editorRef.current.parseEditorState(nextHistory)
+							)
+							// 重新聚焦并将光标定位到文档末尾
+							editorRef.current.focus()
+							editorRef.current.update(() => {
+								const root = $getRoot()
+								root.selectEnd()
+							})
+						} else if (nextHistory === null && editorRef.current) {
+							// 如果nextHistory为null，表示需要清空编辑器
+							editorRef.current.update(() => {
+								const root = $getRoot()
+								root.clear()
+							})
+							// 重新聚焦
+							editorRef.current.focus()
+						}
+						return
+					}
+				}
+				
 				// 检查是否按下了 Cmd + Shift 键 (macOS)
 				if (event.ctrlKey && event.shiftKey) {
 					// 使用 event.key 直接匹配，不使用 toLowerCase()
@@ -126,7 +215,7 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 			return () => {
 				document.removeEventListener('keydown', handleKeyDown)
 			}
-		}, [settings, setSettings])
+		}, [settings, setSettings, getPreviousHistory, getNextHistory, setCurrentInput, currentHistoryIndex])
 
 		useImperativeHandle(ref, () => ({
 			focus: () => {
@@ -245,11 +334,30 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 
 		const handleSubmit = (options: { useVaultSearch?: boolean } = {}) => {
 			const content = editorRef.current?.getEditorState()?.toJSON()
-			content && onSubmit(content, options.useVaultSearch)
+			if (content) {
+				// 保存到历史记录
+				addToHistory(content)
+				// 重置历史索引
+				resetHistoryIndex()
+				// 提交内容
+				onSubmit(content, options.useVaultSearch)
+			}
+		}
+
+		const handleChange = (content: SerializedEditorState) => {
+			// 检查内容是否为空并更新状态
+			setIsEmpty(isEditorStateEmpty(content))
+			// 调用父组件的 onChange 回调
+			onChange?.(content)
 		}
 
 		return (
 			<div className="infio-chat-user-input-container" ref={containerRef}>
+				{placeholder && isEmpty && (
+					<div className="infio-input-placeholder">
+						{placeholder}
+					</div>
+				)}
 				{mentionables.length > 0 && (
 					<div className="infio-chat-user-input-files">
 						{mentionables.map((m) => (
@@ -302,7 +410,7 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 					}}
 					editorRef={editorRef}
 					contentEditableRef={contentEditableRef}
-					onChange={onChange}
+					onChange={handleChange}
 					onEnter={() => handleSubmit({ useVaultSearch: false })}
 					onFocus={onFocus}
 					onMentionNodeMutation={handleMentionNodeMutation}
@@ -331,6 +439,18 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 						<SubmitButton onClick={() => handleSubmit()} />
 					</div>
 				</div>
+				<style>
+					{`
+					.infio-input-placeholder {
+						position: absolute;
+						color: var(--text-muted);
+						pointer-events: none;
+						z-index: 1;
+						padding: calc(var(--size-2-2) + 1px) var(--size-4-2);
+						font-size: var(--font-ui-small);
+					}
+					`}
+				</style>
 			</div>
 		)
 	},

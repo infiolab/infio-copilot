@@ -1503,6 +1503,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 												key={"input-" + message.id}
 												ref={(ref) => registerChatUserInputRef(message.id, ref)}
 												initialSerializedEditorState={message.content}
+												placeholder={t('chat.inputPlaceholder')}
 												onSubmit={(content, useVaultSearch) => {
 													if (editorStateToPlainText(content).trim() === '') return
 													setEditingMessageId(null) // 退出编辑模式
@@ -1600,6 +1601,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 							key={inputMessage.id}
 							ref={(ref) => registerChatUserInputRef(inputMessage.id, ref)}
 							initialSerializedEditorState={inputMessage.content}
+							placeholder={t('chat.inputPlaceholder')}
 							onSubmit={(content, useVaultSearch) => {
 								if (editorStateToPlainText(content).trim() === '') return
 								handleSubmit(
@@ -1621,7 +1623,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 									mentionables,
 								}))
 							}}
-							autoFocus
+							autoFocus={false}
 							addedBlockKey={addedBlockKey}
 						/>
 					)}

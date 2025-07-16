@@ -25,7 +25,7 @@ interface ChatStore {
 
 const useChatStore = create<ChatStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       currentConversationId: null,
       setCurrentConversationId: (id) => set({ currentConversationId: id }),
       

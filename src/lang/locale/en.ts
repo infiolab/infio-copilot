@@ -1,9 +1,10 @@
 export default {
 	chat: {
 		stop: "Stop",
+		inputPlaceholder: "Type a message... (↑/↓ to browse history)",
 		welcome: {
 			title: "Welcome to Infio Copilot",
-			subtitle: "Explore different modes to enhance your productivity"
+			subtitle: "Explore different modes to boost your productivity"
 		},
 		navigation: {
 			history: "Chat History",
@@ -551,7 +552,7 @@ export default {
 		blocks: "blocks",
 		totalFiles: "Total {count} files",
 		initializationComplete: "Workspace RAG vector index initialization complete: {workspaceName}",
-		searchPlaceholder: "Semantic search (press Enter to search)...",
+		searchPlaceholder: "Semantic search (press Enter to search)...(↑/↓ to browse history)",
 		searching: "Searching...",
 		noResults: "No relevant results found",
 		imagePlaceholder: "[Image]",

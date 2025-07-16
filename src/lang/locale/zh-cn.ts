@@ -2,6 +2,7 @@
 export default {
 	chat: {
 		stop: "停止",
+		inputPlaceholder: "输入消息... (↑/↓ 切换历史记录)",
 		welcome: {
 			title: "欢迎使用 Infio Copilot",
 			subtitle: "探索不同模式来提升您的生产力"
@@ -552,7 +553,7 @@ export default {
 		blocks: "块",
 		totalFiles: "共 {count} 个文件",
 		initializationComplete: "工作区 RAG 向量索引初始化完成: {workspaceName}",
-		searchPlaceholder: "语义搜索（按回车键搜索）...",
+		searchPlaceholder: "语义搜索（按回车键搜索）...(↑/↓ 切换历史记录)",
 		searching: "正在搜索...",
 		noResults: "未找到相关结果",
 		imagePlaceholder: "[图片]",

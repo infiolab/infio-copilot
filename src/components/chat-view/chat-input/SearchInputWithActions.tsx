@@ -1,12 +1,13 @@
-import { $getRoot, LexicalEditor, SerializedEditorState } from 'lexical'
+import { $getRoot, $setSelection, $createRangeSelection, LexicalEditor, SerializedEditorState } from 'lexical'
 import {
 	forwardRef,
+	useEffect,
 	useImperativeHandle,
 	useRef,
 	useState
 } from 'react'
 
-
+import useSearchInputStore from '../../../stores/search-input-store'
 import { Mentionable } from '../../../types/mentionable'
 
 import LexicalContentEditable from './LexicalContentEditable'
@@ -38,7 +39,7 @@ const isEditorStateEmpty = (editorState: SerializedEditorState): boolean => {
 		if (!root || !root.children) return true
 		
 		// 检查是否有实际内容
-		const hasContent = root.children.some((child: any) => {
+		const hasContent = root.children.some((child: { type: string; children?: any[] }) => {
 			if (child.type === 'paragraph') {
 				return child.children && child.children.length > 0
 			}
@@ -65,6 +66,15 @@ const SearchInputWithActions = forwardRef<SearchInputRef, SearchInputProps>(
 		},
 		ref
 	) => {
+		const {
+			addToHistory,
+			getPreviousHistory,
+			getNextHistory,
+			resetHistoryIndex,
+			setCurrentInput,
+			currentHistoryIndex,
+		} = useSearchInputStore()
+
 		const editorRef = useRef<LexicalEditor | null>(null)
 		const contentEditableRef = useRef<HTMLDivElement>(null)
 		const containerRef = useRef<HTMLDivElement>(null)
@@ -73,6 +83,72 @@ const SearchInputWithActions = forwardRef<SearchInputRef, SearchInputProps>(
 		const [isEmpty, setIsEmpty] = useState(() => 
 			initialSerializedEditorState ? isEditorStateEmpty(initialSerializedEditorState) : true
 		)
+
+		// 添加键盘事件监听器处理历史记录导航
+		useEffect(() => {
+			const handleKeyDown = (event: KeyboardEvent) => {
+				// 检查是否在输入框中
+				const isInInputArea = contentEditableRef.current?.contains(event.target as Node)
+				
+				if (isInInputArea && !event.ctrlKey && !event.shiftKey && !event.metaKey && !event.altKey) {
+					// 处理历史记录导航
+					if (event.key === 'ArrowUp') {
+						event.preventDefault()
+						// 只有在第一次按up键时才保存当前输入（currentHistoryIndex === -1）
+						if (currentHistoryIndex === -1) {
+							const currentEditorState = editorRef.current?.getEditorState()?.toJSON()
+							setCurrentInput(currentEditorState || null)
+						}
+						const previousHistory = getPreviousHistory()
+						if (previousHistory && editorRef.current) {
+							editorRef.current.setEditorState(
+								editorRef.current.parseEditorState(previousHistory)
+							)
+							// 重新聚焦并将光标定位到文档末尾
+							editorRef.current.focus()
+							editorRef.current.update(() => {
+								const root = $getRoot()
+								root.selectEnd()
+							})
+						}
+						return
+					}
+					
+					if (event.key === 'ArrowDown') {
+						event.preventDefault()
+						const nextHistory = getNextHistory()
+						if (nextHistory && editorRef.current) {
+							editorRef.current.setEditorState(
+								editorRef.current.parseEditorState(nextHistory)
+							)
+							// 重新聚焦并将光标定位到文档末尾
+							editorRef.current.focus()
+							editorRef.current.update(() => {
+								const root = $getRoot()
+								root.selectEnd()
+							})
+						} else if (nextHistory === null && editorRef.current) {
+							// 如果nextHistory为null，表示需要清空编辑器
+							editorRef.current.update(() => {
+								const root = $getRoot()
+								root.clear()
+							})
+							// 重新聚焦
+							editorRef.current.focus()
+						}
+						return
+					}
+				}
+			}
+
+			// 添加事件监听器到 document
+			document.addEventListener('keydown', handleKeyDown)
+
+			// 清理函数
+			return () => {
+				document.removeEventListener('keydown', handleKeyDown)
+			}
+		}, [getPreviousHistory, getNextHistory, setCurrentInput, currentHistoryIndex])
 
 		// 暴露给父组件的方法
 		useImperativeHandle(ref, () => ({
@@ -85,12 +161,19 @@ const SearchInputWithActions = forwardRef<SearchInputRef, SearchInputProps>(
 					root.clear()
 				})
 				setIsEmpty(true)
+				// 重置历史索引
+				resetHistoryIndex()
 			}
-		}))
+		}), [resetHistoryIndex])
 
 		const handleSubmit = (options?: { useVaultSearch?: boolean }) => {
 			const content = editorRef.current?.getEditorState()?.toJSON()
 			if (content) {
+				// 保存到历史记录
+				addToHistory(content)
+				// 重置历史索引
+				resetHistoryIndex()
+				// 提交内容
 				onSubmit(content, options?.useVaultSearch)
 			}
 		}
