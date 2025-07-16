@@ -1096,7 +1096,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 					}
 				} else {
 					// 处理未知的工具类型
-					throw new Error(`Unsupported tool type: ${String(toolArgs?.type) || 'unknown'}`);
+					throw new Error(`Unsupported tool type: ${String((toolArgs as any)?.type) || 'unknown'}`);
 				}
 			} catch (error) {
 				console.error('Failed to apply changes', error)

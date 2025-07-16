@@ -2,6 +2,8 @@
  * 用于指定插入内容的工具参数
  */
 
+import { TransformationType } from '../core/transformations/trans-engine';
+
 export enum ApplyStatus {
 	Idle = 0,
 	Applied = 1,
@@ -115,7 +117,7 @@ export type DataviewQueryToolArgs = {
 export type CallTransformationsToolArgs = {
 	type: 'call_transformations';
 	path: string;
-	transformation: string;
+	transformation: TransformationType;
 	finish?: boolean;
 }
 

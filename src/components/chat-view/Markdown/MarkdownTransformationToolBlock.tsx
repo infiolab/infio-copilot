@@ -2,6 +2,7 @@ import { Sparkles } from 'lucide-react'
 import React from 'react'
 
 import { useApp } from "../../../contexts/AppContext"
+import { TransformationType } from "../../../core/transformations/trans-engine"
 import { ApplyStatus, ToolArgs } from "../../../types/apply"
 import { openMarkdownFile } from "../../../utils/obsidian"
 
@@ -48,11 +49,17 @@ const getTransformationConfig = (transformation: string) => {
 				title: 'Table of Contents',
 				description: 'Generate table of contents structure'
 			}
+		case 'hierarchical_summary':
+			return {
+				icon: <Sparkles size={14} className="infio-chat-code-block-header-icon" />,
+				title: 'Hierarchical Summary',
+				description: 'Create hierarchical summary'
+			}
 		case 'simple_summary':
 			return {
 				icon: <Sparkles size={14} className="infio-chat-code-block-header-icon" />,
 				title: 'Simple Summary',
-				description: 'Create readable summary'
+				description: 'Create simple summary'
 			}
 		default:
 			return {
@@ -80,12 +87,16 @@ export default function MarkdownTransformationToolBlock({
 	}
 
 	React.useEffect(() => {
-		if (finish && applyStatus === ApplyStatus.Idle) {
-			onApply({
-				type: 'call_transformations',
-				path: path || '',
-				transformation: transformation || ''
-			})
+		if (finish && applyStatus === ApplyStatus.Idle && transformation) {
+			// 验证transformation是否为有效的TransformationType
+			const validTransformationTypes = Object.values(TransformationType);
+			if (validTransformationTypes.includes(transformation as TransformationType)) {
+				onApply({
+					type: 'call_transformations',
+					path: path || '',
+					transformation: transformation as TransformationType
+				})
+			}
 		}
 	}, [finish])
 
