@@ -1,7 +1,7 @@
 export default {
 	chat: {
 		stop: "Stop",
-		inputPlaceholder: "Type a message... (↑/↓ to browse history)",
+		inputPlaceholder: "Type a message... (@ to add file, / for command, ↑/↓ to browse history)",
 		welcome: {
 			title: "Welcome to Infio Copilot",
 			subtitle: "Explore different modes to boost your productivity"

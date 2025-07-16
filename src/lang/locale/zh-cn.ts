@@ -2,7 +2,7 @@
 export default {
 	chat: {
 		stop: "停止",
-		inputPlaceholder: "输入消息... (↑/↓ 切换历史记录)",
+		inputPlaceholder: "输入消息... (@ 添加文件, / 输入命令, ↑/↓ 切换历史记录)",
 		welcome: {
 			title: "欢迎使用 Infio Copilot",
 			subtitle: "探索不同模式来提升您的生产力"
