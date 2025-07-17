@@ -3275,7 +3275,7 @@ button.infio-chat-input-model-select {
 /* Apply button styles */
 .infio-apply-button-primary {
   background-color: var(--color-green) !important;
-  color: white !important;
+  color: #ffffff !important;
   border: none !important;
   padding: 2px 6px !important;
   border-radius: 4px !important;
@@ -3287,10 +3287,6 @@ button.infio-chat-input-model-select {
   align-items: center !important;
   justify-content: center !important;
   transition: background-color 0.2s ease !important;
-}
-
-.infio-apply-button-primary:hover {
-  background-color: var(--color-green-hover) !important;
 }
 
 .infio-apply-button-secondary {
@@ -3307,10 +3303,6 @@ button.infio-chat-input-model-select {
   align-items: center !important;
   justify-content: center !important;
   transition: background-color 0.2s ease !important;
-}
-
-.infio-apply-button-secondary:hover {
-  background-color: var(--background-modifier-border-hover) !important;
 }
 
 .infio-apply-button-applying {
@@ -3330,6 +3322,19 @@ button.infio-chat-input-model-select {
 
 .infio-apply-status-icon {
   margin-left: 8px !important;
+}
+
+.infio-applying-status {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+	margin-top: 4px !important;
+	height: 20px !important;
+  min-width: 40px !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: var(--text-normal) !important;
+  font-size: 11px !important;
 }
 
 /* 覆盖标题栏按钮的默认高度设置 */

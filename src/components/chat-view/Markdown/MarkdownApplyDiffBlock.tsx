@@ -1,5 +1,6 @@
 import { Check, ChevronDown, ChevronRight, CopyIcon, Diff, Loader2, X } from 'lucide-react'
 import { PropsWithChildren, useEffect, useState } from 'react'
+import * as Tooltip from '@radix-ui/react-tooltip'
 
 import { useDarkModeContext } from "../../../contexts/DarkModeContext"
 import { t } from '../../../lang/helpers'
@@ -130,36 +131,56 @@ export default function MarkdownApplyDiffBlock({
 					</div>
 				)}
 				<div className={'infio-chat-code-block-header-button'}>
-					<button
-						onClick={() => {
-							handleCopy()
-						}}
-					>
-						{copied ? (
-							<>
-								<CopyIcon size={14} color="var(--color-green)" />
-							</>
-						) : (
-							<>
-								<CopyIcon size={14} />
-							</>
-						)}
-					</button>
-
-					{applying && (
+					{(applying || shouldShowEditing()) && (
 						<div className="infio-applying-status">
 							<Loader2 className="spinner" size={14} />
 						</div>
 					)}
 
-					{shouldShowEditing() && (
-						<div className="infio-editing-status">
-							{t('chat.reactMarkdown.editing')}
-						</div>
-					)}
-
 					{shouldShowActionButtons() && (
 						<>
+							<Tooltip.Provider delayDuration={0}>
+								<Tooltip.Root>
+									<Tooltip.Trigger asChild>
+										<button
+											onClick={() => {
+												handleCopy()
+											}}
+										>
+											{copied ? (
+												<>
+													<CopyIcon size={14} color="var(--color-green)" />
+												</>
+											) : (
+												<>
+													<CopyIcon size={14} />
+												</>
+											)}
+										</button>
+									</Tooltip.Trigger>
+									<Tooltip.Portal>
+										<Tooltip.Content className="infio-tooltip-content">
+											{t('chat.reactMarkdown.copy')}
+										</Tooltip.Content>
+									</Tooltip.Portal>
+								</Tooltip.Root>
+							</Tooltip.Provider>
+							<Tooltip.Provider delayDuration={0}>
+								<Tooltip.Root>
+									<Tooltip.Trigger asChild>
+										<button
+											onClick={handleReject}
+										>
+											<X size={14} />
+										</button>
+									</Tooltip.Trigger>
+									<Tooltip.Portal>
+										<Tooltip.Content className="infio-tooltip-content">
+											{t('applyView.rejectAll').replace('{{shortcut}}', '')}
+										</Tooltip.Content>
+									</Tooltip.Portal>
+								</Tooltip.Root>
+							</Tooltip.Provider>
 							<button
 								onClick={handleAccept}
 								className="infio-apply-button infio-apply-button-primary"
@@ -167,13 +188,6 @@ export default function MarkdownApplyDiffBlock({
 							>
 								<Check size={14} />
 								{t('applyView.acceptAll').replace('{{shortcut}}', '')}
-							</button>
-							<button
-								onClick={handleReject}
-								className="infio-apply-button infio-reject-button"
-							>
-								<X size={14} />
-								{t('applyView.rejectAll').replace('{{shortcut}}', '')}
 							</button>
 						</>
 					)}
