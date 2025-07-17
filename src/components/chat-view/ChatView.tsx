@@ -527,6 +527,34 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		[applyMutation],
 	)
 
+	const handleAccept = useCallback(
+		(applyMsgId: string) => {
+			// Update message status to applied
+			setChatMessages(prev => 
+				prev.map(msg => 
+					msg.id === applyMsgId 
+						? { ...msg, applyStatus: ApplyStatus.Applied }
+						: msg
+				)
+			)
+		},
+		[],
+	)
+
+	const handleReject = useCallback(
+		(applyMsgId: string) => {
+			// Update message status to rejected
+			setChatMessages(prev => 
+				prev.map(msg => 
+					msg.id === applyMsgId 
+						? { ...msg, applyStatus: ApplyStatus.Rejected }
+						: msg
+				)
+			)
+		},
+		[],
+	)
+
 	useEffect(() => {
 		setFocusedMessageId(inputMessage.id)
 		// 初始化当前活动文件引用
@@ -1036,6 +1064,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 										<ReactMarkdownItem
 											key={"content-" + message.id}
 											handleApply={(toolArgs) => handleApply(message.id, toolArgs)}
+											handleAccept={() => handleAccept(message.id)}
+											handleReject={() => handleReject(message.id)}
 											applyStatus={message.applyStatus}
 											toolExecutionResults={message.toolExecutionResults}
 										>
@@ -1145,11 +1175,15 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
 function ReactMarkdownItem({
 	handleApply,
+	handleAccept,
+	handleReject,
 	applyStatus,
 	toolExecutionResults,
 	children,
 }: {
 	handleApply: (toolArgs: ToolArgs) => void
+	handleAccept?: () => void
+	handleReject?: () => void
 	applyStatus: ApplyStatus
 	toolExecutionResults?: Array<{
 		type: string
@@ -1163,6 +1197,8 @@ function ReactMarkdownItem({
 		<ReactMarkdown
 			applyStatus={applyStatus}
 			onApply={handleApply}
+			onAccept={handleAccept}
+			onReject={handleReject}
 			toolExecutionResults={toolExecutionResults}
 		>
 			{children}

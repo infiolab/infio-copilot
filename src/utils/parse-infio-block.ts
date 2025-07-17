@@ -22,11 +22,13 @@ export type ParsedMsgBlock =
 		path: string
 		content: string
 		lineCount?: number
+		finish: boolean
 	} | {
 		type: 'insert_content'
 		path: string
 		startLine: number
 		content: string
+		finish: boolean
 	} | {
 		type: 'read_file'
 		path: string
@@ -424,7 +426,8 @@ export function parseMsgBlocks(
 					type: 'write_to_file',
 					content,
 					path,
-					lineCount
+					lineCount,
+					finish: node.sourceCodeLocation.endTag !== undefined
 				})
 				lastEndOffset = endOffset
 
@@ -469,7 +472,8 @@ export function parseMsgBlocks(
 					type: 'insert_content',
 					path,
 					startLine,
-					content
+					content,
+					finish: node.sourceCodeLocation.endTag !== undefined
 				})
 				lastEndOffset = endOffset
 			} else if (node.nodeName === 'search_and_replace') {

@@ -1,6 +1,10 @@
 import { Check, ChevronDown, ChevronRight, CopyIcon, Edit, Loader2, X } from 'lucide-react'
-import { PropsWithChildren, useMemo, useState } from 'react'
 
+import * as pathUtils from 'path'
+
+import { PropsWithChildren, useEffect, useMemo, useState } from 'react'
+
+import { useApp } from "../../../contexts/AppContext"
 import { useDarkModeContext } from "../../../contexts/DarkModeContext"
 import { t } from '../../../lang/helpers'
 import { ApplyStatus, ToolArgs } from "../../../types/apply"
@@ -11,29 +15,43 @@ export default function MarkdownEditFileBlock({
 	mode,
 	applyStatus,
 	onApply,
+	onAccept,
+	onReject,
 	language,
 	path,
 	startLine,
 	endLine,
+	finish,
 	children,
 }: PropsWithChildren<{
 	mode: string
 	applyStatus: ApplyStatus
 	onApply: (args: ToolArgs) => void
+	onAccept?: () => void
+	onReject?: () => void
 	language?: string
 	path?: string
 	startLine?: number
 	endLine?: number
+	finish?: boolean
 }>) {
 	const [copied, setCopied] = useState(false)
 	const [applying, setApplying] = useState(false)
 	const [isResultOpen, setIsResultOpen] = useState(true)
 	const [isHovered, setIsHovered] = useState(false)
+	const app = useApp()
 	const { isDarkMode } = useDarkModeContext()
 
 	const wrapLines = useMemo(() => {
 		return !language || ['markdown'].includes(language)
 	}, [language])
+
+	// Auto-apply when finish is true
+	useEffect(() => {
+		if (finish && applyStatus === ApplyStatus.Idle) {
+			handleApply()
+		}
+	}, [finish, applyStatus])
 
 	const handleCopy = async () => {
 		try {
@@ -65,6 +83,56 @@ export default function MarkdownEditFileBlock({
 		}
 	}
 
+	const handleAccept = async () => {
+		if (applying || !path) {
+			return
+		}
+		setApplying(true)
+		try {
+			// 获取或创建文件
+			let opFile = app.vault.getFileByPath(path)
+			let newFile = false
+
+			if (!opFile) {
+				// 确保目录结构存在
+				const dir = pathUtils.dirname(path)
+				if (dir && dir !== '.' && dir !== '/') {
+					const dirExists = await app.vault.adapter.exists(dir)
+					if (!dirExists) {
+						await app.vault.adapter.mkdir(dir)
+					}
+				}
+				opFile = await app.vault.create(path, '')
+				newFile = true
+			}
+
+			// 写入内容
+			await app.vault.modify(opFile, String(children))
+
+			// 如果是新文件，在新标签页中打开
+			if (newFile) {
+				app.workspace.openLinkText(path, 'split', true)
+			}
+
+			// 通知成功
+			if (onAccept) {
+				onAccept()
+			}
+
+		} catch (error) {
+			console.error('Failed to accept changes:', error)
+			// TODO: 可以考虑添加错误处理，比如显示错误提示
+		} finally {
+			setApplying(false)
+		}
+	}
+
+	const handleReject = () => {
+		if (onReject) {
+			onReject()
+		}
+	}
+
 	// 获取应用状态图标
 	const getStatusIcon = () => {
 		if (applyStatus === ApplyStatus.Applied) {
@@ -75,32 +143,15 @@ export default function MarkdownEditFileBlock({
 		return null
 	}
 
-	// 获取应用按钮文本和样式
-	const getApplyButtonContent = () => {
-		if (applying) {
-			return {
-				text: <Loader2 className="spinner" size={14} />,
-				className: 'infio-apply-button-applying',
-				disabled: true
-			}
-		}
-		
-		if (applyStatus === ApplyStatus.Idle) {
-			return {
-				text: t('chat.reactMarkdown.apply'),
-				className: 'infio-apply-button-primary',
-				disabled: false
-			}
-		} else {
-			return {
-				text: t('chat.reactMarkdown.reapply'),
-				className: 'infio-apply-button-secondary',
-				disabled: false
-			}
-		}
+	// 判断是否应该显示操作按钮
+	const shouldShowActionButtons = () => {
+		return finish && !applying
 	}
 
-	const buttonContent = getApplyButtonContent()
+	// 判断是否应该显示编辑状态
+	const shouldShowEditing = () => {
+		return !finish && !applying
+	}
 
 	return (
 		<div
@@ -140,13 +191,38 @@ export default function MarkdownEditFileBlock({
 							</>
 						)}
 					</button>
-					<button
-						onClick={handleApply}
-						className={`infio-apply-button ${buttonContent.className}`}
-						disabled={buttonContent.disabled}
-					>
-						{buttonContent.text}
-					</button>
+
+					{applying && (
+						<div className="infio-applying-status">
+							<Loader2 className="spinner" size={14} />
+						</div>
+					)}
+
+					{shouldShowEditing() && (
+						<div className="infio-editing-status">
+							{t('chat.reactMarkdown.editing')}
+						</div>
+					)}
+
+					{shouldShowActionButtons() && (
+						<>
+							<button
+								onClick={handleAccept}
+								className="infio-apply-button infio-apply-button-primary"
+								disabled={applyStatus !== ApplyStatus.Idle}
+							>
+								<Check size={14} />
+								{t('applyView.acceptAll').replace('{{shortcut}}', '')}
+							</button>
+							<button
+								onClick={handleReject}
+								className="infio-apply-button infio-reject-button"
+							>
+								<X size={14} />
+								{t('applyView.rejectAll').replace('{{shortcut}}', '')}
+							</button>
+						</>
+					)}
 				</div>
 			</div>
 			{

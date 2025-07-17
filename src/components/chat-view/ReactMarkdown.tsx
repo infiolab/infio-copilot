@@ -13,8 +13,8 @@ import MarkdownFetchUrlsContentBlock from './Markdown/MarkdownFetchUrlsContentBl
 import MarkdownListFilesBlock from './Markdown/MarkdownListFilesBlock'
 import MarkdownManageFilesBlock from './Markdown/MarkdownManageFilesBlock'
 import MarkdownMatchSearchFilesBlock from './Markdown/MarkdownMatchSearchFilesBlock'
-import MarkdownReadFileBlock from './Markdown/MarkdownReadFileBlock'
 import MarkdownOptimizedReasoningBlock from './Markdown/MarkdownOptimizedReasoningBlock'
+import MarkdownReadFileBlock from './Markdown/MarkdownReadFileBlock'
 import MarkdownRegexSearchFilesBlock from './Markdown/MarkdownRegexSearchFilesBlock'
 import MarkdownSearchAndReplace from './Markdown/MarkdownSearchAndReplace'
 import MarkdownSearchWebBlock from './Markdown/MarkdownSearchWebBlock'
@@ -29,11 +29,15 @@ import UseMcpToolBlock from './Markdown/UseMcpToolBlock'
 function ReactMarkdown({
 	applyStatus,
 	onApply,
+	onAccept,
+	onReject,
 	toolExecutionResults,
 	children,
 }: {
 	applyStatus: ApplyStatus
 	onApply: (toolArgs: ToolArgs) => void
+	onAccept?: () => void
+	onReject?: () => void
 	toolExecutionResults?: Array<{
 		type: string
 		status: ApplyStatus
@@ -74,8 +78,11 @@ function ReactMarkdown({
 						applyStatus={applyStatus}
 						mode={block.type}
 						onApply={onApply}
+						onAccept={onAccept}
+						onReject={onReject}
 						path={block.path}
 						startLine={1}
+						finish={block.finish}
 					>
 						{block.content}
 					</MarkdownEditFileBlock>
@@ -85,9 +92,12 @@ function ReactMarkdown({
 						applyStatus={applyStatus}
 						mode={block.type}
 						onApply={onApply}
+						onAccept={onAccept}
+						onReject={onReject}
 						path={block.path}
 						startLine={block.startLine}
 						endLine={block.startLine} // 插入内容时，endLine 和 startLine 相同
+						finish={block.finish}
 					>
 						{block.content}
 					</MarkdownEditFileBlock>
