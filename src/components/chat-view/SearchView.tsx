@@ -293,9 +293,6 @@ const SearchView = () => {
 			// 刷新统计信息
 			await loadStatistics()
 
-			// 显示成功消息
-			console.log(`✅ 工作区 RAG 向量初始化完成: ${currentWorkspace.name}`)
-
 			// 显示成功状态
 			setRAGInitSuccess({
 				show: true,
@@ -334,9 +331,6 @@ const SearchView = () => {
 
 			// 刷新统计信息
 			await loadStatistics()
-
-			console.log('✅ 工作区索引清除完成')
-
 		} catch (error) {
 			console.error('清除工作区索引失败:', error)
 		} finally {
@@ -699,9 +693,9 @@ const SearchView = () => {
 						<div className="obsidian-rag-success-content">
 							<span className="obsidian-rag-success-icon">✅</span>
 							<div className="obsidian-rag-success-text">
-															<span className="obsidian-rag-success-title">
-								{t('semanticSearch.initializationComplete', { workspaceName: ragInitSuccess.workspaceName })}
-							</span>
+								<span className="obsidian-rag-success-title">
+									{t('semanticSearch.initializationComplete', { workspaceName: ragInitSuccess.workspaceName })}
+								</span>
 							</div>
 							<button
 								className="obsidian-rag-success-close"

@@ -125,6 +125,8 @@ function ReactMarkdown({
 						applyStatus={applyStatus}
 						mode={block.type}
 						onApply={onApply}
+						onAccept={onAccept}
+						onReject={onReject}
 						path={block.path}
 						diff={block.diff}
 						finish={block.finish}

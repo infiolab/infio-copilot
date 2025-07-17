@@ -5,11 +5,14 @@ import ApplyViewRoot from './components/apply-view/ApplyViewRoot'
 // import DiffViewRoot from './components/apply-view/DiffViewRoot'
 import { APPLY_VIEW_TYPE } from './constants'
 import { AppProvider } from './contexts/AppContext'
+import { ApplyEditManagerProvider } from './contexts/ApplyEditManagerContext'
+import InfioPlugin from './main'
 
 export type ApplyViewState = {
 	file: string
 	oldContent: string
 	newContent: string
+	editId?: string // 编辑日志ID，用于ApplyEditManager
 	onClose: (applied: boolean) => void
 }
 
@@ -18,7 +21,7 @@ export class ApplyView extends View {
 
 	private state: ApplyViewState | null = null
 
-	constructor(leaf: WorkspaceLeaf) {
+	constructor(leaf: WorkspaceLeaf, private plugin: InfioPlugin) {
 		super(leaf)
 	}
 
@@ -28,6 +31,10 @@ export class ApplyView extends View {
 
 	getDisplayText() {
 		return `Applying: ${this.state?.file ?? ''}`
+	}
+
+	getState() {
+		return this.state
 	}
 
 	async setState(state: ApplyViewState) {
@@ -48,7 +55,9 @@ export class ApplyView extends View {
 		if (!this.root || !this.state) return
 		this.root.render(
 			<AppProvider app={this.app}>
-				<ApplyViewRoot state={this.state} close={() => this.leaf.detach()} />
+				<ApplyEditManagerProvider getApplyEditManager={() => this.plugin.applyEditManager}>
+					<ApplyViewRoot state={this.state} close={() => this.leaf.detach()} />
+				</ApplyEditManagerProvider>
 			</AppProvider>,
 		)
 	}

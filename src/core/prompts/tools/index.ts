@@ -75,7 +75,6 @@ export function getToolDescriptionsForMode(
 	config.groups.forEach((groupEntry) => {
 		const groupName = getGroupName(groupEntry)
 		const toolGroup = TOOL_GROUPS[groupName]
-		console.log("toolGroup", toolGroup)
 		if (toolGroup) {
 			toolGroup.tools.forEach((tool) => {
 				if (isToolAllowedForMode(tool, mode, customModes ?? [], experiments ?? {})) {

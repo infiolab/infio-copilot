@@ -220,7 +220,6 @@ export class VectorRepository {
 
 		type SearchResult = Omit<SelectVector, 'embedding'> & { similarity: number }
 		const result = await this.db.query<SearchResult>(query, params)
-		console.log("performSimilaritySearch result", result.rows)
 		return result.rows
 	}
 
@@ -293,10 +292,8 @@ export class VectorRepository {
       ORDER BY rank DESC
       LIMIT $2
     `
-		console.log("performFulltextSearch query", query)
 		type SearchResult = Omit<SelectVector, 'embedding'> & { rank: number }
 		const result = await this.db.query<SearchResult>(query, params)
-		console.log("performFulltextSearch result", result.rows)
 		return result.rows
 	}
 
@@ -374,8 +371,6 @@ export class VectorRepository {
 
 			// Join keywords with & for PostgreSQL full-text search
 			const ftsQueryString = keywords.join(' | ')
-
-			console.log(`Original query: "${query}" -> Processed query: "${ftsQueryString}"`)
 			return ftsQueryString
 		} catch (error) {
 			// If all processing fails, return original query

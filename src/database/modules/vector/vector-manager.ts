@@ -90,7 +90,6 @@ export class VectorManager {
 				})
 			}
 		}
-		console.log("mergedChunks: ", mergedChunks)
 		return mergedChunks
 	}
 
@@ -236,7 +235,6 @@ export class VectorManager {
 	): Promise<void> {
 		let filesToIndex: TFile[]
 		if (options.reindexAll) {
-			console.log("updateVaultIndex reindexAll")
 			filesToIndex = await this.getFilesToIndex({
 				embeddingModel: embeddingModel,
 				excludePatterns: options.excludePatterns,
@@ -245,22 +243,17 @@ export class VectorManager {
 			})
 			await this.repository.clearAllVectors(embeddingModel)
 		} else {
-			console.log("updateVaultIndex for update files")
 			await this.cleanVectorsForDeletedFiles(embeddingModel)
-			console.log("updateVaultIndex cleanVectorsForDeletedFiles")
 			filesToIndex = await this.getFilesToIndex({
 				embeddingModel: embeddingModel,
 				excludePatterns: options.excludePatterns,
 				includePatterns: options.includePatterns,
 			})
-			console.log("get files to index: ", filesToIndex.length)
 			await this.repository.deleteVectorsForMultipleFiles(
 				filesToIndex.map((file) => file.path),
 				embeddingModel,
 			)
-			console.log("delete vectors for multiple files: ", filesToIndex.length)
 		}
-		console.log("get files to index: ", filesToIndex.length)
 
 		if (filesToIndex.length === 0) {
 			return
@@ -288,7 +281,6 @@ export class VectorManager {
 		
 		// 设置最小chunk大小，防止产生太小的chunks
 		const minChunkSize = Math.max(100, Math.floor(options.chunkSize * 0.3)); // 最小50字符或chunk_size的50%
-		console.log("textSplitter chunkSize: ", options.chunkSize, "overlap: ", overlap, "minChunkSize: ", minChunkSize)
 
 		const skippedFiles: string[] = []
 		const embeddingProgress = { completed: 0, totalChunks: 0 }
@@ -330,7 +322,6 @@ export class VectorManager {
 		try {
 			for (let i = 0; i < filesToIndex.length; i += FILE_BATCH_SIZE) {
 				const fileBatch = filesToIndex.slice(i, Math.min(i + FILE_BATCH_SIZE, filesToIndex.length))
-				console.log(`Processing file batch ${Math.floor(i / FILE_BATCH_SIZE) + 1}/${Math.ceil(filesToIndex.length / FILE_BATCH_SIZE)} (${fileBatch.length} files)`)
 				
 				// 第一步：分块处理
 				const batchChunks = (
@@ -385,7 +376,6 @@ export class VectorManager {
 				}
 				
 				// 第二步：嵌入处理
-				console.log(`Embedding ${batchChunks.length} chunks for current file batch`)
 				if (embeddingModel.supportsBatch) {
 					// 支持批量处理的提供商
 					for (let j = 0; j < batchChunks.length; j += embeddingBatchSize) {
@@ -430,7 +420,6 @@ export class VectorManager {
 						// 第三步：立即存储
 						if (embeddedBatch.length > 0) {
 							await this.insertVectorsWithTransaction(embeddedBatch, embeddingModel)
-							console.log(`Stored ${embeddedBatch.length} embedded chunks`)
 						}
 
 						embeddingProgress.completed += embeddingBatch.length
@@ -488,7 +477,6 @@ export class VectorManager {
 						// 第三步：立即存储
 						if (embeddedBatch.length > 0) {
 							await this.insertVectorsWithTransaction(embeddedBatch, embeddingModel)
-							console.log(`Stored ${embeddedBatch.length} embedded chunks`)
 						}
 
 						embeddingProgress.completed += embeddingBatch.length
@@ -544,7 +532,6 @@ export class VectorManager {
 	): Promise<void> {
 		let filesToIndex: TFile[]
 		if (options.reindexAll) {
-			console.log("updateWorkspaceIndex reindexAll")
 			filesToIndex = await this.getFilesToIndexInWorkspace({
 				embeddingModel: embeddingModel,
 				workspace: workspace,
@@ -558,23 +545,18 @@ export class VectorManager {
 				await this.repository.deleteVectorsForMultipleFiles(workspaceFilePaths, embeddingModel)
 			}
 		} else {
-			console.log("updateWorkspaceIndex for update files")
 			await this.cleanVectorsForDeletedFiles(embeddingModel)
-			console.log("updateWorkspaceIndex cleanVectorsForDeletedFiles")
 			filesToIndex = await this.getFilesToIndexInWorkspace({
 				embeddingModel: embeddingModel,
 				workspace: workspace,
 				excludePatterns: options.excludePatterns,
 				includePatterns: options.includePatterns,
 			})
-			console.log("get workspace files to index: ", filesToIndex.length)
 			await this.repository.deleteVectorsForMultipleFiles(
 				filesToIndex.map((file) => file.path),
 				embeddingModel,
 			)
-			console.log("delete vectors for workspace files: ", filesToIndex.length)
 		}
-		console.log("get workspace files to index: ", filesToIndex.length)
 
 		if (filesToIndex.length === 0) {
 			return
@@ -602,7 +584,6 @@ export class VectorManager {
 		
 		// 设置最小chunk大小，防止产生太小的chunks
 		const minChunkSize = Math.max(100, Math.floor(options.chunkSize * 0.5)); // 最小50字符或chunk_size的10%
-		console.log("textSplitter chunkSize: ", options.chunkSize, "overlap: ", overlap, "minChunkSize: ", minChunkSize)
 
 		const skippedFiles: string[] = []
 		const embeddingProgress = { completed: 0, totalChunks: 0 }
@@ -644,7 +625,6 @@ export class VectorManager {
 		try {
 			for (let i = 0; i < filesToIndex.length; i += FILE_BATCH_SIZE) {
 				const fileBatch = filesToIndex.slice(i, Math.min(i + FILE_BATCH_SIZE, filesToIndex.length))
-				console.log(`Processing workspace file batch ${Math.floor(i / FILE_BATCH_SIZE) + 1}/${Math.ceil(filesToIndex.length / FILE_BATCH_SIZE)} (${fileBatch.length} files)`)
 				
 				// 第一步：分块处理
 				const batchChunks = (
@@ -698,15 +678,9 @@ export class VectorManager {
 					continue
 				}
 				
-				// 第二步：嵌入处理
-				console.log(`Embedding ${batchChunks.length} chunks for current workspace file batch`)
-				
+				// 第二步：嵌入处理				
 				if (embeddingModel.supportsBatch) {
 					// 支持批量处理的提供商
-					console.log("batchChunks", batchChunks.map((chunk, index) => ({
-						index,
-						contentLength: chunk.content.length,
-					})))
 					for (let j = 0; j < batchChunks.length; j += embeddingBatchSize) {
 						const embeddingBatch = batchChunks.slice(j, Math.min(j + embeddingBatchSize, batchChunks.length))
 						const embeddedBatch: InsertVector[] = []
@@ -749,7 +723,6 @@ export class VectorManager {
 						// 第三步：立即存储
 						if (embeddedBatch.length > 0) {
 							await this.insertVectorsWithTransaction(embeddedBatch, embeddingModel)
-							console.log(`Stored ${embeddedBatch.length} embedded chunks for workspace`)
 						}
 
 						embeddingProgress.completed += embeddingBatch.length
@@ -807,7 +780,6 @@ export class VectorManager {
 						// 第三步：立即存储
 						if (embeddedBatch.length > 0) {
 							await this.insertVectorsWithTransaction(embeddedBatch, embeddingModel)
-							console.log(`Stored ${embeddedBatch.length} embedded chunks for workspace`)
 						}
 
 						embeddingProgress.completed += embeddingBatch.length
@@ -928,7 +900,6 @@ export class VectorManager {
 					// 支持批量处理的提供商：使用流式处理逻辑
 					for (let i = 0; i < contentChunks.length; i += batchSize) {
 						batchCount++
-						console.log(`Embedding batch ${batchCount} of ${Math.ceil(contentChunks.length / batchSize)}`)
 						const batchChunks = contentChunks.slice(i, Math.min(i + batchSize, contentChunks.length))
 
 						const embeddedBatch: InsertVector[] = []
@@ -1089,7 +1060,6 @@ export class VectorManager {
 		reindexAll?: boolean
 	}): Promise<TFile[]> {
 		let filesToIndex = this.app.vault.getMarkdownFiles()
-		console.log("get all vault files: ", filesToIndex.length)
 
 		filesToIndex = filesToIndex.filter((file) => {
 			return !excludePatterns.some((pattern) => minimatch(file.path, pattern))
@@ -1108,7 +1078,6 @@ export class VectorManager {
 		// 优化流程：使用数据库最大mtime来过滤需要更新的文件
 		try {
 			const maxMtime = await this.repository.getMaxMtime(embeddingModel)
-			console.log("Database max mtime:", maxMtime)
 
 			if (maxMtime === null) {
 				// 数据库中没有任何向量，需要索引所有文件
@@ -1173,8 +1142,6 @@ export class VectorManager {
 			.map(path => this.app.vault.getFileByPath(path))
 			.filter((file): file is TFile => file !== null && file instanceof TFile)
 
-		console.log("get workspace files: ", filesToIndex.length)
-
 		// 应用排除和包含模式
 		filesToIndex = filesToIndex.filter((file) => {
 			return !excludePatterns.some((pattern) => minimatch(file.path, pattern))
@@ -1193,8 +1160,6 @@ export class VectorManager {
 		// 优化流程：使用数据库最大mtime来过滤需要更新的文件
 		try {
 			const maxMtime = await this.repository.getMaxMtime(embeddingModel)
-			console.log("Database max mtime:", maxMtime)
-
 			if (maxMtime === null) {
 				// 数据库中没有任何向量，需要索引所有文件
 				return filesToIndex

@@ -44,6 +44,7 @@ import { regexSearchUsingRipgrep } from '../file-search/regex/ripgrep-regex'
 import { McpHub } from '../mcp/McpHub'
 import { RAGEngine } from '../rag/rag-engine'
 import { TransEngine, TransformationType } from '../transformations/trans-engine'
+import { ApplyEditManager } from '../apply/ApplyEditManager'
 import { DataviewManager } from '../../utils/dataview'
 
 // 工具管理器类型
@@ -52,6 +53,7 @@ export interface ToolManagerDependencies {
 	settings: InfioSettings
 	workspaceManager: WorkspaceManager
 	diffStrategy: DiffStrategy
+	applyEditManager: ApplyEditManager
 	getRAGEngine: () => Promise<RAGEngine>
 	getTransEngine: () => Promise<TransEngine>
 	getMcpHub: () => Promise<McpHub>
@@ -125,235 +127,168 @@ export class ToolManager {
 	 * 需要用户确认的文件编辑工具
 	 */
 	private async executeWriteToFile(toolArgs: WriteToFileToolArgs, applyMsgId: string): Promise<ToolExecutionResult> {
-		const { app } = this.dependencies
+		const { applyEditManager } = this.dependencies
 
-		let opFile = app.workspace.getActiveFile()
-		let newFile = false
+		try {
+			// 注册编辑操作
+			await applyEditManager.registerEdit(applyMsgId, toolArgs)
+			
+			// 打开 ApplyView 展示差异
+			await applyEditManager.openApplyView(applyMsgId)
 
-		if (toolArgs.filepath) {
-			opFile = app.vault.getFileByPath(toolArgs.filepath)
-		}
+			// 等待用户操作完成（使用事件驱动方式）
+			const statusChangeEvent = await applyEditManager.waitForEditCompletion(applyMsgId)
+			
+			const applyStatus = statusChangeEvent.status === 'applied' ? ApplyStatus.Applied : ApplyStatus.Rejected
+			const applyEditContent = statusChangeEvent.status === 'applied' ? 'Changes successfully applied' : 'User rejected changes'
 
-		if (!opFile) {
-			// 确保目录结构存在
-			const dir = path.dirname(toolArgs.filepath)
-			if (dir && dir !== '.' && dir !== '/') {
-				const dirExists = await app.vault.adapter.exists(dir)
-				if (!dirExists) {
-					await app.vault.adapter.mkdir(dir)
+			return {
+				type: toolArgs.type,
+				applyMsgId,
+				applyStatus,
+				returnMsg: {
+					role: 'user',
+					applyStatus: ApplyStatus.Idle,
+					content: null,
+					promptContent: `[${toolArgs.type} for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
+					id: uuidv4(),
+					mentionables: [],
 				}
 			}
-			opFile = await app.vault.create(toolArgs.filepath, '')
-			newFile = true
+		} catch (error) {
+			console.error('Failed to execute write_to_file:', error)
+			return this.createFailureResult(
+				toolArgs.type,
+				applyMsgId,
+				error instanceof Error ? error.message : String(error)
+			)
 		}
-
-		return new Promise<ToolExecutionResult>((resolve) => {
-			app.workspace.getLeaf(true).setViewState({
-				type: APPLY_VIEW_TYPE,
-				active: true,
-				state: {
-					file: opFile.path,
-					oldContent: '',
-					newContent: toolArgs.content,
-					onClose: (applied: boolean) => {
-						const applyStatus = applied ? ApplyStatus.Applied : ApplyStatus.Rejected
-						const applyEditContent = applied ? 'Changes successfully applied' : 'User rejected changes'
-
-						if (newFile) {
-							if (!applied) {
-								app.vault.delete(opFile) // delete the new file if user rejected changes
-							} else {
-								app.workspace.openLinkText(toolArgs.filepath, 'split', true)
-							}
-						}
-
-						resolve({
-							type: toolArgs.type,
-							applyMsgId,
-							applyStatus,
-							returnMsg: {
-								role: 'user',
-								applyStatus: ApplyStatus.Idle,
-								content: null,
-								promptContent: `[${toolArgs.type} for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
-								id: uuidv4(),
-								mentionables: [],
-							}
-						})
-					}
-				} satisfies ApplyViewState,
-			})
-		})
 	}
 
 	/**
 	 * 插入内容工具
 	 */
 	private async executeInsertContent(toolArgs: InsertContentToolArgs, applyMsgId: string): Promise<ToolExecutionResult> {
-		const { app } = this.dependencies
+		const { applyEditManager } = this.dependencies
 
-		let opFile = app.workspace.getActiveFile()
-		if (toolArgs.filepath) {
-			opFile = app.vault.getFileByPath(toolArgs.filepath)
+		try {
+			// 注册编辑操作
+			await applyEditManager.registerEdit(applyMsgId, toolArgs)
+			
+			// 打开 ApplyView 展示差异
+			await applyEditManager.openApplyView(applyMsgId)
+
+			// 等待用户操作完成（使用事件驱动方式）
+			const statusChangeEvent = await applyEditManager.waitForEditCompletion(applyMsgId)
+			
+			const applyStatus = statusChangeEvent.status === 'applied' ? ApplyStatus.Applied : ApplyStatus.Rejected
+			const applyEditContent = statusChangeEvent.status === 'applied' ? 'Changes successfully applied' : 'User rejected changes'
+
+			return {
+				type: toolArgs.type,
+				applyMsgId,
+				applyStatus,
+				returnMsg: {
+					role: 'user',
+					applyStatus: ApplyStatus.Idle,
+					content: null,
+					promptContent: `[${toolArgs.type} for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
+					id: uuidv4(),
+					mentionables: [],
+				}
+			}
+		} catch (error) {
+			console.error('Failed to execute insert_content:', error)
+			return this.createFailureResult(
+				toolArgs.type,
+				applyMsgId,
+				error instanceof Error ? error.message : String(error)
+			)
 		}
-
-		if (!opFile) {
-			throw new Error(`File not found: ${toolArgs.filepath}`)
-		}
-
-		const fileContent = await readTFileContent(opFile, app.vault)
-		const appliedFileContent = await ApplyEditToFile(
-			fileContent,
-			toolArgs.content,
-			toolArgs.startLine,
-			toolArgs.endLine
-		)
-
-		if (!appliedFileContent) {
-			throw new Error('Failed to apply edit changes')
-		}
-
-		return new Promise<ToolExecutionResult>((resolve) => {
-			app.workspace.getLeaf(true).setViewState({
-				type: APPLY_VIEW_TYPE,
-				active: true,
-				state: {
-					file: opFile.path,
-					oldContent: fileContent,
-					newContent: appliedFileContent,
-					onClose: (applied: boolean) => {
-						const applyStatus = applied ? ApplyStatus.Applied : ApplyStatus.Rejected
-						const applyEditContent = applied ? 'Changes successfully applied' : 'User rejected changes'
-
-						resolve({
-							type: toolArgs.type,
-							applyMsgId,
-							applyStatus,
-							returnMsg: {
-								role: 'user',
-								applyStatus: ApplyStatus.Idle,
-								content: null,
-								promptContent: `[${toolArgs.type} for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
-								id: uuidv4(),
-								mentionables: [],
-							}
-						})
-					}
-				} satisfies ApplyViewState,
-			})
-		})
 	}
 
 	/**
 	 * 搜索替换工具
 	 */
 	private async executeSearchAndReplace(toolArgs: SearchAndReplaceToolArgs, applyMsgId: string): Promise<ToolExecutionResult> {
-		const { app } = this.dependencies
+		const { applyEditManager } = this.dependencies
 
-		let opFile = app.workspace.getActiveFile()
-		if (toolArgs.filepath) {
-			opFile = app.vault.getFileByPath(toolArgs.filepath)
+		try {
+			// 注册编辑操作
+			await applyEditManager.registerEdit(applyMsgId, toolArgs)
+			
+			// 打开 ApplyView 展示差异
+			await applyEditManager.openApplyView(applyMsgId)
+
+			// 等待用户操作完成（使用事件驱动方式）
+			const statusChangeEvent = await applyEditManager.waitForEditCompletion(applyMsgId)
+			
+			const applyStatus = statusChangeEvent.status === 'applied' ? ApplyStatus.Applied : ApplyStatus.Rejected
+			const applyEditContent = statusChangeEvent.status === 'applied' ? 'Changes successfully applied' : 'User rejected changes'
+
+			return {
+				type: 'search_and_replace',
+				applyMsgId,
+				applyStatus,
+				returnMsg: {
+					role: 'user',
+					applyStatus: ApplyStatus.Idle,
+					content: null,
+					promptContent: `[search_and_replace for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
+					id: uuidv4(),
+					mentionables: [],
+				}
+			}
+		} catch (error) {
+			console.error('Failed to execute search_and_replace:', error)
+			return this.createFailureResult(
+				toolArgs.type,
+				applyMsgId,
+				error instanceof Error ? error.message : String(error)
+			)
 		}
-
-		if (!opFile) {
-			throw new Error(`File not found: ${toolArgs.filepath}`)
-		}
-
-		const fileContent = await readTFileContent(opFile, app.vault)
-		const appliedFileContent = await SearchAndReplace(
-			fileContent,
-			toolArgs.operations
-		)
-
-		if (!appliedFileContent) {
-			throw new Error('Failed to search_and_replace')
-		}
-
-		return new Promise<ToolExecutionResult>((resolve) => {
-			app.workspace.getLeaf(true).setViewState({
-				type: APPLY_VIEW_TYPE,
-				active: true,
-				state: {
-					file: opFile.path,
-					oldContent: fileContent,
-					newContent: appliedFileContent,
-					onClose: (applied: boolean) => {
-						const applyStatus = applied ? ApplyStatus.Applied : ApplyStatus.Rejected
-						const applyEditContent = applied ? 'Changes successfully applied' : 'User rejected changes'
-
-						resolve({
-							type: 'search_and_replace',
-							applyMsgId,
-							applyStatus,
-							returnMsg: {
-								role: 'user',
-								applyStatus: ApplyStatus.Idle,
-								content: null,
-								promptContent: `[search_and_replace for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
-								id: uuidv4(),
-								mentionables: [],
-							}
-						})
-					}
-				} satisfies ApplyViewState,
-			})
-		})
 	}
 
 	/**
 	 * 应用差异工具
 	 */
 	private async executeApplyDiff(toolArgs: ApplyDiffToolArgs, applyMsgId: string): Promise<ToolExecutionResult> {
-		const { app, diffStrategy } = this.dependencies
+		const { applyEditManager } = this.dependencies
 
-		let opFile = app.workspace.getActiveFile()
-		if (toolArgs.filepath) {
-			opFile = app.vault.getFileByPath(toolArgs.filepath)
+		try {
+			// 注册编辑操作
+			await applyEditManager.registerEdit(applyMsgId, toolArgs)
+			
+			// 打开 ApplyView 展示差异
+			await applyEditManager.openApplyView(applyMsgId)
+
+			// 等待用户操作完成（使用事件驱动方式）
+			const statusChangeEvent = await applyEditManager.waitForEditCompletion(applyMsgId)
+			
+			const applyStatus = statusChangeEvent.status === 'applied' ? ApplyStatus.Applied : ApplyStatus.Rejected
+			const applyEditContent = statusChangeEvent.status === 'applied' ? 'Changes successfully applied' : 'User rejected changes'
+
+			return {
+				type: 'apply_diff',
+				applyMsgId,
+				applyStatus,
+				returnMsg: {
+					role: 'user',
+					applyStatus: ApplyStatus.Idle,
+					content: null,
+					promptContent: `[apply_diff for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
+					id: uuidv4(),
+					mentionables: [],
+				}
+			}
+		} catch (error) {
+			console.error('Failed to execute apply_diff:', error)
+			return this.createFailureResult(
+				toolArgs.type,
+				applyMsgId,
+				error instanceof Error ? error.message : String(error)
+			)
 		}
-
-		if (!opFile) {
-			throw new Error(`File not found: ${toolArgs.filepath}`)
-		}
-
-		const fileContent = await readTFileContent(opFile, app.vault)
-		const appliedResult = await diffStrategy.applyDiff(
-			fileContent,
-			toolArgs.diff
-		)
-
-		if (!appliedResult || !appliedResult.success) {
-			throw new Error('Failed to apply_diff')
-		}
-
-		return new Promise<ToolExecutionResult>((resolve) => {
-			app.workspace.getLeaf(true).setViewState({
-				type: APPLY_VIEW_TYPE,
-				active: true,
-				state: {
-					file: opFile.path,
-					oldContent: fileContent,
-					newContent: appliedResult.content,
-					onClose: (applied: boolean) => {
-						const applyStatus = applied ? ApplyStatus.Applied : ApplyStatus.Rejected
-						const applyEditContent = applied ? 'Changes successfully applied' : 'User rejected changes'
-
-						resolve({
-							type: 'apply_diff',
-							applyMsgId,
-							applyStatus,
-							returnMsg: {
-								role: 'user',
-								applyStatus: ApplyStatus.Idle,
-								content: null,
-								promptContent: `[apply_diff for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
-								id: uuidv4(),
-								mentionables: [],
-							}
-						})
-					}
-				} satisfies ApplyViewState,
-			})
-		})
 	}
 
 	/**

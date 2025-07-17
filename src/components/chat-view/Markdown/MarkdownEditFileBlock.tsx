@@ -1,10 +1,6 @@
 import { Check, ChevronDown, ChevronRight, CopyIcon, Edit, Loader2, X } from 'lucide-react'
-
-import * as pathUtils from 'path'
-
 import { PropsWithChildren, useEffect, useMemo, useState } from 'react'
 
-import { useApp } from "../../../contexts/AppContext"
 import { useDarkModeContext } from "../../../contexts/DarkModeContext"
 import { t } from '../../../lang/helpers'
 import { ApplyStatus, ToolArgs } from "../../../types/apply"
@@ -39,7 +35,6 @@ export default function MarkdownEditFileBlock({
 	const [applying, setApplying] = useState(false)
 	const [isResultOpen, setIsResultOpen] = useState(true)
 	const [isHovered, setIsHovered] = useState(false)
-	const app = useApp()
 	const { isDarkMode } = useDarkModeContext()
 
 	const wrapLines = useMemo(() => {
@@ -84,44 +79,14 @@ export default function MarkdownEditFileBlock({
 	}
 
 	const handleAccept = async () => {
-		if (applying || !path) {
+		if (applying || !onAccept) {
 			return
 		}
 		setApplying(true)
 		try {
-			// 获取或创建文件
-			let opFile = app.vault.getFileByPath(path)
-			let newFile = false
-
-			if (!opFile) {
-				// 确保目录结构存在
-				const dir = pathUtils.dirname(path)
-				if (dir && dir !== '.' && dir !== '/') {
-					const dirExists = await app.vault.adapter.exists(dir)
-					if (!dirExists) {
-						await app.vault.adapter.mkdir(dir)
-					}
-				}
-				opFile = await app.vault.create(path, '')
-				newFile = true
-			}
-
-			// 写入内容
-			await app.vault.modify(opFile, String(children))
-
-			// 如果是新文件，在新标签页中打开
-			if (newFile) {
-				app.workspace.openLinkText(path, 'split', true)
-			}
-
-			// 通知成功
-			if (onAccept) {
-				onAccept()
-			}
-
+			onAccept()
 		} catch (error) {
 			console.error('Failed to accept changes:', error)
-			// TODO: 可以考虑添加错误处理，比如显示错误提示
 		} finally {
 			setApplying(false)
 		}

@@ -8,24 +8,30 @@ import {
 import { DiffStrategy } from '../core/diff/DiffStrategy'
 
 
-const DiffStrategyContext = createContext<DiffStrategy>(null)
+const DiffStrategyContext = createContext<() => DiffStrategy | undefined>(null)
 
 export function DiffStrategyProvider({
-	diffStrategy,
+	getDiffStrategy,
 	children,
-}: PropsWithChildren<{ diffStrategy: DiffStrategy }>) {
+}: PropsWithChildren<{ getDiffStrategy: () => DiffStrategy | undefined }>) {
 
 	const value = useMemo(() => {
-		return diffStrategy
-	}, [diffStrategy])
+		return getDiffStrategy
+	}, [getDiffStrategy])
 
 	return <DiffStrategyContext.Provider value={value}>{children}</DiffStrategyContext.Provider>
 }
 
 export function useDiffStrategy() {
-	const context = useContext(DiffStrategyContext)
-	if (!context) {
+	const getDiffStrategy = useContext(DiffStrategyContext)
+	if (!getDiffStrategy) {
 		throw new Error('DiffStrategyContext is not initialized')
 	}
-	return context
+	
+	const diffStrategy = getDiffStrategy()
+	if (!diffStrategy) {
+		throw new Error('DiffStrategy is not available')
+	}
+	
+	return diffStrategy
 }

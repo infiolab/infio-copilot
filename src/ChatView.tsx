@@ -6,6 +6,7 @@ import { Root, createRoot } from 'react-dom/client'
 import Chat, { ChatProps, ChatRef } from './components/chat-view/ChatView'
 import { CHAT_VIEW_TYPE } from './constants'
 import { AppProvider } from './contexts/AppContext'
+import { ApplyEditManagerProvider } from './contexts/ApplyEditManagerContext'
 import { DarkModeProvider } from './contexts/DarkModeContext'
 import { DatabaseProvider } from './contexts/DatabaseContext'
 import { DataviewProvider } from './contexts/DataviewContext'
@@ -95,24 +96,29 @@ export class ChatView extends ItemView {
 							<DatabaseProvider
 								getDatabaseManager={() => this.plugin.getDbManager()}
 							>
-								<DiffStrategyProvider diffStrategy={this.plugin.diffStrategy}>
-									<RAGProvider getRAGEngine={() => this.plugin.getRAGEngine()}>
-										<TransProvider getTransEngine={() => this.plugin.getTransEngine()}>
-											<DataviewProvider dataviewManager={this.plugin.dataviewManager}>
-											<McpHubProvider getMcpHub={() => this.plugin.getMcpHub()}>
-												<QueryClientProvider client={queryClient}>
-													<React.StrictMode>
-														<DialogProvider
-															container={containerElement}
-														>
-															<Chat ref={this.chatRef} {...this.initialChatProps} />
-														</DialogProvider>
-													</React.StrictMode>
-												</QueryClientProvider>
-											</McpHubProvider>
-										</DataviewProvider>
-										</TransProvider>
-									</RAGProvider>
+								<DiffStrategyProvider getDiffStrategy={() => this.plugin.diffStrategy}>
+									<ApplyEditManagerProvider getApplyEditManager={() => {
+										console.log('[ChatView] getApplyEditManager called, this.plugin.applyEditManager:', this.plugin.applyEditManager)
+										return this.plugin.applyEditManager
+									}}>
+										<RAGProvider getRAGEngine={() => this.plugin.getRAGEngine()}>
+											<TransProvider getTransEngine={() => this.plugin.getTransEngine()}>
+												<DataviewProvider dataviewManager={this.plugin.dataviewManager}>
+													<McpHubProvider getMcpHub={() => this.plugin.getMcpHub()}>
+														<QueryClientProvider client={queryClient}>
+															<React.StrictMode>
+																<DialogProvider
+																	container={containerElement}
+																>
+																	<Chat ref={this.chatRef} {...this.initialChatProps} />
+																</DialogProvider>
+															</React.StrictMode>
+														</QueryClientProvider>
+													</McpHubProvider>
+												</DataviewProvider>
+											</TransProvider>
+										</RAGProvider>
+									</ApplyEditManagerProvider>
 								</DiffStrategyProvider>
 							</DatabaseProvider>
 						</LLMProvider>

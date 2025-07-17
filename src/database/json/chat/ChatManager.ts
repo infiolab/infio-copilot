@@ -264,7 +264,6 @@ export class ChatManager extends AbstractJsonRepository<
 	}
 
 	public async listChats(workspaceFilter?: string): Promise<ChatConversationMeta[]> {
-		console.log('listChats', workspaceFilter)
 		const metadata = await this.listMetadata()
 
 		// Use a Map to store the latest version of each chat by ID.

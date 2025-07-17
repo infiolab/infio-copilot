@@ -26,9 +26,8 @@ export class CustomModeManager extends AbstractJsonRepository<
 	}
 
 	protected parseFileName(fileName: string): CustomModeMetadata | null {
-		const match = fileName.match(
-			new RegExp(`^v${CUSTOM_MODE_SCHEMA_VERSION}_(.+)_([0-9a-f-]+)\\.json$`),
-		)
+		const regex = new RegExp(`^v${CUSTOM_MODE_SCHEMA_VERSION}_(.+)_([0-9a-f-]+)\\.json$`)
+		const match = regex.exec(fileName)
 		if (!match) return null
 
 		const encodedName = match[1]

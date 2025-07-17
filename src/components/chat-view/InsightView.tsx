@@ -221,20 +221,6 @@ const InsightView = () => {
 				// 刷新洞察列表
 				await loadInsights()
 
-				// 显示成功消息和统计信息
-				console.log(t('insights.success.workspaceInitialized', { name: currentWorkspace.name }))
-				console.log(`✅ 深度处理完成统计:`)
-				console.log(`📁 文件: ${result.processedFiles} 个处理成功`)
-				console.log(`📂 文件夹: ${result.processedFolders} 个处理成功`)
-				console.log(`📊 总计: ${result.totalItems} 个项目（包含所有子项目）`)
-				if (result.skippedItems > 0) {
-					console.log(`⚠️  跳过: ${result.skippedItems} 个项目`)
-				}
-				if (result.insightId) {
-					console.log(`🔍 洞察ID: ${result.insightId}`)
-				}
-				console.log(`💡 工作区摘要仅使用顶层配置项目，避免内容重叠`)
-
 				// 显示成功状态
 				setInitSuccess({
 					show: true,
@@ -286,9 +272,6 @@ const InsightView = () => {
 			const result = await transEngine.deleteWorkspaceTransformations(currentWorkspace)
 
 			if (result.success) {
-				const workspaceName = currentWorkspace?.name || 'vault'
-				console.log(t('insights.success.workspaceDeleted', { name: workspaceName, count: result.deletedCount }))
-
 				// 刷新洞察列表
 				await loadInsights()
 
@@ -339,8 +322,6 @@ const InsightView = () => {
 			const result = await transEngine.deleteSingleInsight(insightId)
 
 			if (result.success) {
-				console.log(t('insights.success.insightDeleted', { id: insightId }))
-
 				// 刷新洞察列表
 				await loadInsights()
 			} else {

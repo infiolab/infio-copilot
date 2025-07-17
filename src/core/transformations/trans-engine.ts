@@ -427,12 +427,6 @@ export class TransEngine {
 	> {
 		// 如果没有必要的参数，跳过缓存检查
 		if (!this.embeddingModel || !this.insightManager) {
-			console.log("TransEngine: 跳过缓存检查");
-			console.log("embeddingModel:", this.embeddingModel ? "已初始化" : "未初始化");
-			console.log("insightManager:", this.insightManager ? "已初始化" : "未初始化");
-			console.log("embeddingModelId:", this.settings.embeddingModelId);
-			console.log("embeddingModelProvider:", this.settings.embeddingModelProvider);
-			console.log("提示：请在插件设置中配置嵌入模型，或点击'一键配置'按钮");
 			return {
 				success: true,
 				foundCache: false
@@ -441,7 +435,6 @@ export class TransEngine {
 
 		try {
 			const existingInsights = await this.insightManager.getInsightsBySourcePath(sourcePath, this.embeddingModel);
-			console.log("existingInsights", existingInsights);
 
 			// 查找匹配的转换类型和修改时间的洞察
 			const matchingInsight = existingInsights.find(insight =>
@@ -451,7 +444,6 @@ export class TransEngine {
 
 			if (matchingInsight) {
 				// 找到匹配的缓存结果，直接返回
-				console.log(`使用缓存的转换结果: ${transformationType} for ${sourcePath}`);
 				return {
 					success: true,
 					foundCache: true,
@@ -525,11 +517,6 @@ export class TransEngine {
 		contentType: 'document' | 'tag' | 'folder'
 	): Promise<void> {
 		if (!this.embeddingModel || !this.insightManager) {
-			console.log("TransEngine: 无法保存到数据库");
-			console.log("embeddingModel:", this.embeddingModel ? "已初始化" : "未初始化");
-			console.log("insightManager:", this.insightManager ? "已初始化" : "未初始化");
-			console.log("embeddingModelId:", this.settings.embeddingModelId);
-			console.log("embeddingModelProvider:", this.settings.embeddingModelProvider);
 			return;
 		}
 
@@ -550,7 +537,6 @@ export class TransEngine {
 				this.embeddingModel
 			);
 
-			console.log(`转换结果已成功保存到数据库: ${transformationType} for ${sourcePath}`);
 		} catch (dbError) {
 			console.warn('保存洞察到数据库失败:', dbError);
 			// 后台任务失败不影响主要的转换结果
@@ -561,7 +547,6 @@ export class TransEngine {
 	 * 主要的转换执行方法 - 支持所有类型的转换
 	 */
 	async runTransformation(params: TransformationParams): Promise<TransformationResult> {
-		console.log("runTransformation", params);
 		const {
 			filePath,
 			contentType = 'document',
@@ -926,11 +911,6 @@ export class TransEngine {
 	> {
 		if (!this.embeddingModel || !this.insightManager) {
 			console.warn('TransEngine: embedding model or insight manager not available')
-			console.log("embeddingModel:", this.embeddingModel ? "已初始化" : "未初始化");
-			console.log("insightManager:", this.insightManager ? "已初始化" : "未初始化");
-			console.log("embeddingModelId:", this.settings.embeddingModelId);
-			console.log("embeddingModelProvider:", this.settings.embeddingModelProvider);
-			console.log("提示：请在插件设置中配置嵌入模型，或点击'一键配置'按钮");
 			return []
 		}
 
@@ -986,11 +966,6 @@ export class TransEngine {
 	async getAllInsights(): Promise<Omit<import('../../database/schema').SelectSourceInsight, 'embedding'>[]> {
 		if (!this.embeddingModel || !this.insightManager) {
 			console.warn('TransEngine: embedding model or insight manager not available')
-			console.log("embeddingModel:", this.embeddingModel ? "已初始化" : "未初始化");
-			console.log("insightManager:", this.insightManager ? "已初始化" : "未初始化");
-			console.log("embeddingModelId:", this.settings.embeddingModelId);
-			console.log("embeddingModelProvider:", this.settings.embeddingModelProvider);
-			console.log("提示：请在插件设置中配置嵌入模型，或点击'一键配置'按钮");
 			return []
 		}
 
@@ -1280,7 +1255,6 @@ export class TransEngine {
 				},
 				this.embeddingModel
 			)
-			console.log(`文件夹摘要已保存到数据库: ${folderPath}`)
 		} catch (error) {
 			console.warn('保存文件夹摘要到数据库失败:', error)
 		}
@@ -1385,8 +1359,6 @@ export class TransEngine {
 				// 对于 vault 工作区，删除所有洞察
 				await this.insightManager.clearAllInsights(this.embeddingModel)
 
-				console.log(`已删除 vault 工作区的所有 ${allInsights.length} 个转换`)
-
 				return {
 					success: true,
 					deletedCount: allInsights.length
@@ -1406,7 +1378,6 @@ export class TransEngine {
 			// 批量删除洞察
 			if (uniquePaths.length > 0) {
 				await this.insightManager.deleteInsightsBySourcePaths(uniquePaths, this.embeddingModel)
-				console.log(`已删除工作区 "${workspaceName}" 的 ${deletedCount} 个转换，涉及 ${uniquePaths.length} 个路径`)
 			}
 
 			return {
@@ -1455,7 +1426,6 @@ export class TransEngine {
 
 			if (workspaceInsights.length > 0) {
 				await this.insightManager.deleteInsightsBySourcePath(workspaceInsightPath, this.embeddingModel)
-				console.log(`已删除工作区 "${workspaceName}" 的 ${workspaceInsights.length} 个转换`)
 			}
 
 			return {
@@ -1493,8 +1463,6 @@ export class TransEngine {
 		try {
 			// 直接按ID删除洞察
 			await this.insightManager.deleteInsightById(insightId, this.embeddingModel)
-
-			console.log(`已删除洞察 ID: ${insightId}`)
 
 			return {
 				success: true
@@ -1593,7 +1561,6 @@ export class TransEngine {
 					}
 				}
 			}
-			console.log('allItems', allItems);
 			if (allItems.length === 0) {
 				return {
 					success: false,
@@ -1749,8 +1716,6 @@ export class TransEngine {
 					maxMtime = item.mtime;
 				}
 			}
-			console.log('maxMtime', maxMtime);
-
 			// 如果没有找到任何有效的 mtime，使用当前时间
 			const sourceMtime = maxMtime > 0 ? maxMtime : 0;
 
@@ -1779,8 +1744,6 @@ export class TransEngine {
 
 			if (cacheCheckResult.foundCache && cacheCheckResult.result.success) {
 				// 找到缓存的工作区洞察，直接返回
-				console.log(`使用缓存的工作区洞察: ${workspace.name}`);
-
 				onProgress?.({
 					stage: '使用缓存洞察',
 					current: 1,

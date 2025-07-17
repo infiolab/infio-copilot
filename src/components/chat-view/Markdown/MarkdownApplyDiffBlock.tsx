@@ -1,5 +1,5 @@
-import { Check, ChevronDown, ChevronRight, Diff, Loader2, X } from 'lucide-react'
-import { PropsWithChildren, useState } from 'react'
+import { Check, ChevronDown, ChevronRight, CopyIcon, Diff, Loader2, X } from 'lucide-react'
+import { PropsWithChildren, useEffect, useState } from 'react'
 
 import { useDarkModeContext } from "../../../contexts/DarkModeContext"
 import { t } from '../../../lang/helpers'
@@ -11,6 +11,8 @@ export default function MarkdownApplyDiffBlock({
 	mode,
 	applyStatus,
 	onApply,
+	onAccept,
+	onReject,
 	path,
 	diff,
 	finish,
@@ -18,17 +20,37 @@ export default function MarkdownApplyDiffBlock({
 	mode: string
 	applyStatus: ApplyStatus
 	onApply: (args: ToolArgs) => void
+	onAccept?: () => void
+	onReject?: () => void
 	path: string
 	diff: string
 	finish: boolean
 }>) {
+	const [copied, setCopied] = useState(false)
 	const [applying, setApplying] = useState(false)
 	const [isResultOpen, setIsResultOpen] = useState(true)
 	const [isHovered, setIsHovered] = useState(false)
 	const { isDarkMode } = useDarkModeContext()
 
+	// Auto-apply when finish is true
+	useEffect(() => {
+		if (finish && applyStatus === ApplyStatus.Idle) {
+			handleApply()
+		}
+	}, [finish, applyStatus])
+
+	const handleCopy = async () => {
+		try {
+			await navigator.clipboard.writeText(diff)
+			setCopied(true)
+			setTimeout(() => setCopied(false), 2000)
+		} catch (err) {
+			console.error('Failed to copy text: ', err)
+		}
+	}
+
 	const handleApply = async () => {
-		if (applying || !finish) {
+		if (applying) {
 			return
 		}
 		setApplying(true)
@@ -45,6 +67,26 @@ export default function MarkdownApplyDiffBlock({
 		}
 	}
 
+	const handleAccept = async () => {
+		if (applying || !onAccept) {
+			return
+		}
+		setApplying(true)
+		try {
+			onAccept()
+		} catch (error) {
+			console.error('Failed to accept changes:', error)
+		} finally {
+			setApplying(false)
+		}
+	}
+
+	const handleReject = () => {
+		if (onReject) {
+			onReject()
+		}
+	}
+
 	// 获取应用状态图标
 	const getStatusIcon = () => {
 		if (applyStatus === ApplyStatus.Applied) {
@@ -55,40 +97,15 @@ export default function MarkdownApplyDiffBlock({
 		return null
 	}
 
-	// 获取应用按钮文本和样式
-	const getApplyButtonContent = () => {
-		if (!finish) {
-			return {
-				text: <><Loader2 className="spinner" size={14} /> {t('chat.reactMarkdown.loading')}</>,
-				className: 'infio-apply-button-applying',
-				disabled: true
-			}
-		}
-		
-		if (applying) {
-			return {
-				text: <><Loader2 className="spinner" size={14} /> {t('chat.reactMarkdown.applying')}</>,
-				className: 'infio-apply-button-applying',
-				disabled: true
-			}
-		}
-		
-		if (applyStatus === ApplyStatus.Idle) {
-			return {
-				text: t('chat.reactMarkdown.apply'),
-				className: 'infio-apply-button-primary',
-				disabled: false
-			}
-		} else {
-			return {
-				text: t('chat.reactMarkdown.reapply'),
-				className: 'infio-apply-button-secondary',
-				disabled: false
-			}
-		}
+	// 判断是否应该显示操作按钮
+	const shouldShowActionButtons = () => {
+		return finish && !applying
 	}
 
-	const buttonContent = getApplyButtonContent()
+	// 判断是否应该显示编辑状态
+	const shouldShowEditing = () => {
+		return !finish && !applying
+	}
 
 	return (
 		<div
@@ -108,18 +125,58 @@ export default function MarkdownApplyDiffBlock({
 						) : (
 							<Diff size={14} className="infio-chat-code-block-header-icon" />
 						)}
-						{mode}: {path}
+						{t('chat.reactMarkdown.editOrApplyDiff').replace('{mode}', mode).replace('{path}', path)}
 						{getStatusIcon()}
 					</div>
 				)}
 				<div className={'infio-chat-code-block-header-button'}>
 					<button
-						onClick={handleApply}
-						className={`infio-apply-button ${buttonContent.className}`}
-						disabled={buttonContent.disabled}
+						onClick={() => {
+							handleCopy()
+						}}
 					>
-						{buttonContent.text}
+						{copied ? (
+							<>
+								<CopyIcon size={14} color="var(--color-green)" />
+							</>
+						) : (
+							<>
+								<CopyIcon size={14} />
+							</>
+						)}
 					</button>
+
+					{applying && (
+						<div className="infio-applying-status">
+							<Loader2 className="spinner" size={14} />
+						</div>
+					)}
+
+					{shouldShowEditing() && (
+						<div className="infio-editing-status">
+							{t('chat.reactMarkdown.editing')}
+						</div>
+					)}
+
+					{shouldShowActionButtons() && (
+						<>
+							<button
+								onClick={handleAccept}
+								className="infio-apply-button infio-apply-button-primary"
+								disabled={applyStatus !== ApplyStatus.Idle}
+							>
+								<Check size={14} />
+								{t('applyView.acceptAll').replace('{{shortcut}}', '')}
+							</button>
+							<button
+								onClick={handleReject}
+								className="infio-apply-button infio-reject-button"
+							>
+								<X size={14} />
+								{t('applyView.rejectAll').replace('{{shortcut}}', '')}
+							</button>
+						</>
+					)}
 				</div>
 			</div>
 			{isResultOpen && (

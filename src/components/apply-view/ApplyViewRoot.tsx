@@ -5,6 +5,7 @@ import ContentEditable from 'react-contenteditable'
 
 import { ApplyViewState } from '../../ApplyView'
 import { useApp } from '../../contexts/AppContext'
+import { useApplyEditManager } from '../../contexts/ApplyEditManagerContext'
 import { t } from '../../lang/helpers'
 
 export default function ApplyViewRoot({ state, close }: {
@@ -24,6 +25,7 @@ export default function ApplyViewRoot({ state, close }: {
 	}
 
 	const app = useApp()
+	const applyEditManager = useApplyEditManager()
 
 	// Track which lines have been accepted or excluded
 	const [diffStatus, setDiffStatus] = useState<Array<'active' | 'accepted' | 'excluded'>>([])
@@ -35,13 +37,33 @@ export default function ApplyViewRoot({ state, close }: {
 		return initialDiff
 	})
 
-	// Store edited content for each diff part
-	const [editedContents, setEditedContents] = useState<string[]>(
-		diff.map(part => part.value)
-	)
+	const [editedContents, setEditedContents] = useState<string[]>(() => {
+		return diff.map((change) => change.value)
+	})
+
+	// After the state is initialized, set up the status array
+	useEffect(() => {
+		if (diffStatus.length === 0) {
+			setDiffStatus(diff.map(() => 'active'))
+		}
+	}, [diff, diffStatus.length])
 
 	const handleAccept = async () => {
-		// Filter and process content based on diffStatus
+		// 如果有 editId，使用 ApplyEditManager 处理
+		if (state.editId && applyEditManager) {
+			try {
+				await applyEditManager.apply(state.editId)
+				if (state.onClose) {
+					state.onClose(true)
+				}
+				close()
+			} catch (error) {
+				console.error('Failed to apply edit:', error)
+			}
+			return
+		}
+
+		// 兼容旧的直接应用逻辑
 		const newContent = diff.reduce((result, change, index) => {
 			// Keep unchanged content, non-excluded additions, or excluded removals
 			if ((!change.added && !change.removed) ||
@@ -63,6 +85,15 @@ export default function ApplyViewRoot({ state, close }: {
 	}
 
 	const handleReject = async () => {
+		// 如果有 editId，使用 ApplyEditManager 处理
+		if (state.editId && applyEditManager) {
+			try {
+				await applyEditManager.reject(state.editId)
+			} catch (error) {
+				console.error('Failed to reject edit:', error)
+			}
+		}
+
 		if (state.onClose) {
 			state.onClose(false)
 		}

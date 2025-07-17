@@ -7,7 +7,8 @@ import { ApplyView } from './ApplyView'
 import { ChatView } from './ChatView'
 import { ChatProps } from './components/chat-view/ChatView'
 import { APPLY_VIEW_TYPE, CHAT_VIEW_TYPE, JSON_VIEW_TYPE, PREVIEW_VIEW_TYPE } from './constants'
-import { getDiffStrategy } from "./core/diff/DiffStrategy"
+import { ApplyEditManager } from './core/apply/ApplyEditManager'
+import { getDiffStrategy, DiffStrategy } from "./core/diff/DiffStrategy"
 import { InlineEdit } from './core/edit/inline-edit-processor'
 import { McpHub } from './core/mcp/McpHub'
 import { RAGEngine } from './core/rag/rag-engine'
@@ -58,6 +59,7 @@ export default class InfioPlugin extends Plugin {
 	inlineEdit: InlineEdit | null = null
 	diffStrategy?: DiffStrategy
 	dataviewManager: DataviewManager | null = null
+	applyEditManager: ApplyEditManager | null = null
 
 	async onload() {
 		// load settings
@@ -80,14 +82,35 @@ export default class InfioPlugin extends Plugin {
 		this.embeddingManager = new EmbeddingManager()
 		console.log('EmbeddingManager initialized')
 
+		// initialize diff strategy BEFORE view registration
+		this.diffStrategy = getDiffStrategy(
+			this.settings.chatModelId || "",
+			this.app,
+			this.settings.fuzzyMatchThreshold,
+			this.settings.experimentalDiffStrategy,
+			this.settings.multiSearchReplaceDiffStrategy,
+		)
+
+		// initialize apply edit manager BEFORE view registration
+		console.log('[main.ts] About to initialize ApplyEditManager')
+		console.log('[main.ts] this.app:', !!this.app)
+		console.log('[main.ts] this.diffStrategy:', this.diffStrategy)
+		try {
+			this.applyEditManager = new ApplyEditManager(this.app, this.diffStrategy as DiffStrategy)
+			console.log('[main.ts] ApplyEditManager initialized successfully:', this.applyEditManager)
+		} catch (error) {
+			console.error('[main.ts] Failed to initialize ApplyEditManager:', error)
+			this.applyEditManager = null
+		}
+
 		// add icon to ribbon
 		this.addRibbonIcon('wand-sparkles', t('main.openInfioCopilot'), () =>
 			this.openChatView(),
 		)
 
-		// register views
+		// register views AFTER critical dependencies are initialized
 		this.registerView(CHAT_VIEW_TYPE, (leaf) => new ChatView(leaf, this))
-		this.registerView(APPLY_VIEW_TYPE, (leaf) => new ApplyView(leaf))
+		this.registerView(APPLY_VIEW_TYPE, (leaf) => new ApplyView(leaf, this))
 		this.registerView(PREVIEW_VIEW_TYPE, (leaf) => new PreviewView(leaf))
 		this.registerView(JSON_VIEW_TYPE, (leaf) => new JsonView(leaf, this))
 
@@ -105,15 +128,6 @@ export default class InfioPlugin extends Plugin {
 			this.app
 		);
 
-		// initialize diff strategy
-		this.diffStrategy = getDiffStrategy(
-			this.settings.chatModelId || "",
-			this.app,
-			this.settings.fuzzyMatchThreshold,
-			this.settings.experimentalDiffStrategy,
-			this.settings.multiSearchReplaceDiffStrategy,
-		)
-
 		// add settings change listener
 		this.addSettingsListener((newSettings) => {
 			// Update inlineEdit when settings change
@@ -128,6 +142,18 @@ export default class InfioPlugin extends Plugin {
 				this.settings.experimentalDiffStrategy,
 				this.settings.multiSearchReplaceDiffStrategy,
 			)
+
+			// Update apply edit manager when settings change
+			console.log('[main.ts] About to re-initialize ApplyEditManager in settings change')
+			console.log('[main.ts] this.app:', !!this.app)
+			console.log('[main.ts] this.diffStrategy:', this.diffStrategy)
+			try {
+				this.applyEditManager = new ApplyEditManager(this.app, this.diffStrategy as DiffStrategy)
+				console.log('[main.ts] ApplyEditManager re-initialized successfully:', this.applyEditManager)
+			} catch (error) {
+				console.error('[main.ts] Failed to re-initialize ApplyEditManager:', error)
+				this.applyEditManager = null
+			}
 			// Update MCP Hub when settings change
 			if (this.settings.mcpEnabled && !this.mcpHub) {
 				void this.getMcpHub()

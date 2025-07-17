@@ -16,6 +16,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { ApplyView } from '../../ApplyView'
 import { useApp } from '../../contexts/AppContext'
+import { useApplyEditManager } from '../../contexts/ApplyEditManagerContext'
 import { useDataview } from '../../contexts/DataviewContext'
 import { useDiffStrategy } from '../../contexts/DiffStrategyContext'
 import { useLLM } from '../../contexts/LLMContext'
@@ -50,7 +51,6 @@ import {
 } from '../../utils/mentionable'
 import { openSettingsModalWithError } from '../../utils/open-settings-modal'
 import { PromptGenerator } from '../../utils/prompt-generator'
-// Removed empty line above, added one below for group separation
 import { onEnt } from '../../utils/web-search'
 import ErrorBoundary from '../common/ErrorBoundary'
 
@@ -128,7 +128,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		chatList,
 	} = useChatHistory()
 	const { streamResponse, chatModel } = useLLM()
-	
+
 	// 使用全局状态管理
 	const {
 		currentConversationId: storeConversationId,
@@ -148,19 +148,22 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		return new WorkspaceManager(app)
 	}, [app])
 
+	// Get applyEditManager before toolManager to avoid initialization order issues
+	const applyEditManager = useApplyEditManager()
 	const toolManager = useMemo(() => {
 		const dependencies: ToolManagerDependencies = {
 			app,
 			settings,
 			workspaceManager,
 			diffStrategy,
+			applyEditManager,
 			getRAGEngine,
 			getTransEngine,
 			getMcpHub,
 			getDataviewManager: () => dataviewManager,
 		}
 		return new ToolManager(dependencies)
-	}, [app, settings, workspaceManager, diffStrategy, getRAGEngine, getTransEngine, getMcpHub, dataviewManager])
+	}, [app, settings, workspaceManager, diffStrategy, applyEditManager, getRAGEngine, getTransEngine, getMcpHub, dataviewManager])
 
 	const [inputMessage, setInputMessage] = useState<ChatUserMessage>(() => {
 		const newMessage = getNewInputMessage(app, settings.defaultMention)
@@ -187,15 +190,15 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 	)
 	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
 	const [focusedMessageId, setFocusedMessageId] = useState<string | null>(null)
-	
+
 	// 当前对话ID，初始化时总是生成新的
 	const [currentConversationId, setCurrentConversationId] = useState<string>(uuidv4())
-	
+
 	// 初始化加载状态
 	const [isInitialLoading, setIsInitialLoading] = useState<boolean>(
 		shouldAutoLoadLastChat && !!storeConversationId
 	)
-	
+
 	const [queryProgress, setQueryProgress] = useState<QueryProgressState>({
 		type: 'idle',
 	})
@@ -463,7 +466,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 					}
 				}
 			}
-			
+
 			// 使用工具管理器处理其他所有工具
 			return await toolManager.executeTool(toolArgs, applyMsgId)
 		},
@@ -528,31 +531,57 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 	)
 
 	const handleAccept = useCallback(
-		(applyMsgId: string) => {
-			// Update message status to applied
-			setChatMessages(prev => 
-				prev.map(msg => 
-					msg.id === applyMsgId 
-						? { ...msg, applyStatus: ApplyStatus.Applied }
-						: msg
+		async (applyMsgId: string) => {
+			if (!applyEditManager) {
+				console.error('ApplyEditManager is not available')
+				return
+			}
+			try {
+				await applyEditManager.apply(applyMsgId)
+				// Update message status to applied
+				setChatMessages(prev =>
+					prev.map(msg =>
+						msg.id === applyMsgId
+							? { ...msg, applyStatus: ApplyStatus.Applied }
+							: msg
+					)
 				)
-			)
+			} catch (error) {
+				console.error('Failed to accept edit:', error)
+				// Update message status to failed
+				setChatMessages(prev =>
+					prev.map(msg =>
+						msg.id === applyMsgId
+							? { ...msg, applyStatus: ApplyStatus.Failed }
+							: msg
+					)
+				)
+			}
 		},
-		[],
+		[applyEditManager],
 	)
 
 	const handleReject = useCallback(
-		(applyMsgId: string) => {
-			// Update message status to rejected
-			setChatMessages(prev => 
-				prev.map(msg => 
-					msg.id === applyMsgId 
-						? { ...msg, applyStatus: ApplyStatus.Rejected }
-						: msg
+		async (applyMsgId: string) => {
+			if (!applyEditManager) {
+				console.error('ApplyEditManager is not available')
+				return
+			}
+			try {
+				await applyEditManager.reject(applyMsgId)
+				// Update message status to rejected
+				setChatMessages(prev =>
+					prev.map(msg =>
+						msg.id === applyMsgId
+							? { ...msg, applyStatus: ApplyStatus.Rejected }
+							: msg
+					)
 				)
-			)
+			} catch (error) {
+				console.error('Failed to reject edit:', error)
+			}
 		},
-		[],
+		[applyEditManager],
 	)
 
 	useEffect(() => {
@@ -561,7 +590,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		currentActiveFileRef.current = app.workspace.getActiveFile()
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
-	
+
 	// 自动加载上次的聊天记录
 	useEffect(() => {
 		const autoLoadLastChat = async () => {
@@ -589,10 +618,10 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 				setIsInitialLoading(false)
 			}
 		}
-		
+
 		autoLoadLastChat()
 	}, [storeConversationId, shouldAutoLoadLastChat, chatMessages.length, getChatMessagesById, handleLoadConversation, setStoreConversationId, setShouldAutoLoadLastChat])
-	
+
 	// 组件卸载时重置shouldAutoLoadLastChat标志
 	useEffect(() => {
 		return () => {
