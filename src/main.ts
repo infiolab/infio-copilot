@@ -92,12 +92,8 @@ export default class InfioPlugin extends Plugin {
 		)
 
 		// initialize apply edit manager BEFORE view registration
-		console.log('[main.ts] About to initialize ApplyEditManager')
-		console.log('[main.ts] this.app:', !!this.app)
-		console.log('[main.ts] this.diffStrategy:', this.diffStrategy)
 		try {
 			this.applyEditManager = new ApplyEditManager(this.app, this.diffStrategy as DiffStrategy)
-			console.log('[main.ts] ApplyEditManager initialized successfully:', this.applyEditManager)
 		} catch (error) {
 			console.error('[main.ts] Failed to initialize ApplyEditManager:', error)
 			this.applyEditManager = null
@@ -144,14 +140,10 @@ export default class InfioPlugin extends Plugin {
 			)
 
 			// Update apply edit manager when settings change
-			console.log('[main.ts] About to re-initialize ApplyEditManager in settings change')
-			console.log('[main.ts] this.app:', !!this.app)
-			console.log('[main.ts] this.diffStrategy:', this.diffStrategy)
 			try {
 				this.applyEditManager = new ApplyEditManager(this.app, this.diffStrategy as DiffStrategy)
-				console.log('[main.ts] ApplyEditManager re-initialized successfully:', this.applyEditManager)
 			} catch (error) {
-				console.error('[main.ts] Failed to re-initialize ApplyEditManager:', error)
+				console.error('Failed to re-initialize ApplyEditManager:', error)
 				this.applyEditManager = null
 			}
 			// Update MCP Hub when settings change

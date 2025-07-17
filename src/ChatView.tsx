@@ -98,7 +98,6 @@ export class ChatView extends ItemView {
 							>
 								<DiffStrategyProvider getDiffStrategy={() => this.plugin.diffStrategy}>
 									<ApplyEditManagerProvider getApplyEditManager={() => {
-										console.log('[ChatView] getApplyEditManager called, this.plugin.applyEditManager:', this.plugin.applyEditManager)
 										return this.plugin.applyEditManager
 									}}>
 										<RAGProvider getRAGEngine={() => this.plugin.getRAGEngine()}>
