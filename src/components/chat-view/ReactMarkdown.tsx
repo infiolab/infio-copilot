@@ -76,7 +76,6 @@ function ReactMarkdown({
 						onApply={onApply}
 						path={block.path}
 						startLine={1}
-						toolExecutionResult={findToolExecutionResult('write_to_file')}
 					>
 						{block.content}
 					</MarkdownEditFileBlock>
@@ -89,7 +88,6 @@ function ReactMarkdown({
 						path={block.path}
 						startLine={block.startLine}
 						endLine={block.startLine} // 插入内容时，endLine 和 startLine 相同
-						toolExecutionResult={findToolExecutionResult('insert_content')}
 					>
 						{block.content}
 					</MarkdownEditFileBlock>
@@ -110,7 +108,6 @@ function ReactMarkdown({
 							regexFlags: op.regex_flags,
 						}))}
 						finish={block.finish}
-						toolExecutionResult={findToolExecutionResult('search_and_replace')}
 					/>
 				) : block.type === 'apply_diff' ? (
 					<MarkdownApplyDiffBlock
@@ -121,7 +118,6 @@ function ReactMarkdown({
 						path={block.path}
 						diff={block.diff}
 						finish={block.finish}
-						toolExecutionResult={findToolExecutionResult('apply_diff')}
 					/>
 				) : block.type === 'read_file' ? (
 					<MarkdownReadFileBlock

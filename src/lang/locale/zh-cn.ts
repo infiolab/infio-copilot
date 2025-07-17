@@ -135,6 +135,7 @@ export default {
 			searchAndReplaceInPath: "在 {path} 中搜索和替换",
 			applying: "正在应用...",
 			apply: "应用",
+			reapply: "重新应用",
 			reasoning: "推理",
 			thinking: "思考",
 			plan: "规划",

@@ -134,6 +134,7 @@ export default {
 			searchAndReplaceInPath: "Search and replace in {path}",
 			applying: "Applying...",
 			apply: "Apply",
+			reapply: "Reapply",
 			reasoning: "Reasoning",
 			thinking: "Thinking",
 			plan: "Plan",

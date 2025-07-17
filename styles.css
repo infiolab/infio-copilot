@@ -904,15 +904,15 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   position: relative;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
-	margin-top: 12px;
-	margin-bottom: 12px;
+	margin-top: 8px;
+	margin-bottom: 8px;
   /* 防止代码块内容溢出 */
   overflow: hidden;
   word-wrap: break-word;
 }
 
-.infio-chat-code-block.infio-reasoning-block {
-  /* Height restrictions removed to show full content */
+.infio-chat-code-block code {
+  padding: 0;
 }
 
 .infio-reasoning-content-wrapper {
@@ -922,16 +922,12 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   overflow-y: visible;
 }
 
-.infio-chat-code-block code {
-  padding: 0;
-}
-
 .infio-chat-code-block-header {
   display: none;
   justify-content: space-between;
   align-items: center;
   font-size: var(--font-smallest);
-  padding: 0 var(--size-4-1) 0 0;
+  padding: 0;
 }
 
 .infio-chat-code-block:hover .infio-chat-code-block-header {
@@ -987,6 +983,7 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   overflow: hidden;
   min-width: fit-content;
   height: 100%;
+  padding-right: var(--size-4-1);
 }
 
 .infio-chat-code-block.has-filename
@@ -1242,8 +1239,6 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   border: none !important;
   background: none !important;
   border-radius: 0 !important;
-  margin-top: 4px !important;
-  margin-bottom: 4px !important;
   color: var(--text-muted) !important;
 }
 
@@ -3275,6 +3270,84 @@ button.infio-chat-input-model-select {
 
 .infio-markdown .katex * {
   overflow: visible !important;
+}
+
+/* Apply button styles */
+.infio-apply-button-primary {
+  background-color: var(--color-green) !important;
+  color: white !important;
+  border: none !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-size: 11px !important;
+  height: 20px !important;
+  min-width: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.infio-apply-button-primary:hover {
+  background-color: var(--color-green-hover) !important;
+}
+
+.infio-apply-button-secondary {
+  background-color: var(--background-modifier-border) !important;
+  color: var(--text-normal) !important;
+  border: none !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-size: 11px !important;
+  height: 20px !important;
+  min-width: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.infio-apply-button-secondary:hover {
+  background-color: var(--background-modifier-border-hover) !important;
+}
+
+.infio-apply-button-applying {
+  background-color: var(--background-modifier-border) !important;
+  color: var(--text-muted) !important;
+  border: none !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  cursor: not-allowed !important;
+  font-size: 11px !important;
+  height: 20px !important;
+  min-width: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.infio-apply-status-icon {
+  margin-left: 8px !important;
+}
+
+/* 覆盖标题栏按钮的默认高度设置 */
+.infio-chat-code-block.has-filename .infio-chat-code-block-header-button .infio-apply-button-primary,
+.infio-chat-code-block.has-filename .infio-chat-code-block-header-button .infio-apply-button-secondary,
+.infio-chat-code-block.has-filename .infio-chat-code-block-header-button .infio-apply-button-applying {
+  height: 20px !important;
+  margin: 4px 0 !important;
+}
+
+/* 确保复制按钮也有相同的高度限制 */
+.infio-chat-code-block.has-filename .infio-chat-code-block-header-button button:not(.infio-apply-button-primary):not(.infio-apply-button-secondary):not(.infio-apply-button-applying) {
+  height: 20px !important;
+  margin: 4px 0 !important;
+  padding: 0 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 

@@ -50,13 +50,14 @@ export default function MarkdownListFilesBlock({
 
 	return (
 		<div>
+			{/* 工具执行结果显示区域 */}
 			<div
 				className={`infio-chat-code-block infio-list-files-block ${path ? 'has-filename' : ''}`}
 				onMouseEnter={() => setIsHovered(true)}
 				onMouseLeave={() => setIsHovered(false)}
 			>
 				<div className={'infio-chat-code-block-header'}>
-					<div 
+					<div
 						className={'infio-chat-code-block-header-filename'}
 						onClick={(e) => {
 							if (toolExecutionResult && isHovered) {
@@ -76,20 +77,18 @@ export default function MarkdownListFilesBlock({
 						{t('chat.reactMarkdown.listFiles').replace('{path}', path)}
 					</div>
 				</div>
-			</div>
-			{/* 工具执行结果显示区域 */}
-			{toolExecutionResult && isResultOpen && (
-				<div style={{ marginTop: '8px' }}>
+				{/* 工具执行结果显示区域 */}
+				{toolExecutionResult && isResultOpen && (
 					<MemoizedSyntaxHighlighterWrapper
 						isDarkMode={isDarkMode}
 						language="markdown"
 						hasFilename={false}
 						wrapLines={true}
 					>
-						{toolExecutionResult.content}
+						{String(toolExecutionResult.content)}
 					</MemoizedSyntaxHighlighterWrapper>
-				</div>
-			)}
+				)}
+			</div>
 		</div>
 	)
 } 

@@ -31,7 +31,6 @@ function SyntaxHighlighterWrapper({
 					? '0 0 var(--radius-s) var(--radius-s)'
 					: 'var(--radius-s)',
 				margin: 0,
-				padding: 'var(--size-4-2)',
 				fontSize: 'var(--font-ui-small)',
 				fontFamily:
 					language === 'markdown' ? 'var(--font-interface)' : 'inherit',
