@@ -40,17 +40,28 @@ export default function RawMarkdownBlock({
 			return false
 		}
 		
+		// 处理可能包含行号的路径 (格式: path:lineNumber)
+		let pathToCheck = href
+		const colonIndex = href.lastIndexOf(':')
+		if (colonIndex !== -1) {
+			const potentialLineNumber = href.substring(colonIndex + 1)
+			// 如果冒号后面是数字，则认为是行号，去掉行号部分
+			if (/^\d+$/.test(potentialLineNumber)) {
+				pathToCheck = href.substring(0, colonIndex)
+			}
+		}
+		
 		// 检查是否为文件路径（相对路径或绝对路径）
 		// 支持常见的文件扩展名
 		const fileExtensions = ['.md', '.txt', '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx']
-		const hasFileExtension = fileExtensions.some(ext => href.toLowerCase().endsWith(ext))
+		const hasFileExtension = fileExtensions.some(ext => pathToCheck.toLowerCase().endsWith(ext))
 		
 		// 如果有文件扩展名，或者看起来像文件路径（包含斜杠但不是URL），则认为是内部链接
 		return hasFileExtension || 
-			   (href.includes('/') && !href.includes('://')) ||
-			   href.startsWith('./') ||
-			   href.startsWith('../') ||
-			   (!href.includes('.') && !href.includes(':')) // 可能是不带扩展名的文件名
+			   (pathToCheck.includes('/') && !pathToCheck.includes('://')) ||
+			   pathToCheck.startsWith('./') ||
+			   pathToCheck.startsWith('../') ||
+			   (!pathToCheck.includes('.') && !pathToCheck.includes(':')) // 可能是不带扩展名的文件名
 	}
 
 	// 处理链接点击
@@ -59,11 +70,27 @@ export default function RawMarkdownBlock({
 			e.preventDefault()
 			
 			// 解码URL编码的路径
-			const filePath = decodeURIComponent(href)
+			const decodedHref = decodeURIComponent(href)
+			
+			// 检查是否包含行号 (格式: path:lineNumber)
+			const colonIndex = decodedHref.lastIndexOf(':')
+			let filePath = decodedHref
+			let lineNumber: number | undefined
+			
+			if (colonIndex !== -1) {
+				const potentialLineNumber = decodedHref.substring(colonIndex + 1)
+				// 检查冒号后面是否为数字
+				if (/^\d+$/.test(potentialLineNumber)) {
+					filePath = decodedHref.substring(0, colonIndex)
+					lineNumber = parseInt(potentialLineNumber, 10)
+				}
+			}
 			
 			console.debug('🔍 [RawMarkdownBlock] 尝试打开文件:', {
 				originalHref: href,
-				decodedPath: filePath
+				decodedHref,
+				filePath,
+				lineNumber
 			})
 			
 			// 首先尝试直接使用解码后的路径
@@ -82,7 +109,12 @@ export default function RawMarkdownBlock({
 			if (foundFile) {
 				console.debug('✅ [RawMarkdownBlock] 找到文件:', foundFile.path)
 				try {
-					openMarkdownFile(app, foundFile.path)
+					// 如果有行号，传递给openMarkdownFile函数
+					if (lineNumber !== undefined) {
+						openMarkdownFile(app, foundFile.path, lineNumber)
+					} else {
+						openMarkdownFile(app, foundFile.path)
+					}
 				} catch (error) {
 					console.error('❌ [RawMarkdownBlock] 打开文件失败:', error)
 					// 如果打开失败，让浏览器处理链接

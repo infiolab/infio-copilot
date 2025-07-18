@@ -106,6 +106,8 @@ function ReactMarkdown({
 						key={"search-and-replace-" + index}
 						applyStatus={applyStatus}
 						onApply={onApply}
+						onAccept={onAccept}
+						onReject={onReject}
 						path={block.path}
 						content={block.content}
 						operations={block.operations.map(op => ({
