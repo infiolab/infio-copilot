@@ -138,18 +138,18 @@
   user-select: text;
   display: flex;
   flex-direction: column;
-  gap: var(--size-4-1);
+  gap: var(--size-2-1);
   padding: 0 var(--size-4-3) var(--size-4-5) var(--size-4-3);
   margin: var(--size-4-2) calc(var(--size-4-3) * -1) 0;
   /* 确保内容不会超出容器 */
   min-width: 0;
 
   .infio-chat-messages-user {
-		margin-top: 12px;
-		margin-bottom: 12px;
+		margin-top: 1px;
+		margin-bottom: 1px;
     display: flex;
     flex-direction: column;
-    gap: var(--size-4-1);
+    gap: var(--size-2-1);
     /* 防止用户消息超出容器 */
     min-width: 0;
     max-width: 100%;
@@ -158,7 +158,6 @@
   .infio-chat-messages-assistant {
 		display: flex;
     flex-direction: column;
-    /* padding-bottom: var(--size-4-2); */
     /* 防止助手消息超出容器 */
     min-width: 0;
     max-width: 100%;
@@ -404,11 +403,30 @@
   text-decoration: none;
   transition: color 0.1s ease;
   word-break: break-word;
+  cursor: pointer;
 }
 
 .infio-markdown-link:hover {
   color: var(--text-accent-hover);
   text-decoration: underline;
+}
+
+/* Internal file link styling */
+.infio-markdown-link--internal {
+  color: var(--text-accent);
+}
+
+.infio-markdown-link--internal:hover {
+  color: var(--text-accent-hover);
+  background-color: var(--background-modifier-hover);
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin: -1px -3px;
+}
+
+/* External link styling */
+.infio-markdown-link--external {
+  color: var(--text-accent);
 }
 
 /* Inline code styling within tables */
@@ -904,8 +922,6 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   position: relative;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
-	margin-top: 8px;
-	margin-bottom: 8px;
   /* 防止代码块内容溢出 */
   overflow: hidden;
   word-wrap: break-word;
@@ -922,12 +938,26 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   overflow-y: visible;
 }
 
+/* 折叠/展开功能相关样式 */
+.infio-reasoning-content-wrapper.collapsed {
+  max-height: 150px;
+  overflow-y: auto;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.infio-reasoning-content-wrapper.expanded {
+  max-height: none;
+  overflow-y: visible;
+  transition: max-height 0.3s ease-in-out;
+}
+
 .infio-chat-code-block-header {
   display: none;
   justify-content: space-between;
   align-items: center;
   font-size: var(--font-smallest);
   padding: 0;
+	margin: 0;
 }
 
 .infio-chat-code-block:hover .infio-chat-code-block-header {

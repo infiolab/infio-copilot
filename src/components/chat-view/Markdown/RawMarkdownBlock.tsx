@@ -5,7 +5,9 @@ import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 
+import { useApp } from '../../../contexts/AppContext'
 import { useDarkModeContext } from '../../../contexts/DarkModeContext'
+import { openMarkdownFile } from '../../../utils/obsidian'
 
 import { MemoizedMermaidBlock } from './MermaidBlock'
 import { MemoizedSyntaxHighlighterWrapper } from './SyntaxHighlighterWrapper'
@@ -19,6 +21,7 @@ export default function RawMarkdownBlock({
 	content,
 	className = "infio-markdown",
 }: RawMarkdownBlockProps) {
+	const app = useApp()
 	const { isDarkMode } = useDarkModeContext()
 	const containerRef = useRef<HTMLDivElement>(null)
 
@@ -26,6 +29,72 @@ export default function RawMarkdownBlock({
 	const katexOptions = {
 		throwOnError: false,
 		errorColor: isDarkMode ? '#ff6b6b' : '#cc0000'
+	}
+
+	// 判断链接是否为内部文件链接
+	const isInternalFileLink = (href: string): boolean => {
+		if (!href) return false
+		
+		// 排除外部链接
+		if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+			return false
+		}
+		
+		// 检查是否为文件路径（相对路径或绝对路径）
+		// 支持常见的文件扩展名
+		const fileExtensions = ['.md', '.txt', '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx']
+		const hasFileExtension = fileExtensions.some(ext => href.toLowerCase().endsWith(ext))
+		
+		// 如果有文件扩展名，或者看起来像文件路径（包含斜杠但不是URL），则认为是内部链接
+		return hasFileExtension || 
+			   (href.includes('/') && !href.includes('://')) ||
+			   href.startsWith('./') ||
+			   href.startsWith('../') ||
+			   (!href.includes('.') && !href.includes(':')) // 可能是不带扩展名的文件名
+	}
+
+	// 处理链接点击
+	const handleLinkClick = (e: React.MouseEvent, href: string) => {
+		if (isInternalFileLink(href)) {
+			e.preventDefault()
+			
+			// 解码URL编码的路径
+			const filePath = decodeURIComponent(href)
+			
+			console.debug('🔍 [RawMarkdownBlock] 尝试打开文件:', {
+				originalHref: href,
+				decodedPath: filePath
+			})
+			
+			// 首先尝试直接使用解码后的路径
+			let foundFile = app.vault.getFileByPath(filePath)
+			
+			if (!foundFile) {
+				// 如果直接路径找不到，尝试在vault中搜索
+				foundFile = app.vault.getFiles().find(f => 
+					f.name === filePath || 
+					f.path === filePath ||
+					f.path.endsWith('/' + filePath) ||
+					f.basename === filePath.replace(/\.[^/.]+$/, '') // 去掉扩展名比较
+				)
+			}
+			
+			if (foundFile) {
+				console.debug('✅ [RawMarkdownBlock] 找到文件:', foundFile.path)
+				try {
+					openMarkdownFile(app, foundFile.path)
+				} catch (error) {
+					console.error('❌ [RawMarkdownBlock] 打开文件失败:', error)
+					// 如果打开失败，让浏览器处理链接
+					window.open(href, '_blank')
+				}
+			} else {
+				console.warn('⚠️ [RawMarkdownBlock] 未找到文件:', filePath)
+				// 如果找不到文件，让浏览器处理链接
+				window.open(href, '_blank')
+			}
+		}
+		// 对于外部链接，让默认行为处理
 	}
 
 	// 处理复制事件，使用原始 markdown 格式
@@ -164,14 +233,17 @@ export default function RawMarkdownBlock({
 						)
 					},
 					
-					// 优化表格内的链接渲染
+					// 优化链接渲染
 					a({ href, children, ...props }) {
+						const isInternal = isInternalFileLink(href || '')
+						
 						return (
 							<a 
 								href={href}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="infio-markdown-link"
+								target={isInternal ? undefined : "_blank"}
+								rel={isInternal ? undefined : "noopener noreferrer"}
+								className={`infio-markdown-link ${isInternal ? 'infio-markdown-link--internal' : 'infio-markdown-link--external'}`}
+								onClick={(e) => handleLinkClick(e, href || '')}
 								{...props}
 							>
 								{children}
