@@ -129,6 +129,14 @@ export class ApplyEditManager {
 			throw new Error(`Edit log ${editId} not found`)
 		}
 
+		// 检查是否已存在对应editId的ApplyView
+		const existingLeaf = this.findApplyViewByEditId(editId)
+		if (existingLeaf) {
+			// 如果已存在，激活该tab
+			this.app.workspace.setActiveLeaf(existingLeaf)
+			return
+		}
+
 		// 计算新内容
 		const newContent = await this.calculateNewContent(log)
 
@@ -192,7 +200,7 @@ export class ApplyEditManager {
 			this.emitEditStatusChange(editId, 'applied')
 
 			// 关闭ApplyView
-			this.closeApplyView(log.params.filepath)
+			this.closeApplyView(editId)
 
 		} catch (error) {
 			console.error('[ApplyEditManager] apply failed:', error)
@@ -213,7 +221,7 @@ export class ApplyEditManager {
 
 		await this.editLogManager.updateStatus(editId, 'rejected')
 		this.emitEditStatusChange(editId, 'rejected')
-		this.closeApplyView(log.params.filepath)
+		this.closeApplyView(editId)
 	}
 
 	/**
@@ -249,15 +257,24 @@ export class ApplyEditManager {
 	}
 
 	/**
+	 * 根据editId查找已存在的ApplyView
+	 */
+	private findApplyViewByEditId(editId: string) {
+		const leaves = this.app.workspace.getLeavesOfType(APPLY_VIEW_TYPE)
+		return leaves.find(leaf => {
+			const viewState = leaf.view.getState() as ApplyViewState & { editId?: string }
+			return viewState.editId === editId
+		})
+	}
+
+	/**
 	 * 关闭对应的ApplyView
 	 */
-	private closeApplyView(filePath: string): void {
-		this.app.workspace.getLeavesOfType(APPLY_VIEW_TYPE).forEach(leaf => {
-			const viewState = leaf.view.getState() as ApplyViewState & { editId?: string }
-			if (viewState.file === filePath) {
-				leaf.detach()
-			}
-		})
+	private closeApplyView(editId: string): void {
+		const leaf = this.findApplyViewByEditId(editId)
+		if (leaf) {
+			leaf.detach()
+		}
 	}
 
 	/**
