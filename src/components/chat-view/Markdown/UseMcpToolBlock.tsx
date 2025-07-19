@@ -1,8 +1,10 @@
-import { Server } from 'lucide-react'
-import React from 'react'
+import { ChevronDown, ChevronRight, Server } from 'lucide-react'
+import React, { useState } from 'react'
 
-import { t } from '../../../lang/helpers'
+import { useDarkModeContext } from "../../../contexts/DarkModeContext"
 import { ApplyStatus, UseMcpToolArgs } from "../../../types/apply"
+
+import { MemoizedSyntaxHighlighterWrapper } from "./SyntaxHighlighterWrapper"
 
 export default function UseMcpToolBlock({
 	applyStatus,
@@ -10,15 +12,26 @@ export default function UseMcpToolBlock({
 	serverName,
 	toolName,
 	parameters,
-	finish
+	finish,
+	toolExecutionResult
 }: {
 	applyStatus: ApplyStatus
 	onApply: (args: UseMcpToolArgs) => void
 	serverName: string,
 	toolName: string,
 	parameters: Record<string, unknown>,
-	finish: boolean
+	finish: boolean,
+	toolExecutionResult?: {
+		type: string
+		status: ApplyStatus
+		content: string
+		timestamp: number
+	}
 }) {
+
+	const { isDarkMode } = useDarkModeContext()
+	const [isResultOpen, setIsResultOpen] = useState(false)
+	const [isHovered, setIsHovered] = useState(false)
 
 	React.useEffect(() => {
 		if (finish && applyStatus === ApplyStatus.Idle) {
@@ -33,42 +46,58 @@ export default function UseMcpToolBlock({
 
 	return (
 		<div
-			className={`infio-chat-code-block has-filename`
-			}
+			className={`infio-chat-code-block has-filename`}
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
 		>
-			<div className={'infio-chat-code-block-header'}>
+			<div className={'infio-chat-code-block-header'}
+				onClick={(e) => {
+					e.stopPropagation()
+					setIsResultOpen(!isResultOpen)
+				}}
+			>
 				<div className={'infio-chat-code-block-header-filename'}>
-					<Server size={14} className="infio-chat-code-block-header-icon" />
-					{t('mcpHub.useMcpToolFrom')}
+					{isHovered ? (
+						isResultOpen ? <ChevronDown size={14} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={14} className="infio-chat-code-block-header-icon" />
+					) : (
+						<Server size={14} className="infio-chat-code-block-header-icon" />
+					)}
+					Use
 					<span className="infio-mcp-tool-server-name">{serverName}</span>
+					<span className="infio-mcp-tool-name">[{toolName}]</span>
 				</div>
 			</div>
 			<div
 				className="infio-reasoning-content-wrapper"
 			>
-				<div className="infio-mcp-tool-row">
-					<div className="infio-mcp-tool-row-header">
-						<div className="infio-mcp-tool-name-section">
-							<span className="infio-mcp-tool-name">{toolName}</span>
-						</div>
-					</div>
-					{t('mcpHub.parameters')}: <div className="infio-mcp-tool-parameters">
-						<pre className="infio-json-pre"><code>{JSON.stringify(parameters, null, 2)}</code></pre>
-					</div>
-				</div>
+				<pre className="infio-json-pre">
+					<code>{JSON.stringify(parameters, null, 2)}</code>
+				</pre>
+				{/* 工具执行结果显示区域 */}
+				{toolExecutionResult && isResultOpen && (
+					<MemoizedSyntaxHighlighterWrapper
+						isDarkMode={isDarkMode}
+						language="markdown"
+						hasFilename={false}
+						wrapLines={true}
+					>
+						{String(toolExecutionResult.content)}
+					</MemoizedSyntaxHighlighterWrapper>
+				)}
 			</div>
 			<style>{`
 				.infio-mcp-tool-row {
 					padding: 12px;
-					border-bottom: 1px solid var(--background-modifier-border);
 					background-color: var(--background-primary);
 					border-radius: var(--radius-s);
 				}
-				.infio-mcp-tool-row-header {
-					display: flex;
-					align-items: center;
-					gap: 8px;
-					margin-bottom: 8px;
+				.infio-mcp-tool-row-result {
+					padding: 12px;
+					background-color: var(--background-secondary);
+					border-radius: var(--radius-s);
+				}
+				.infio-chat-code-block-header {
+					cursor: pointer;
 				}
 				.infio-mcp-tool-name {
 					font-weight: 600;
@@ -84,15 +113,9 @@ export default function UseMcpToolBlock({
 					font-size: 13px;
 					display: inline-block;
 				}
-				.infio-mcp-tool-parameters {
-					font-size: 14px;
-					color: var(--text-muted);
-					line-height: 1.4;
-					margin: 8px 0 0 0;
-				}
 				.infio-json-pre {
-					background: #282c34;
-					color: #d4d4d4;
+					background: var(--background-modifier-form-field);
+					color: var(--text-normal);
 					border-radius: 4px;
 					padding: 8px;
 					font-size: 13px;
