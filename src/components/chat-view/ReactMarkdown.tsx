@@ -269,7 +269,6 @@ function ReactMarkdown({
 						onApply={onApply}
 						operations={block.operations}
 						finish={block.finish}
-						toolExecutionResult={findToolExecutionResult('manage_files')}
 					/>
 				) : block.type === 'tool_result' ? (
 					<MarkdownToolResult

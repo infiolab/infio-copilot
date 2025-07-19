@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Server } from 'lucide-react'
+import { ChevronsDownUp, ChevronsUpDown, Server } from 'lucide-react'
 import React, { useState } from 'react'
 
 import { useDarkModeContext } from "../../../contexts/DarkModeContext"
@@ -58,7 +58,7 @@ export default function UseMcpToolBlock({
 			>
 				<div className={'infio-chat-code-block-header-filename'}>
 					{isHovered ? (
-						isResultOpen ? <ChevronDown size={14} className="infio-chat-code-block-header-icon" /> : <ChevronRight size={14} className="infio-chat-code-block-header-icon" />
+						isResultOpen ? <ChevronsDownUp size={14} className="infio-chat-code-block-header-icon" /> : <ChevronsUpDown size={14} className="infio-chat-code-block-header-icon" />
 					) : (
 						<Server size={14} className="infio-chat-code-block-header-icon" />
 					)}
@@ -67,19 +67,23 @@ export default function UseMcpToolBlock({
 					<span className="infio-mcp-tool-name">[{toolName}]</span>
 				</div>
 			</div>
-			<div
-				className="infio-reasoning-content-wrapper"
-			>
-				<pre className="infio-json-pre">
-					<code>{JSON.stringify(parameters, null, 2)}</code>
-				</pre>
+			<div>
+				<MemoizedSyntaxHighlighterWrapper
+					isDarkMode={isDarkMode}
+					language="json"
+					hasFilename={false}
+					wrapLines={false}
+					backgroundColor="var(--background-modifier-form-field)"
+				>
+					{JSON.stringify(parameters, null, 2)}
+				</MemoizedSyntaxHighlighterWrapper>
 				{/* 工具执行结果显示区域 */}
 				{toolExecutionResult && isResultOpen && (
 					<MemoizedSyntaxHighlighterWrapper
 						isDarkMode={isDarkMode}
 						language="markdown"
 						hasFilename={false}
-						wrapLines={true}
+						wrapLines={false}
 					>
 						{String(toolExecutionResult.content)}
 					</MemoizedSyntaxHighlighterWrapper>
@@ -112,15 +116,6 @@ export default function UseMcpToolBlock({
 					font-weight: bold;
 					font-size: 13px;
 					display: inline-block;
-				}
-				.infio-json-pre {
-					background: var(--background-modifier-form-field);
-					color: var(--text-normal);
-					border-radius: 4px;
-					padding: 8px;
-					font-size: 13px;
-					overflow-x: auto;
-					margin: 0;
 				}
 			`}</style>
 		</div>

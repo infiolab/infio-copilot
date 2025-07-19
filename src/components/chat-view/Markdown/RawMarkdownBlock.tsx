@@ -24,6 +24,43 @@ export default function RawMarkdownBlock({
 	const app = useApp()
 	const { isDarkMode } = useDarkModeContext()
 	const containerRef = useRef<HTMLDivElement>(null)
+	console.log("content", content)
+
+	// URL编码处理函数
+	const encodeUrlForMarkdown = (url: string): string => {
+		// 对URL进行编码，特别处理空格、问号等特殊字符
+		return url
+			.replace(/ /g, '%20')   // 空格编码为%20
+			.replace(/\?/g, '%3F')  // 问号编码为%3F
+			.replace(/#/g, '%23')   // 井号编码为%23
+			.replace(/&/g, '%26')   // &符号编码为%26
+			.replace(/\[/g, '%5B')  // 方括号编码
+			.replace(/\]/g, '%5D')
+	}
+
+	// 预处理Markdown内容，修复链接中的特殊字符
+	const preprocessMarkdownContent = (markdownContent: string): string => {
+		if (!markdownContent ||markdownContent.trim() === "") {
+			return markdownContent
+		}
+		// 匹配所有Markdown链接格式 [text](url)
+		return markdownContent.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, linkUrl) => {
+			// 检查URL是否需要编码（包含特殊字符但不是已编码的URL）
+			if ((linkUrl.includes(' ') || linkUrl.includes('?') || linkUrl.includes('#') || linkUrl.includes('&')) && 
+				!linkUrl.includes('%20') && !linkUrl.includes('%3F') && !linkUrl.includes('%23') && !linkUrl.includes('%26')) {
+				const encodedUrl = encodeUrlForMarkdown(linkUrl)
+				console.debug('🔧 [RawMarkdownBlock] 编码URL:', {
+					original: linkUrl,
+					encoded: encodedUrl
+				})
+				return `[${linkText}](${encodedUrl})`
+			}
+			return match
+		})
+	}
+
+	// 预处理内容
+	const processedContent = preprocessMarkdownContent(content)
 
 	// 配置 rehype-katex 选项
 	const katexOptions = {
@@ -210,7 +247,7 @@ export default function RawMarkdownBlock({
 				container.removeEventListener('copy', handleCopy)
 			}
 		}
-	}, [content])
+	}, [processedContent])
 
 	return (
 		<div ref={containerRef}>
@@ -318,7 +355,7 @@ export default function RawMarkdownBlock({
 					},
 				}}
 			>
-				{content}
+				{processedContent}
 			</ReactMarkdown>
 			
 

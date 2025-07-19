@@ -1,4 +1,4 @@
-import { Check, Copy, FileIcon, FolderPlus, Loader2, Move, Trash2, X } from 'lucide-react'
+import { Check, Copy, FileIcon, FolderPlus, Loader2, Move, Trash2, X, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 import React, { useState } from 'react'
 
 import { ApplyStatus, ManageFilesToolArgs } from "../../../types/apply"
@@ -23,6 +23,8 @@ export default function MarkdownManageFilesBlock({
 	finish: boolean
 }) {
 	const [applying, setApplying] = useState(false)
+	const [isResultOpen, setIsResultOpen] = useState(true)
+	const [isHovered, setIsHovered] = useState(false)
 
 	const getOperationIcon = (action: string) => {
 		switch (action) {
@@ -69,55 +71,93 @@ export default function MarkdownManageFilesBlock({
 		})
 	}
 
+	// 获取应用状态图标
+	const getStatusIcon = () => {
+		if (applyStatus === ApplyStatus.Applied) {
+			return <Check size={14} color="var(--color-green)" className="infio-apply-status-icon" />
+		} else if (applyStatus === ApplyStatus.Failed || applyStatus === ApplyStatus.Rejected) {
+			return <X size={14} color="var(--color-red)" className="infio-apply-status-icon" />
+		}
+		return null
+	}
+	
+	// 判断是否应该显示编辑状态
+	const shouldShowEditing = () => {
+		return !finish
+	}
+
+	// 判断是否应该显示操作按钮
+	const shouldShowActionButtons = () => {
+		return finish && applyStatus === ApplyStatus.Idle
+	}
+
 	return (
-		<div className={`infio-chat-code-block infio-manage-files-block has-filename`}>
+		<div
+			className={`infio-chat-code-block has-filename infio-reasoning-block`}
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
+		>
 			<div className={'infio-chat-code-block-header'}>
-				<div className={'infio-chat-code-block-header-filename'}>
-					<FolderPlus size={14} className="infio-chat-code-block-header-icon" />
+				<div
+					className={'infio-chat-code-block-header-filename'}
+					onClick={() => setIsResultOpen(!isResultOpen)}
+					style={{ cursor: isHovered ? 'pointer' : 'default' }}
+				>
+					{isHovered ? (
+						isResultOpen ? <ChevronsDownUp size={14} className="infio-chat-code-block-header-icon" /> : <ChevronsUpDown size={14} className="infio-chat-code-block-header-icon" />
+					) : (
+						<FolderPlus size={14} className="infio-chat-code-block-header-icon" />
+					)}
 					文件管理操作 ({operations.length} 个操作)
+					{getStatusIcon()}
 				</div>
 				<div className={'infio-chat-code-block-header-button'}>
-					<button
-						onClick={handleApply}
-						className="infio-apply-button"
-						disabled={applyStatus !== ApplyStatus.Idle || applying || !finish}
-					>
-						{
-							!finish ? (
-								<>
-									<Loader2 className="spinner" size={14} /> 准备执行
-								</>
-							) : applyStatus === ApplyStatus.Idle ? (
-								applying ? (
-									<>
-										<Loader2 className="spinner" size={14} /> 执行中
-									</>
-								) : (
-									'执行操作'
-								)
-							) : applyStatus === ApplyStatus.Applied ? (
+					{shouldShowEditing() && (
+						<div className="infio-applying-status">
+							<Loader2 className="spinner" size={14} />
+						</div>
+					)}
+
+					{shouldShowActionButtons() && (
+						<button
+							onClick={handleApply}
+							className="infio-apply-button infio-apply-button-primary"
+							disabled={applyStatus !== ApplyStatus.Idle || applying}
+						>
+							{applyStatus === ApplyStatus.Applied ? (
 								<>
 									<Check size={14} /> 已完成
 								</>
-							) : (
+							) : applyStatus === ApplyStatus.Failed ? (
 								<>
 									<X size={14} /> 执行失败
 								</>
+							) : (
+								<>
+									<Check size={14} /> 执行操作
+								</>
 							)}
-					</button>
+						</button>
+					)}
 				</div>
 			</div>
-			<div className="infio-chat-code-block-content">
-				{operations.map((operation, index) => (
-					<div key={index} className="manage-files-operation">
-						<div className="operation-item">
-							{getOperationIcon(operation.action)}
-							<span className="operation-description">
-								{getOperationDescription(operation)}
-							</span>
+			<div
+				className={`infio-reasoning-content-wrapper ${isResultOpen ? 'expanded' : 'collapsed'}`}
+			>
+				{isResultOpen && (
+				<div className="infio-chat-code-block-content">
+					{operations.map((operation, index) => (
+						<div key={index} className="manage-files-operation">
+							<div className="operation-item">
+								{getOperationIcon(operation.action)}
+								<span className="operation-description">
+									{getOperationDescription(operation)}
+								</span>
+							</div>
 						</div>
-					</div>
-				))}
+					))}
+				</div>
+				)}
 			</div>
 		</div>
 	)

@@ -48,13 +48,13 @@ export default function MarkdownSwitchModeBlock({
 
 	return (
 		<div>
-			<div 
+			<div
 				className={`infio-chat-code-block has-filename`}
 				onMouseEnter={() => setIsHovered(true)}
 				onMouseLeave={() => setIsHovered(false)}
 			>
 				<div className={'infio-chat-code-block-header'}>
-					<div 
+					<div
 						className={'infio-chat-code-block-header-filename'}
 						onClick={() => toolExecutionResult && setIsResultOpen(!isResultOpen)}
 						style={{ cursor: toolExecutionResult && isHovered ? 'pointer' : 'default' }}
@@ -66,41 +66,43 @@ export default function MarkdownSwitchModeBlock({
 						)}
 						{t('chat.reactMarkdown.switchToMode').replace('{mode}', mode.charAt(0).toUpperCase() + mode.slice(1))}
 					</div>
-				<div className={'infio-chat-code-block-header-button'}>
-					<button
-						onClick={handleApply}
-						style={{ color: '#008000' }}
-						disabled={applyStatus !== ApplyStatus.Idle || applying}
-					>
-						{applyStatus === ApplyStatus.Idle ? (
-							applying ? (
+					<div className={'infio-chat-code-block-header-button'}>
+						<button
+							onClick={handleApply}
+							style={{ color: '#008000' }}
+							disabled={applyStatus !== ApplyStatus.Idle || applying}
+						>
+							{applyStatus === ApplyStatus.Idle ? (
+								applying ? (
+									<>
+										<Loader2 className="spinner" size={14} /> {t('chat.reactMarkdown.allowing')}
+									</>
+								) : (
+									t('chat.reactMarkdown.allow')
+								)
+							) : applyStatus === ApplyStatus.Applied ? (
 								<>
-									<Loader2 className="spinner" size={14} /> {t('chat.reactMarkdown.allowing')}
+									<Check size={14} /> {t('chat.reactMarkdown.success')}
 								</>
 							) : (
-								t('chat.reactMarkdown.allow')
-							)
-						) : applyStatus === ApplyStatus.Applied ? (
-							<>
-								<Check size={14} /> {t('chat.reactMarkdown.success')}
-							</>
-						) : (
-							<>
-								<X size={14} /> {t('chat.reactMarkdown.failed')}
-							</>
-						)}
-					</button>
+								<>
+									<X size={14} /> {t('chat.reactMarkdown.failed')}
+								</>
+							)}
+						</button>
+					</div>
 				</div>
-			</div>
-				<MemoizedSyntaxHighlighterWrapper
-					isDarkMode={isDarkMode}
-					language="markdown"
-					hasFilename={true}
-					wrapLines={true}
-					isOpen={true}
-				>
-					{reason}
-				</MemoizedSyntaxHighlighterWrapper>
+				{isResultOpen && (
+					<MemoizedSyntaxHighlighterWrapper
+						isDarkMode={isDarkMode}
+						language="markdown"
+						hasFilename={true}
+						wrapLines={true}
+						isOpen={true}
+					>
+						{reason}
+					</MemoizedSyntaxHighlighterWrapper>
+				)}
 			</div>
 			{/* 工具执行结果显示区域 */}
 			{toolExecutionResult && isResultOpen && (

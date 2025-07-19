@@ -509,18 +509,10 @@ export class ToolManager {
 			formattedContent = `[dataview_query] 查询失败:\n${result.error}`
 		}
 
-		return {
-			type: 'dataview_query',
-			applyMsgId,
-			applyStatus: result.success ? ApplyStatus.Applied : ApplyStatus.Failed,
-			returnMsg: {
-				role: 'user',
-				applyStatus: ApplyStatus.Idle,
-				content: null,
-				promptContent: formattedContent,
-				id: uuidv4(),
-				mentionables: [],
-			}
+		if (result.success) {
+			return this.createSuccessResult('dataview_query', applyMsgId, formattedContent)
+		} else {
+			return this.createFailureResult('dataview_query', applyMsgId, formattedContent)
 		}
 	}
 
