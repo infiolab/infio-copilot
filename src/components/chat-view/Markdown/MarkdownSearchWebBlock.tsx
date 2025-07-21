@@ -6,6 +6,7 @@ import { useSettings } from "../../../contexts/SettingsContext"
 import { t } from '../../../lang/helpers'
 import { ApplyStatus, SearchWebToolArgs } from "../../../types/apply"
 
+import RawMarkdownBlock from './RawMarkdownBlock'
 import { MemoizedSyntaxHighlighterWrapper } from "./SyntaxHighlighterWrapper"
 
 export default function MarkdownWebSearchBlock({
@@ -58,7 +59,7 @@ export default function MarkdownWebSearchBlock({
 				onMouseLeave={() => setIsHovered(false)}
 			>
 				<div className={'infio-chat-code-block-header'}>
-					<div 
+					<div
 						className={'infio-chat-code-block-header-filename'}
 						onClick={(e) => {
 							if (toolExecutionResult && isHovered) {
@@ -76,42 +77,47 @@ export default function MarkdownWebSearchBlock({
 						)}
 						{t('chat.reactMarkdown.webSearch').replace('{query}', query)}
 					</div>
-				<div className={'infio-chat-code-block-header-button'}>
-					<button
-						style={{ color: '#008000' }}
-						disabled={true}
-					>
-						{
-							!finish || applyStatus === ApplyStatus.Idle ? (
-								<>
-									<Loader2 className="spinner" size={14} /> {t('chat.reactMarkdown.searching')}
-								</>
-							) : applyStatus === ApplyStatus.Applied ? (
-								<>
-									<Check size={14} /> {t('chat.reactMarkdown.done')}
-								</>
-							) : (
-								<>
-									<X size={14} /> {t('chat.reactMarkdown.failed')}
-								</>
-							)}
-					</button>
+					<div className={'infio-chat-code-block-header-button'}>
+						<button
+							style={{ color: '#008000' }}
+							disabled={true}
+						>
+							{
+								!finish || applyStatus === ApplyStatus.Idle ? (
+									<>
+										<Loader2 className="spinner" size={14} /> {t('chat.reactMarkdown.searching')}
+									</>
+								) : applyStatus === ApplyStatus.Applied ? (
+									<>
+										<Check size={14} /> {t('chat.reactMarkdown.done')}
+									</>
+								) : (
+									<>
+										<X size={14} /> {t('chat.reactMarkdown.failed')}
+									</>
+								)}
+						</button>
+					</div>
 				</div>
 			</div>
+			{/* 工具执行结果显示区域 */}
+			{toolExecutionResult && isResultOpen && (
+				<div className="infio-search-web-result-content">
+					<RawMarkdownBlock
+						key={"markdown-result"}
+						content={String(toolExecutionResult.content)}
+						className="infio-markdown"
+					/>
+				</div>
+			)}
+			<style>{`
+				.infio-search-web-result-content {
+					margin: 0 0 0 14px;
+					padding: 2px 2px 2px 2px;
+					background-color: var(--background-modifier-hover);
+					border-radius: var(--radius-s);
+				}
+			`}</style>
 		</div>
-		{/* 工具执行结果显示区域 */}
-		{toolExecutionResult && isResultOpen && (
-			<div className="infio-reasoning-content-wrapper">
-				<MemoizedSyntaxHighlighterWrapper
-					isDarkMode={isDarkMode}
-					language="markdown"
-					hasFilename={false}
-					wrapLines={true}
-				>
-					{toolExecutionResult.content}
-				</MemoizedSyntaxHighlighterWrapper>
-			</div>
-		)}
-	</div>
 	)
 } 

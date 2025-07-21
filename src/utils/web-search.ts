@@ -5,8 +5,8 @@ import { htmlToMarkdown, requestUrl } from 'obsidian';
 import { JINA_BASE_URL, SERPER_BASE_URL } from '../constants';
 import { RAGEngine } from '../core/rag/rag-engine';
 
-import { isVideoUrl, getVideoProvider } from './video-detector';
-import { YoutubeTranscript, isYoutubeUrl } from './youtube-transcript';
+import { getVideoProvider, isVideoUrl } from './video-detector';
+import { YoutubeTranscript } from './youtube-transcript';
 
 
 interface SearchResult {
@@ -96,10 +96,55 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 	return dotProduct / (magnitudeA * magnitudeB);
 }
 
+// 添加内容清理函数
+function cleanWebContent(content: string): string {
+	if (!content) return content;
+
+	let cleanedContent = content;
+
+	// 1. 移除 base64 图片数据
+	cleanedContent = cleanedContent.replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/g, '[Image]');
+
+	// 2. 移除 HTTP/HTTPS 链接，但保留显示文本
+	cleanedContent = cleanedContent.replace(/\[([^\]]*)\]\(https?:\/\/[^\s\)]+\)/g, '$1');
+
+	// 3. 移除独立的 HTTP/HTTPS 链接
+	cleanedContent = cleanedContent.replace(/https?:\/\/[^\s\n\r]+/g, '');
+
+	// 4. 移除 markdown 图片语法
+	cleanedContent = cleanedContent.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '[Image: $1]');
+
+	// 5. 移除多余的空白行（超过2个连续换行）
+	cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n');
+
+	// 6. 移除行首行尾的空格
+	cleanedContent = cleanedContent.replace(/^[ \t]+|[ \t]+$/gm, '');
+
+	// 7. 移除常见的网页导航元素和重复内容
+	cleanedContent = cleanedContent.replace(/^\s*(Home|Navigation|Menu|Footer|Header|Sidebar|Advertisement|Ad|Cookie|Privacy Policy|Terms of Service|Subscribe|Newsletter|Follow us|Share|Like|Comment|Login|Sign up|Register)\s*$/gim, '');
+
+	// 8. 移除空行开头的特殊字符
+	cleanedContent = cleanedContent.replace(/^\s*[-•·*]\s*$/gm, '');
+
+	// 9. 移除过短的行（可能是无意义的导航或标签）
+	cleanedContent = cleanedContent.split('\n')
+		.filter(line => {
+			const trimmed = line.trim();
+			// 保留空行和长度大于3的行，或者看起来像标题的行
+			return trimmed === '' || trimmed.length > 3 || /^#{1,6}\s/.test(trimmed);
+		})
+		.join('\n');
+
+	// 10. 最终清理多余的空白
+	cleanedContent = cleanedContent.replace(/\n{2,}/g, '\n\n').trim();
+
+	return cleanedContent;
+}
+
 async function serperSearch(query: string, serperApiKey: string, serperSearchEngine: string): Promise<SearchResult[]> {
 	return new Promise((resolve, reject) => {
 		const url = `${SERPER_BASE_URL}?q=${encodeURIComponent(query)}&engine=${serperSearchEngine}&api_key=${serperApiKey}&num=20`;
-		https.get(url, (res: any) => {
+		https.get(url, (res) => {
 			let data = '';
 
 			res.on('data', (chunk: Buffer) => {
@@ -272,11 +317,20 @@ export async function fetchUrlContent(url: string, apiKey: string): Promise<stri
 		} else {
 			content = await fetchByLocalTool(url);
 		}
-		return content.replaceAll(/\n{2,}/g, '\n');
+		// 应用内容清理
+		const cleanedContent = cleanWebContent(content);
+		return cleanedContent;
 	} catch (error) {
 		console.error(`Failed to fetch URL content: ${url}`, error);
 		return null;
 	}
+}
+
+export interface WebSearchResult {
+	url: string;
+	title: string;
+	content: string;
+	snippet: string;
 }
 
 export async function webSearch(
@@ -285,21 +339,29 @@ export async function webSearch(
 	serperSearchEngine: string,
 	jinaApiKey: string,
 	ragEngine: RAGEngine
-): Promise<string> {
+): Promise<WebSearchResult[]> {
 	try {
 		const results = await serperSearch(query, serperApiKey, serperSearchEngine);
 		const filteredResults = await filterByEmbedding(query, results, ragEngine);
+		console.log("filteredResults", filteredResults)
 		const filteredResultsWithContent = await Promise.all(filteredResults.map(async (result) => {
 			let content = await fetchUrlContent(result.link, jinaApiKey);
-			if (content.length === 0) {
-				content = result.snippet;
+			if (!content || content.length === 0) {
+				// 如果获取内容失败，使用 snippet 并进行清理
+				content = cleanWebContent(result.snippet);
 			}
-			return `<url_content url="${result.link}">\n${content}\n</url_content>`;
+			return {
+				url: result.link,
+				title: result.title,
+				snippet: result.snippet,
+				content: content
+			};
 		}));
-		return filteredResultsWithContent.join('\n\n');
+		console.log("filteredResultsWithContent", filteredResultsWithContent)
+		return filteredResultsWithContent;
 	} catch (error) {
 		console.error(`Failed to web search: ${query}`, error);
-		return "web search error";
+		return [];
 	}
 }
 

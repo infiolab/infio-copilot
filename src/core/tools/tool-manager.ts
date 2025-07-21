@@ -3,39 +3,38 @@ import * as path from 'path'
 import { App, TFile, TFolder } from 'obsidian'
 import { v4 as uuidv4 } from 'uuid'
 
-import { ApplyViewState } from '../../ApplyView'
-import { APPLY_VIEW_TYPE } from '../../constants'
 import { Workspace } from '../../database/json/workspace/types'
 import { WorkspaceManager } from '../../database/json/workspace/WorkspaceManager'
 import {
+	ApplyDiffToolArgs,
 	ApplyStatus,
+	CallTransformationsToolArgs,
+	DataviewQueryToolArgs,
+	FetchUrlsContentToolArgs,
+	InsertContentToolArgs,
+	ListFilesToolArgs,
+	ManageFilesToolArgs,
+	MatchSearchFilesToolArgs,
+	ReadFileToolArgs,
+	RegexSearchFilesToolArgs,
+	SearchAndReplaceToolArgs,
+	SearchWebToolArgs,
+	SemanticSearchFilesToolArgs,
+	SwitchModeToolArgs,
 	ToolArgs,
 	ToolExecutionFailure,
 	ToolExecutionResult,
 	ToolExecutionSuccess,
-	WriteToFileToolArgs,
-	InsertContentToolArgs,
-	SearchAndReplaceToolArgs,
-	ApplyDiffToolArgs,
-	ReadFileToolArgs,
-	ListFilesToolArgs,
-	MatchSearchFilesToolArgs,
-	RegexSearchFilesToolArgs,
-	SemanticSearchFilesToolArgs,
-	SearchWebToolArgs,
-	FetchUrlsContentToolArgs,
-	SwitchModeToolArgs,
 	UseMcpToolArgs,
-	DataviewQueryToolArgs,
-	CallTransformationsToolArgs,
-	ManageFilesToolArgs,
+	WriteToFileToolArgs,
 } from '../../types/apply'
 import { InfioSettings } from '../../types/settings'
-import { ApplyEditToFile, SearchAndReplace } from '../../utils/apply'
+import { DataviewManager } from '../../utils/dataview'
 import { listFilesAndFolders, semanticSearchFiles } from '../../utils/glob-utils'
-import { readTFileContent, readTFileContentPdf } from '../../utils/obsidian'
+import { readTFileContentPdf } from '../../utils/obsidian'
 import { addLineNumbers } from '../../utils/prompt-generator'
-import { fetchUrlsContent, webSearch } from '../../utils/web-search'
+import { fetchUrlsContent, webSearch, WebSearchResult } from '../../utils/web-search'
+import { ApplyEditManager } from '../apply/ApplyEditManager'
 import { DiffStrategy } from '../diff/DiffStrategy'
 import { matchSearchUsingCorePlugin } from '../file-search/match/coreplugin-match'
 import { matchSearchUsingOmnisearch } from '../file-search/match/omnisearch-match'
@@ -44,8 +43,6 @@ import { regexSearchUsingRipgrep } from '../file-search/regex/ripgrep-regex'
 import { McpHub } from '../mcp/McpHub'
 import { RAGEngine } from '../rag/rag-engine'
 import { TransEngine, TransformationType } from '../transformations/trans-engine'
-import { ApplyEditManager } from '../apply/ApplyEditManager'
-import { DataviewManager } from '../../utils/dataview'
 
 // 工具管理器类型
 export interface ToolManagerDependencies {
@@ -425,8 +422,18 @@ export class ToolManager {
 			await getRAGEngine()
 		)
 
-		const formattedContent = `[search_web for '${toolArgs.query}'] Result:\n${results}\n`
-		return this.createSuccessResult('search_web', applyMsgId, formattedContent)
+		// 生成 promptContent - 原来的格式，包含完整内容
+		const promptContent = `[search_web for '${toolArgs.query}'] Result:\n` + 
+			results.map(result => 
+				`<url_content url="${result.url}">\n${result.content}\n</url_content>`
+			).join('\n\n') + '\n'
+
+		// 生成 toolResultContent - markdown 链接列表
+		const toolResultContent = results.map(result => 
+			`[${result.title}](${result.url})`
+		).join('\n\n')
+
+		return this.createSuccessResult('search_web', applyMsgId, promptContent, toolResultContent)
 	}
 
 	/**
@@ -674,13 +681,14 @@ export class ToolManager {
 		type: string,
 		applyMsgId: string,
 		promptContent: string,
+		toolResultContent?: string,
 		id?: string
 	): ToolExecutionSuccess {
 		return {
 			type,
 			applyMsgId,
 			applyStatus: ApplyStatus.Applied,
-			toolResultContent: promptContent,
+			toolResultContent: toolResultContent || promptContent,
 			returnMsg: {
 				role: 'user',
 				applyStatus: ApplyStatus.Idle,

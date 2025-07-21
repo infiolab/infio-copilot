@@ -3403,3 +3403,8 @@ button.infio-chat-input-model-select {
 .cm-gutterElement.cm-activeLineGutter {
 	background-color: transparent;
 }
+
+/* Search Web Button Styles */
+.infio-search-web-button {
+	color: #008000 !important;
+}

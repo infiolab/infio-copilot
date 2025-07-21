@@ -24,7 +24,6 @@ export default function RawMarkdownBlock({
 	const app = useApp()
 	const { isDarkMode } = useDarkModeContext()
 	const containerRef = useRef<HTMLDivElement>(null)
-	console.log("content", content)
 
 	// URL编码处理函数
 	const encodeUrlForMarkdown = (url: string): string => {

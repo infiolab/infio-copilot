@@ -56,9 +56,7 @@ export function getToolDescriptionsForMode(
 	customModes?: ModeConfig[],
 	experiments?: Record<string, boolean>,
 ): string {
-	// console.log("getToolDescriptionsForMode", mode, customModes)
 	const config = getModeConfig(mode, customModes)
-	// console.log("config", config)
 	const args: ToolArgs = {
 		cwd,
 		searchSettings,
