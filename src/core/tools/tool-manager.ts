@@ -422,6 +422,12 @@ export class ToolManager {
 			await getRAGEngine()
 		)
 
+		console.log('results', results)
+
+		if (results.length === 0) {
+			return this.createFailureResult('search_web', applyMsgId, 'No results found')
+		}
+
 		// 生成 promptContent - 原来的格式，包含完整内容
 		const promptContent = `[search_web for '${toolArgs.query}'] Result:\n` + 
 			results.map(result => 

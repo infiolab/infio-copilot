@@ -1,6 +1,6 @@
 import https from 'https';
 
-import { htmlToMarkdown, requestUrl } from 'obsidian';
+import { htmlToMarkdown, requestUrl, loadPdfJs } from 'obsidian';
 
 import { JINA_BASE_URL, SERPER_BASE_URL } from '../constants';
 import { RAGEngine } from '../core/rag/rag-engine';
@@ -96,6 +96,69 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 	return dotProduct / (magnitudeA * magnitudeB);
 }
 
+// 检测URL是否指向PDF文件
+function isPdfUrl(url: string): boolean {
+	try {
+		const urlObj = new URL(url);
+		const pathname = urlObj.pathname.toLowerCase();
+		return pathname.endsWith('.pdf');
+	} catch {
+		return false;
+	}
+}
+
+// 检测响应是否为PDF内容
+function isPdfResponse(response: any): boolean {
+	// 检查响应头中的content-type
+	const contentType = response.headers?.['content-type'] || response.headers?.['Content-Type'];
+	if (contentType && contentType.toLowerCase().includes('application/pdf')) {
+		return true;
+	}
+	
+	// 检查PDF文件签名
+	if (response.arrayBuffer) {
+		try {
+			const buffer = response.arrayBuffer;
+			const firstBytes = new Uint8Array(buffer.slice(0, 5));
+			const signature = String.fromCharCode(...firstBytes);
+			return signature === '%PDF-';
+		} catch {
+			// 如果无法检查签名，回退到URL检查
+		}
+	}
+	
+	return false;
+}
+
+// 使用PDF.js解析PDF内容
+async function parsePdfFromBuffer(pdfBuffer: ArrayBuffer): Promise<string> {
+	try {
+		// 使用 Obsidian 内置的 PDF.js
+		const pdfjsLib = await loadPdfJs();
+
+		// 使用 PDF.js 处理 PDF
+		const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer });
+		const doc = await loadingTask.promise;
+		let fullText = '';
+
+		for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+			const page = await doc.getPage(pageNum);
+			const textContent = await page.getTextContent();
+			const pageText = textContent.items
+				.map((item: any) => item.str)
+				.join(' ');
+			fullText += pageText + '\n\n';
+		}
+
+		// 清理null字节，防止编码错误
+		const cleanText = (fullText || '(Empty PDF content)').replace(/\0/g, '');
+		return cleanText;
+	} catch (error: any) {
+		console.error('Error parsing PDF from URL:', error);
+		return `(Error reading PDF file: ${error?.message || 'Unknown error'})`;
+	}
+}
+
 // 添加内容清理函数
 function cleanWebContent(content: string): string {
 	if (!content) return content;
@@ -106,13 +169,13 @@ function cleanWebContent(content: string): string {
 	cleanedContent = cleanedContent.replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/g, '[Image]');
 
 	// 2. 移除 HTTP/HTTPS 链接，但保留显示文本
-	cleanedContent = cleanedContent.replace(/\[([^\]]*)\]\(https?:\/\/[^\s\)]+\)/g, '$1');
+	cleanedContent = cleanedContent.replace(/\[([^\]]*)\]\(https?:\/\/[^\s)]+\)/g, '$1');
 
 	// 3. 移除独立的 HTTP/HTTPS 链接
 	cleanedContent = cleanedContent.replace(/https?:\/\/[^\s\n\r]+/g, '');
 
 	// 4. 移除 markdown 图片语法
-	cleanedContent = cleanedContent.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '[Image: $1]');
+	cleanedContent = cleanedContent.replace(/!\[([^\]]*)\]\([^)]+\)/g, '[Image: $1]');
 
 	// 5. 移除多余的空白行（超过2个连续换行）
 	cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n');
@@ -247,8 +310,50 @@ Platform: ${provider || 'Unknown'}
 Note: This is a video content. Please use specialized video processing tools for content analysis.`
 	}
 
-	// 非视频内容，使用常规方式获取网页内容
+	// 检查是否可能是PDF内容
+	const mightBePdf = isPdfUrl(url);
+
+	// 获取响应
 	const response = await requestUrl({ url })
+	
+	// 检查响应是否为PDF内容
+	const isPdf = mightBePdf || isPdfResponse(response);
+	
+	if (isPdf) {
+		try {
+			// 获取PDF的二进制数据
+			let pdfBuffer: ArrayBuffer;
+			
+			if (response.arrayBuffer) {
+				pdfBuffer = response.arrayBuffer;
+			} else {
+				// 如果没有arrayBuffer，尝试重新请求获取二进制数据
+				console.log('Re-requesting URL to get binary data for PDF:', url);
+				const binaryResponse = await requestUrl({ 
+					url,
+					// 明确要求二进制响应
+					headers: { 
+						'Accept': 'application/pdf,*/*' 
+					}
+				});
+				pdfBuffer = binaryResponse.arrayBuffer;
+			}
+			
+			if (!pdfBuffer) {
+				return `PDF Content Detected: ${url}\nNote: Unable to extract binary data from PDF response. The content may be corrupted.`
+			}
+			
+			// 使用PDF.js解析PDF内容
+			const pdfText = await parsePdfFromBuffer(pdfBuffer);
+			return `PDF Document: ${url}\n\nExtracted Text:\n${pdfText}`;
+			
+		} catch (error) {
+			console.error('Failed to parse PDF content:', error);
+			return `PDF Content Detected: ${url}\nNote: Failed to extract text from PDF. Error: ${error instanceof Error ? error.message : String(error)}`;
+		}
+	}
+
+	// 非PDF内容，使用常规方式获取网页内容
 	return htmlToMarkdown(response.text)
 }
 
