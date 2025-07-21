@@ -35,7 +35,7 @@ export function CopyButton({ message }: { message: string }) {
 				</Tooltip.Trigger>
 				<Tooltip.Portal>
 					<Tooltip.Content className="infio-tooltip-content">
-						{t('chat.reactMarkdown.copyMsg')}
+						{t('chat.reactMarkdown.copyMsg') as string}
 					</Tooltip.Content>
 				</Tooltip.Portal>
 			</Tooltip.Root>
@@ -66,7 +66,7 @@ export function CreateNewFileButton({ message }: { message: string }) {
 		<Tooltip.Provider delayDuration={0}>
 			<Tooltip.Root>
 				<Tooltip.Trigger asChild>
-					<button style={{ color: '#008000' }}>
+					<button className="infio-markdown-create-button">
 						{created ? (
 							<Check
 								size={12}
@@ -79,7 +79,7 @@ export function CreateNewFileButton({ message }: { message: string }) {
 				</Tooltip.Trigger>
 				<Tooltip.Portal>
 					<Tooltip.Content className="infio-tooltip-content">
-						{t('chat.reactMarkdown.createNewNote')}
+						{t('chat.reactMarkdown.createNewNote') as string}
 					</Tooltip.Content>
 				</Tooltip.Portal>
 			</Tooltip.Root>
@@ -143,11 +143,11 @@ const MarkdownWithIcons = ({
 					className={`${className}`}
 				/>
 			</div>
-			{markdownContent && finish && iconName === "attempt_completion" &&
+			{/* {markdownContent && finish && iconName === "attempt_completion" &&
 				<div className="infio-chat-message-actions">
 					<CopyButton message={markdownContent} />
 					<CreateNewFileButton message={markdownContent} />
-				</div>}
+				</div>} */}
 		</>
 	);
 };

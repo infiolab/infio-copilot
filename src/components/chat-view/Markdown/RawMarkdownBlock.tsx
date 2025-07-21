@@ -1,5 +1,7 @@
+import * as Tooltip from '@radix-ui/react-tooltip'
 import 'katex/dist/katex.min.css'
-import { useEffect, useRef } from 'react'
+import { Check, CopyIcon, FilePlus2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
@@ -7,10 +9,93 @@ import remarkMath from 'remark-math'
 
 import { useApp } from '../../../contexts/AppContext'
 import { useDarkModeContext } from '../../../contexts/DarkModeContext'
+import { t } from '../../../lang/helpers'
 import { openMarkdownFile } from '../../../utils/obsidian'
 
 import { MemoizedMermaidBlock } from './MermaidBlock'
 import { MemoizedSyntaxHighlighterWrapper } from './SyntaxHighlighterWrapper'
+
+// CopyButton component integrated into RawMarkdownBlock
+function CopyButton({ message }: { message: string }) {
+	const [copied, setCopied] = useState(false)
+
+	const handleCopy = async () => {
+		await navigator.clipboard.writeText(message)
+		setCopied(true)
+		setTimeout(() => {
+			setCopied(false)
+		}, 1500)
+	}
+
+	return (
+		<Tooltip.Provider delayDuration={0}>
+			<Tooltip.Root>
+				<Tooltip.Trigger asChild>
+					<button className="infio-markdown-action-button">
+						{copied ? (
+							<Check
+								size={12}
+								className="infio-chat-message-actions-icon--copied"
+							/>
+						) : (
+							<CopyIcon onClick={handleCopy} size={12} />
+						)}
+					</button>
+				</Tooltip.Trigger>
+				<Tooltip.Portal>
+					<Tooltip.Content className="infio-tooltip-content">
+						{t('chat.reactMarkdown.copyMsg')}
+					</Tooltip.Content>
+				</Tooltip.Portal>
+			</Tooltip.Root>
+		</Tooltip.Provider>
+	)
+}
+
+// CreateNewFileButton component integrated into RawMarkdownBlock  
+function CreateNewFileButton({ message }: { message: string }) {
+	const app = useApp()
+	const [created, setCreated] = useState(false)
+
+	const cleanMarkdownTitle = (text: string): string => {
+		// 移除所有 # 开头的标题标记
+		return text.replace(/^#+\s*/g, '');
+	}
+
+	const handleCreate = async () => {
+		const firstLine = cleanMarkdownTitle(message.trimStart().split('\n')[0].trim()).replace(/[\\/:]/g, '');
+		const filename = firstLine.slice(0, 200) + (firstLine.length > 200 ? '...' : '') || 'untitled';
+		await app.vault.create(`/${filename}.md`, message)
+		await app.workspace.openLinkText(filename, 'split', true)
+		setCreated(true)
+		setTimeout(() => {
+			setCreated(false)
+		}, 1500)
+	}
+	return (
+		<Tooltip.Provider delayDuration={0}>
+			<Tooltip.Root>
+				<Tooltip.Trigger asChild>
+					<button className="infio-markdown-action-button infio-markdown-create-button">
+						{created ? (
+							<Check
+								size={12}
+								className="infio-chat-message-actions-icon--copied"
+							/>
+						) : (
+							<FilePlus2 onClick={handleCreate} size={12} />
+						)}
+					</button>
+				</Tooltip.Trigger>
+				<Tooltip.Portal>
+					<Tooltip.Content className="infio-tooltip-content">
+						{t('chat.reactMarkdown.createNewNote')}
+					</Tooltip.Content>
+				</Tooltip.Portal>
+			</Tooltip.Root>
+		</Tooltip.Provider>
+	)
+}
 
 interface RawMarkdownBlockProps {
 	content: string
@@ -249,7 +334,10 @@ export default function RawMarkdownBlock({
 	}, [processedContent])
 
 	return (
-		<div ref={containerRef}>
+		<div 
+			ref={containerRef} 
+			className="infio-markdown-container-with-actions"
+		>
 			<ReactMarkdown
 				className={className}
 				remarkPlugins={[remarkMath, remarkGfm]}
@@ -357,7 +445,13 @@ export default function RawMarkdownBlock({
 				{processedContent}
 			</ReactMarkdown>
 			
-
+			{/* Action buttons - only show on hover and if content exists */}
+			{content && content.trim().length > 0 && (
+				<div className="infio-markdown-actions">
+					<CopyButton message={content} />
+					<CreateNewFileButton message={content} />
+				</div>
+			)}
 		</div>
 	)
 }

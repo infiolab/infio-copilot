@@ -3408,3 +3408,90 @@ button.infio-chat-input-model-select {
 .infio-search-web-button {
 	color: #008000 !important;
 }
+
+/*
+ * RawMarkdownBlock Action Buttons
+ * - Hover to show copy and create file buttons
+ * - Positioned at bottom right corner
+ * - Non-intrusive and doesn't affect layout
+ */
+
+.infio-markdown-container-with-actions {
+	position: relative;
+	&:hover {
+		background-color: var(--background-modifier-hover);
+	}
+}
+
+.infio-markdown-actions {
+	position: absolute;
+	bottom: 8px;
+	right: 8px;
+	display: flex;
+	gap: 4px;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+	padding: 0px;
+	z-index: 10;
+	button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    width: 24px;
+    padding: 0;
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: var(--text-faint);
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--background-modifier-hover);
+    }
+  }
+
+  .infio-chat-message-actions-icon--copied {
+    color: var(--text-muted);
+  }
+}
+
+.infio-markdown-container-with-actions:hover .infio-markdown-actions {
+	opacity: 1;
+	visibility: visible;
+}
+
+.infio-markdown-action-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border: none;
+	border-radius: 4px;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all 0.2s ease-in-out;
+	padding: 0;
+}
+
+.infio-markdown-action-button:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+	transform: scale(1.1);
+}
+
+.infio-markdown-action-button:active {
+	transform: scale(0.95);
+}
+
+.infio-markdown-create-button {
+	color: #008000;
+}
+
+.infio-markdown-create-button:hover {
+	background: rgba(0, 128, 0, 0.1);
+	color: #008000;
+}
