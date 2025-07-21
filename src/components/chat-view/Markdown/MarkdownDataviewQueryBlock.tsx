@@ -2,11 +2,10 @@ import { Check, ChevronsDownUp, ChevronsUpDown, Database, Loader2, X } from 'luc
 import React, { useState } from 'react'
 
 import { useDarkModeContext } from "../../../contexts/DarkModeContext"
-import { t } from '../../../lang/helpers'
 import { ApplyStatus, DataviewQueryToolArgs } from "../../../types/apply"
 
-import { MemoizedSyntaxHighlighterWrapper } from "./SyntaxHighlighterWrapper"
 import RawMarkdownBlock from "./RawMarkdownBlock"
+import { MemoizedSyntaxHighlighterWrapper } from "./SyntaxHighlighterWrapper"
 
 export default function MarkdownDataviewQueryBlock({
 	applyStatus,

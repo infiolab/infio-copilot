@@ -112,7 +112,7 @@ export default function MarkdownWebSearchBlock({
 			)}
 			<style>{`
 				.infio-search-web-result-content {
-					margin: 0 0 0 14px;
+					margin: 0 0 0 12px;
 					padding: 2px 2px 2px 2px;
 					background-color: var(--background-modifier-hover);
 					border-radius: var(--radius-s);
