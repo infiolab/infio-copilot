@@ -343,81 +343,83 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 								</svg>
 							</button>
 						</Popover.Trigger>
-						<Popover.Content
-							side="bottom"
-							align="start"
-							sideOffset={4}
-							className="infio-llm-setting-combobox-dropdown"
-						>
-							<div ref={listRef}>
-								<div className="infio-llm-setting-search-container">
-									<input
-										type="text"
-										className="infio-llm-setting-item-search"
-										placeholder={modelIds.length > 0 ? t("settings.ModelProvider.searchOrEnterModelName") : t("settings.ModelProvider.enterCustomModelName")}
-										value={searchTerm}
-										onChange={(e) => {
-											setSearchTerm(e.target.value);
-											setSelectedIndex(0);
-										}}
-										onKeyDown={(e) => {
-											switch (e.key) {
-												case "ArrowDown":
-													e.preventDefault();
-													setSelectedIndex((prev) =>
-														Math.min(prev + 1, filteredOptions.length - 1)
-													);
-													break;
-												case "ArrowUp":
-													e.preventDefault();
-													setSelectedIndex((prev) => Math.max(prev - 1, 0));
-													break;
-												case "Enter": {
-													e.preventDefault();
-													if (filteredOptions.length > 0) {
-														const selectedOption = filteredOptions[selectedIndex];
-														if (selectedOption) {
-															handleModelSelect(modelProvider, selectedOption.id, selectedOption.isCustom);
+						<Popover.Portal container={document.querySelector('.modal-container')}>
+							<Popover.Content
+								side="bottom"
+								align="start"
+								sideOffset={4}
+								className="infio-llm-setting-combobox-dropdown"
+							>
+								<div ref={listRef}>
+									<div className="infio-llm-setting-search-container">
+										<input
+											type="text"
+											className="infio-llm-setting-item-search"
+											placeholder={modelIds.length > 0 ? t("settings.ModelProvider.searchOrEnterModelName") : t("settings.ModelProvider.enterCustomModelName")}
+											value={searchTerm}
+											onChange={(e) => {
+												setSearchTerm(e.target.value);
+												setSelectedIndex(0);
+											}}
+											onKeyDown={(e) => {
+												switch (e.key) {
+													case "ArrowDown":
+														e.preventDefault();
+														setSelectedIndex((prev) =>
+															Math.min(prev + 1, filteredOptions.length - 1)
+														);
+														break;
+													case "ArrowUp":
+														e.preventDefault();
+														setSelectedIndex((prev) => Math.max(prev - 1, 0));
+														break;
+													case "Enter": {
+														e.preventDefault();
+														if (filteredOptions.length > 0) {
+															const selectedOption = filteredOptions[selectedIndex];
+															if (selectedOption) {
+																handleModelSelect(modelProvider, selectedOption.id, selectedOption.isCustom);
+															}
+														} else if (searchTerm.trim()) {
+															// If no options but there is input content, use the input content directly
+															handleModelSelect(modelProvider, searchTerm.trim(), true);
 														}
-													} else if (searchTerm.trim()) {
-														// If no options but there is input content, use the input content directly
-														handleModelSelect(modelProvider, searchTerm.trim(), true);
-													}
-													setSearchTerm("");
-													setIsOpen(false);
-													break;
-												}
-												case "Escape":
-													e.preventDefault();
-													setIsOpen(false);
-													setSearchTerm("");
-													break;
-											}
-										}}
-									/>
-								</div>
-								{filteredOptions.length > 0 ? (
-									<div className="infio-llm-setting-options-list">
-										{filteredOptions.map((option, index) => (
-											<Popover.Close key={option.id} asChild>
-												<div
-													ref={(el) => (itemRefs.current[index] = el)}
-													onMouseEnter={() => setSelectedIndex(index)}
-													onClick={() => {
-														handleModelSelect(modelProvider, option.id, option.isCustom);
 														setSearchTerm("");
 														setIsOpen(false);
-													}}
-													className={`infio-llm-setting-combobox-option ${index === selectedIndex ? 'is-selected' : ''}`}
-												>
-													<HighlightedText segments={option.html} />
-												</div>
+														break;
+													}
+													case "Escape":
+														e.preventDefault();
+														setIsOpen(false);
+														setSearchTerm("");
+														break;
+												}
+											}}
+										/>
+									</div>
+									{filteredOptions.length > 0 ? (
+										<div className="infio-llm-setting-options-list">
+											{filteredOptions.map((option, index) => (
+												<Popover.Close key={option.id} asChild>													
+													<div
+														ref={(el) => (itemRefs.current[index] = el)}
+														onMouseEnter={() => setSelectedIndex(index)}
+														onClick={() => {
+															handleModelSelect(modelProvider, option.id, option.isCustom);
+															setSearchTerm("");
+															setIsOpen(false);
+														}}
+														className={`infio-llm-setting-combobox-option ${index === selectedIndex ? 'is-selected' : ''}`}
+													>
+														<HighlightedText segments={option.html} />
+													</div>
 											</Popover.Close>
 										))}
-									</div>
-								) : null}
-							</div>
-						</Popover.Content>
+										</div>
+									) : null}
+								</div>
+							</Popover.Content>
+						</Popover.Portal>
 					</Popover.Root>
 				</div>
 			</div>
