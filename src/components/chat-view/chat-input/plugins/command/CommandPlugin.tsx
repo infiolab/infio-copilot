@@ -1,11 +1,10 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import clsx from 'clsx'
 import {
-	$parseSerializedNode,
 	COMMAND_PRIORITY_NORMAL,
 	TextNode
 } from 'lexical'
-import { Slash } from 'lucide-react'
+import { SquareSlash } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -15,6 +14,8 @@ import {
 	LexicalTypeaheadMenuPlugin,
 	useBasicTypeaheadTriggerMatch,
 } from '../typeahead-menu/LexicalTypeaheadMenuPlugin'
+
+import { $createCommandNode } from './CommandNode'
 
 class CommandTypeaheadOption extends MenuOption {
 	name: string
@@ -52,12 +53,8 @@ function CommandMenuItem({
 			onMouseEnter={onMouseEnter}
 			onClick={onClick}
 		>
-			<div className="infio-chat-template-menu-item">
-				<div className="text">
-					<Slash size={10} />{' '}
-					<span>{option.name}</span>
-				</div>
-			</div>
+			<SquareSlash size={14} className="infio-popover-item-icon" />
+			<span>{option.name}</span>
 		</li>
 	)
 }
@@ -99,14 +96,16 @@ export default function CommandPlugin() {
 			closeMenu: () => void,
 		) => {
 			editor.update(() => {
-				const parsedNodes = selectedOption.command.content.nodes.map((node) =>
-					$parseSerializedNode(node),
+				// Create a CommandNode instead of inserting the full command content
+				const commandNode = $createCommandNode(
+					selectedOption.command.name,
+					selectedOption.command.id
 				)
+				
 				if (nodeToRemove) {
 					const parent = nodeToRemove.getParentOrThrow()
-					parent.splice(nodeToRemove.getIndexWithinParent(), 1, parsedNodes)
-					const lastNode = parsedNodes[parsedNodes.length - 1]
-					lastNode.selectEnd()
+					parent.splice(nodeToRemove.getIndexWithinParent(), 1, [commandNode])
+					commandNode.selectEnd()
 				}
 				closeMenu()
 			})
@@ -127,12 +126,7 @@ export default function CommandPlugin() {
 			) =>
 				anchorElementRef.current && searchResults.length
 					? createPortal(
-						<div
-							className="infio-popover"
-							style={{
-								position: 'fixed',
-							}}
-						>
+						<div className="infio-popover infio-command-popover">
 							<ul>
 								{options.map((option, i: number) => (
 									<CommandMenuItem

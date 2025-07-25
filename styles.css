@@ -530,7 +530,7 @@ button:not(.clickable-icon).infio-chat-list-dropdown {
   font-size: var(--font-ui-medium);
   outline: none;
   min-height: 80px;
-  max-height: 200px;
+  max-height: 800px;
   overflow-y: auto;
   font-size: var(--font-ui-medium);
   padding: var(--size-2-1);
@@ -701,7 +701,7 @@ button:not(.clickable-icon).infio-chat-list-dropdown {
   background-color: var(--background-primary);
   border-radius: var(--radius-s);
   border: 1px solid var(--background-modifier-border);
-  max-height: 350px;
+  max-height: 800px;
   overflow-y: auto;
   white-space: pre-line;
 
@@ -1426,11 +1426,10 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
 
 .infio-chat-lexical-content-editable-root {
   min-height: 62px;
-  max-height: 500px;
+  max-height: 800px;
   overflow-y: auto;
   overflow-x: hidden;
-  /* 确保编辑器不会影响外部滚动 */
-  contain: size style;
+
 }
 
 .infio-chat-lexical-content-editable-root .mention {
@@ -1457,11 +1456,15 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
 .infio-search-lexical-content-editable-root .mention {
   background-color: var(--tag-background);
   color: var(--tag-color);
-  padding: var(--size-2-1) calc(var(--size-2-1));
-  border-radius: var(--radius-s);
-  background-color: var(--tag-background);
-  color: var(--tag-color);
   padding: 0 calc(var(--size-2-1));
+  border-radius: var(--radius-s);
+  word-break: break-all;
+}
+
+.infio-chat-lexical-content-editable-root .command {
+  background-color: rgba(115, 90, 14, 0.2); /* 黄色背景 */
+  color: #f1c43f; /* 深黄色文字 */
+  padding: var(--size-2-1) calc(var(--size-2-1));
   border-radius: var(--radius-s);
   word-break: break-all;
 }
@@ -1585,12 +1588,14 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
   }
 }
 
-.infio-chat-template-menu-item {
+.infio-command-text {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--size-4-1);
-  width: 100%;
+  gap: 6px;
+}
+
+.infio-command-popover {
+  position: fixed;
 }
 
 .infio-chat-message-actions {

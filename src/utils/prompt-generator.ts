@@ -1,4 +1,4 @@
-import { App, TAbstractFile, TFile, TFolder, Vault, getLanguage, htmlToMarkdown, normalizePath, requestUrl } from 'obsidian'
+import { App, TAbstractFile, TFile, TFolder, getLanguage, htmlToMarkdown, normalizePath, requestUrl } from 'obsidian'
 
 import { editorStateToPlainText } from '../components/chat-view/chat-input/utils/editor-state-to-plain-text'
 import { QueryProgressState } from '../components/chat-view/QueryProgress'
@@ -6,6 +6,7 @@ import { DiffStrategy } from '../core/diff/DiffStrategy'
 import { McpHub } from '../core/mcp/McpHub'
 import { SystemPrompt } from '../core/prompts/system'
 import { RAGEngine } from '../core/rag/rag-engine'
+import { CommandManager } from '../database/json/command/CommandManager'
 import { ConvertDataManager } from '../database/json/convert-data/ConvertDataManager'
 import { ConvertType } from '../database/json/convert-data/types'
 import { WorkspaceManager } from '../database/json/workspace/WorkspaceManager'
@@ -24,7 +25,6 @@ import { InfioSettings } from '../types/settings'
 import { CustomModePrompts, Mode, ModeConfig, getFullModeDetails } from "../utils/modes"
 
 import {
-	parsePdfContent,
 	readTFileContent
 } from './obsidian'
 import { tokenCount } from './token'
@@ -91,6 +91,7 @@ export class PromptGenerator {
 	private getMcpHub: () => Promise<McpHub> | null = null
 	private convertDataManager: ConvertDataManager
 	private workspaceManager: WorkspaceManager
+	private commandManager: CommandManager
 	private static readonly EMPTY_ASSISTANT_MESSAGE: RequestMessage = {
 		role: 'assistant',
 		content: '',
@@ -115,6 +116,7 @@ export class PromptGenerator {
 		this.getMcpHub = getMcpHub ?? null
 		this.convertDataManager = new ConvertDataManager(app)
 		this.workspaceManager = new WorkspaceManager(app)
+		this.commandManager = new CommandManager(app)
 	}
 
 	public async generateRequestMessages({
@@ -429,7 +431,8 @@ export class PromptGenerator {
 			}
 		}
 
-		const query = editorStateToPlainText(message.content)
+		const rawQuery = editorStateToPlainText(message.content)
+		const query = await this.replaceCommandsInQuery(rawQuery)
 		let similaritySearchResults = undefined
 
 		useVaultSearch =
@@ -1381,5 +1384,57 @@ ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`,
 			console.error(`Failed to save image to ${targetPath}:`, error)
 			throw error
 		}
+	}
+
+	/**
+	 * Replace command mentions in the query with their actual content
+	 */
+	private async replaceCommandsInQuery(query: string): Promise<string> {
+		// Find all command mentions in the format /commandName
+		const commandRegex = /\/(\w+)/g
+		const commandMatches = Array.from(query.matchAll(commandRegex))
+		
+		if (commandMatches.length === 0) {
+			return query
+		}
+
+		// Get all commands from database
+		const allCommands = await this.commandManager.ListCommands()
+		let processedQuery = query
+
+		// Replace each command mention
+		for (const match of commandMatches) {
+			const [fullMatch, commandName] = match
+			
+			// Find the command by name
+			const command = allCommands.find(cmd => cmd.name === commandName)
+			if (command) {
+				// Convert command content to plain text
+				const commandText = command.content.nodes
+					.map(node => this.lexicalNodeToPlainText(node))
+					.join('')
+				
+				// Replace the command mention with its content
+				processedQuery = processedQuery.replace(fullMatch, commandText)
+			}
+		}
+
+		return processedQuery
+	}
+
+	/**
+	 * Helper method to convert lexical node to plain text (similar to editor-state-to-plain-text.ts)
+	 */
+	private lexicalNodeToPlainText(node: any): string {
+		if (node.children) {
+			return node.children
+				.map((child: any) => this.lexicalNodeToPlainText(child))
+				.join('')
+		} else if (node.type === 'linebreak') {
+			return '\n'
+		} else if (node.text && typeof node.text === 'string') {
+			return node.text
+		}
+		return ''
 	}
 }

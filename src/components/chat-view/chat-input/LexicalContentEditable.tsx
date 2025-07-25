@@ -17,8 +17,8 @@ import { useApp } from '../../../contexts/AppContext'
 import { MentionableImage } from '../../../types/mentionable'
 import { fuzzySearch } from '../../../utils/fuzzy-search'
 
+import { CommandNode } from './plugins/command/CommandNode'
 import CommandPlugin from './plugins/command/CommandPlugin'
-import CreateCommandPopoverPlugin from './plugins/command/CreateCommandPopoverPlugin'
 import DragDropPaste from './plugins/image/DragDropPastePlugin'
 import ImagePastePlugin from './plugins/image/ImagePastePlugin'
 import AutoLinkMentionPlugin from './plugins/mention/AutoLinkMentionPlugin'
@@ -73,7 +73,7 @@ export default function LexicalContentEditable({
 			root: rootTheme || 'infio-chat-lexical-content-editable-root',
 			paragraph: 'infio-chat-lexical-content-editable-paragraph',
 		},
-		nodes: [MentionNode],
+		nodes: [MentionNode, CommandNode],
 		editorState: initialEditorState,
 		onError: (error) => {
 			console.error(error)
@@ -146,13 +146,13 @@ export default function LexicalContentEditable({
 			<ImagePastePlugin onCreateImageMentionables={onCreateImageMentionables} />
 			<DragDropPaste onCreateImageMentionables={onCreateImageMentionables} />
 			<CommandPlugin />
-			{plugins?.commandPopover && (
+			{/* {plugins?.commandPopover && (
 				<CreateCommandPopoverPlugin
 					anchorElement={plugins.commandPopover.anchorElement}
 					contentEditableElement={contentEditableRef.current}
 					onCreateCommand={plugins.commandPopover.onCreateCommand}
 				/>
-			)}
+			)} */}
 		</LexicalComposer>
 	)
 }

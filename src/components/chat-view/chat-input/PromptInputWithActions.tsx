@@ -107,18 +107,14 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 
 		const [displayedMentionableKey, setDisplayedMentionableKey] = useState<
 			string | null
-		>(addedBlockKey ?? null)
+		>(null)
 
 		// 追踪编辑器是否为空
 		const [isEmpty, setIsEmpty] = useState(() => 
 			initialSerializedEditorState ? isEditorStateEmpty(initialSerializedEditorState) : true
 		)
 
-		useEffect(() => {
-			if (addedBlockKey) {
-				setDisplayedMentionableKey(addedBlockKey)
-			}
-		}, [addedBlockKey])
+
 
 		// 添加快捷键监听器
 		useEffect(() => {
@@ -276,11 +272,6 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 							.filter((v) => !!v),
 					),
 			)
-			if (addedMentionables.length > 0) {
-				setDisplayedMentionableKey(
-					getMentionableKey(addedMentionables[addedMentionables.length - 1]),
-				)
-			}
 		}
 
 		const handleCreateImageMentionables = useCallback(
@@ -295,13 +286,6 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 				)
 				if (newMentionableImages.length === 0) return
 				setMentionables([...mentionables, ...newMentionableImages])
-				setDisplayedMentionableKey(
-					getMentionableKey(
-						serializeMentionable(
-							newMentionableImages[newMentionableImages.length - 1],
-						),
-					),
-				)
 			},
 			[mentionables, setMentionables],
 		)
@@ -435,11 +419,7 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 					</div>
 				</div>
 				<style>
-					{`
-					.infio-chat-user-input-container {
-						position: relative;
-					}
-					
+					{`					
 					.infio-chat-user-input-editor-container {
 						position: relative;
 					}
