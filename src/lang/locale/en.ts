@@ -210,7 +210,7 @@ export default {
 		"save": "Save"
 	},
 	command: {
-		"createQuickCommand": "Create Quick Command",
+		"createQuickCommand": "Quick Command",
 		"name": "Name",
 		"content": "Content",
 		"createCommand": "Create Command",

@@ -211,7 +211,7 @@ export default {
 		"save": "保存"
 	},
 	command: {
-		"createQuickCommand": "创建快捷命令",
+		"createQuickCommand": "快捷命令",
 		"name": "名称",
 		"content": "内容",
 		"createCommand": "创建命令",

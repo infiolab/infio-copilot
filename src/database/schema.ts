@@ -95,6 +95,7 @@ export type TemplateRecord = {
 	id: string
 	name: string
 	content: TemplateContent
+	icon?: string
 	createdAt: Date
 	updatedAt: Date
 }
@@ -108,6 +109,7 @@ export const templateTable: TableDefinition = {
 		id: { type: 'UUID', primaryKey: true, defaultRandom: true },
 		name: { type: 'TEXT', notNull: true, unique: true },
 		content: { type: 'JSONB', notNull: true },
+		icon: { type: 'TEXT' },
 		createdAt: { type: 'TIMESTAMP', notNull: true, defaultNow: true },
 		updatedAt: { type: 'TIMESTAMP', notNull: true, defaultNow: true }
 	}

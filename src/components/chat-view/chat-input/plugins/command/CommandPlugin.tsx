@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { QuickCommand, useCommands } from '../../../../../hooks/use-commands'
+import { getIconComponent } from '../../../../../hooks/use-icon-selector'
 import { MenuOption } from '../shared/LexicalMenu'
 import {
 	LexicalTypeaheadMenuPlugin,
@@ -53,7 +54,10 @@ function CommandMenuItem({
 			onMouseEnter={onMouseEnter}
 			onClick={onClick}
 		>
-			<SquareSlash size={14} className="infio-popover-item-icon" />
+			{(() => {
+				const IconComponent = option.command.icon ? getIconComponent(option.command.icon) : SquareSlash
+				return <IconComponent size={14} className="infio-popover-item-icon" />
+			})()}
 			<span>{option.name}</span>
 		</li>
 	)

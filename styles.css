@@ -2877,8 +2877,6 @@ button.infio-chat-input-model-select {
 }
 
 .infio-commands-header {
-  padding-bottom: var(--size-4-2);
-  border-bottom: 1px solid var(--background-modifier-border);
   margin-bottom: var(--size-4-2);
 }
 
@@ -2910,14 +2908,15 @@ button.infio-chat-input-model-select {
 
 .infio-commands-input {
   background-color: var(--background-primary) !important;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
+  border: none !important;
+  border-radius: var(--radius-s) !important;
   color: var(--text-normal);
-  padding: var(--size-4-2);
+  padding: var(--size-2-2);
+	margin-bottom: var(--size-2-2);
   font-size: var(--font-ui-small);
   width: 100%;
   box-sizing: border-box;
-  margin-bottom: var(--size-4-2);
+  height: 36px;
 }
 
 .infio-commands-textarea {
@@ -3022,10 +3021,12 @@ button.infio-chat-input-model-select {
 
 .infio-commands-name {
   font-weight: var(--font-medium);
-  margin-bottom: var(--size-2-3);
   font-size: var(--font-ui-medium);
-  color: var(--text-accent);
-	user-select: text;
+  color: #f1c43f;
+  user-select: text;
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
 }
 
 .infio-commands-content {
@@ -3076,6 +3077,9 @@ button.infio-chat-input-model-select {
 }
 
 .infio-commands-edit-name {
+  display: flex;
+  align-items: center;
+  justify-content: center !important;
   background-color: var(--background-primary) !important;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
@@ -3084,6 +3088,8 @@ button.infio-chat-input-model-select {
   font-size: var(--font-ui-medium);
   font-weight: var(--font-medium);
   width: 100%;
+  height: 36px;
+  box-sizing: border-box;
 }
 
 .infio-commands-view-mode {
@@ -3100,7 +3106,115 @@ button.infio-chat-input-model-select {
 .infio-commands-form-group {
   display: flex;
   flex-direction: column;
+}
+
+.infio-commands-form-row {
+  display: flex;
+  gap: var(--size-4-2);
+  align-items: flex-end;
+}
+
+.infio-commands-form-row .infio-commands-label {
+  margin-bottom: var(--size-2-1);
+}
+
+.infio-commands-form-row .infio-commands-icon-group {
+  flex-shrink: 0;
+  width: auto;
+}
+
+.infio-commands-form-row .infio-commands-form-group:not(.infio-commands-icon-group) {
+  flex: 1;
+}
+
+.infio-commands-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--size-2-3);
+}
+
+.infio-commands-market-name {
+  font-weight: var(--font-medium);
+  font-size: var(--font-ui-medium);
+  color: var(--text-accent);
+  display: flex;
+  align-items: center;
   gap: var(--size-2-2);
+}
+
+/* Icon Selector Styles */
+.infio-icon-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.infio-icon-selector-button {
+  display: flex;
+  align-items: center;
+	justify-content: center;
+	background-color: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	color: var(--text-muted) !important;
+	padding: 0 !important;
+	margin: 0 !important;
+  gap: var(--size-2-1);
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  min-width: 36px !important;
+  height: 36px !important;
+	border-radius: var(--radius-s) !important;
+  justify-content: center !important;
+
+	&:hover {
+		background-color: var(--background-modifier-hover) !important;
+	}
+}
+
+.infio-icon-selector-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin-top: var(--size-2-1);
+  max-height: 320px;
+  overflow-y: auto;
+  min-width: 280px;
+}
+
+.infio-icon-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: var(--size-2-1);
+  padding: var(--size-4-3) var(--size-4-2);
+}
+
+.infio-icon-selector-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+	background-color: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	color: var(--text-muted) !important;
+	padding: 0 !important;
+	margin: 0 !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+	&:hover {
+		background-color: var(--background-modifier-hover) !important;
+	}
+
+	&.selected {
+		background-color: var(--interactive-accent) !important;
+		color: var(--text-on-accent) !important;
+	}
 }
 
 .infio-commands-section {
@@ -3499,4 +3613,231 @@ button.infio-chat-input-model-select {
 .infio-markdown-create-button:hover {
 	background: rgba(0, 128, 0, 0.1);
 	color: #008000;
+}
+
+/* Commands View Tabs Styles */
+.infio-commands-tabs {
+  display: flex;
+  gap: 0;
+	border: none;
+  margin-bottom: var(--size-4-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+  position: relative;
+  width: 100%;
+}
+
+.infio-commands-tab-button {
+  border: none;
+  padding: 16px 24px;
+  cursor: pointer;
+  color: var(--text-normal) !important;
+  background-color: transparent !important;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  border-bottom: 2px solid transparent;
+  flex: 1;
+  text-align: center;
+}
+
+.infio-commands-tab-button.active {
+  border-bottom: 2px solid var(--interactive-accent);
+}
+
+.infio-commands-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+}
+
+/* Commands Create Section Collapsible Styles */
+.infio-commands-create-section {
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  margin-bottom: 16px;
+}
+
+.infio-commands-create-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.infio-commands-create-item-header:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.infio-commands-create-item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.infio-commands-hub-expander {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.infio-commands-create-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.infio-commands-create-expanded {
+  border-top: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: expandContent 0.3s ease-out;
+  border-bottom-left-radius: var(--radius-s);
+  border-bottom-right-radius: var(--radius-s);
+}
+
+@keyframes expandContent {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Market Commands Styles */
+.infio-commands-market-item {
+  background-color: var(--background-primary);
+  border-radius: var(--radius-s);
+  padding: var(--size-4-2);
+  box-shadow: var(--shadow-s);
+  border: 1px solid var(--background-modifier-border);
+  transition: all 0.2s ease;
+}
+
+.infio-commands-market-item:hover {
+  box-shadow: var(--shadow-l);
+  border-color: var(--background-modifier-border-hover);
+}
+
+.infio-commands-market-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--size-2-3);
+}
+
+.infio-commands-market-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+}
+
+.infio-commands-market-name {
+  font-weight: var(--font-medium);
+  font-size: var(--font-ui-medium);
+  color: #f1c43f;
+  user-select: text;
+}
+
+.infio-commands-market-category {
+  background-color: #f1c43f;
+  color: #000000;
+  padding: 2px 8px;
+  border-radius: var(--radius-s);
+  font-size: 12px;
+  font-weight: 500;
+  align-self: flex-start;
+	margin-top: var(--size-4-2);
+}
+
+.infio-commands-market-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+}
+
+.infio-commands-market-downloads {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.infio-commands-market-description {
+  color: #f1c43f;
+  margin-bottom: var(--size-2-3);
+  font-size: var(--font-ui-medium);
+  line-height: 1.8;
+  user-select: text;
+}
+
+.infio-commands-market-content {
+  font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+  margin-bottom: var(--size-4-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+	user-select: text;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.infio-commands-market-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-2-2);
+}
+
+.infio-commands-install-btn {
+  display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	color: var(--text-muted) !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	width: 24px !important;
+	height: 24px !important;
+  gap: var(--size-2-1);
+  cursor: pointer !important;
+  font-size: var(--font-ui-small) !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+
+	&:hover {
+		background-color: var(--interactive-accent) !important;
+		color: var(--text-on-accent) !important;
+	}
+
+	&:active {
+		transform: translateY(0);
+	}
 }

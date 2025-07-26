@@ -11,14 +11,15 @@ export interface QuickCommand {
 	name: string
 	content: TemplateContent
 	contentText: string
+	icon?: string
 	createdAt: number
 	updatedAt: number
 }
 
 type UseCommands = {
-	createCommand: (name: string, content: TemplateContent) => Promise<void>
+	createCommand: (name: string, content: TemplateContent, icon?: string) => Promise<void>
 	deleteCommand: (id: string) => Promise<void>
-	updateCommand: (id: string, name: string, content: TemplateContent) => Promise<void>
+	updateCommand: (id: string, name: string, content: TemplateContent, icon?: string) => Promise<void>
 	commandList: QuickCommand[]
 }
 
@@ -37,6 +38,7 @@ export function useCommands(): UseCommands {
 				name: row.name,
 				content: row.content,
 				contentText: row.content.nodes.map(lexicalNodeToPlainText).join(''),
+				icon: row.icon,
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
 			})))
@@ -48,10 +50,11 @@ export function useCommands(): UseCommands {
 	}, [fetchCommandList])
 
 	const createCommand = useCallback(
-		async (name: string, content: TemplateContent): Promise<void> => {
+		async (name: string, content: TemplateContent, icon?: string): Promise<void> => {
 			await templateManager.createCommand({
 				name,
 				content,
+				icon,
 			})
 			fetchCommandList()
 		},
@@ -67,10 +70,11 @@ export function useCommands(): UseCommands {
 	)
 
 	const updateCommand = useCallback(
-		async (id: string, name: string, content: TemplateContent): Promise<void> => {
+		async (id: string, name: string, content: TemplateContent, icon?: string): Promise<void> => {
 			await templateManager.updateCommand(id, {
 				name,
 				content,
+				icon,
 			})
 			fetchCommandList()
 		},
