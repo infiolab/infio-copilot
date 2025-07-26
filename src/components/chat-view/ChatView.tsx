@@ -588,21 +588,29 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 	)
 
 	const handleExecuteStarredCommand = useCallback((commandName: string) => {
-		// Create a simple text editor state with the command name prefixed with /
-		const commandText = `/${commandName}`
-		
-		const textNode = {
+		// Find the command in starredCommands to get its ID
+		const command = starredCommands.find(cmd => cmd.name === commandName)
+		if (!command) {
+			console.error(`Command "${commandName}" not found in starred commands`)
+			return
+		}
+
+		// Create a CommandNode with proper structure
+		const commandNode = {
+			commandName: command.name,
+			commandId: command.id,
+			commandContent: command.contentText,
 			detail: 0,
 			format: 0,
-			mode: 'normal',
+			mode: 'token',
 			style: '',
-			text: commandText,
-			type: 'text',
+			text: `/${command.name}`,
+			type: 'command',
 			version: 1,
 		}
 
 		const paragraphNode = {
-			children: [textNode],
+			children: [commandNode],
 			direction: 'ltr' as const,
 			format: '' as const,
 			indent: 0,
@@ -621,12 +629,12 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 			}
 		}
 
-		// Submit the command with / prefix to trigger command processing
+		// Submit the command with proper CommandNode structure
 		handleSubmit([...chatMessages, { ...inputMessage, content: editorState }], false)
 		setInputMessage(getNewInputMessage(app, settings.defaultMention))
 		preventAutoScrollRef.current = false
 		handleScrollToBottom()
-	}, [chatMessages, inputMessage, handleSubmit, app, settings.defaultMention])
+	}, [chatMessages, inputMessage, handleSubmit, app, settings.defaultMention, starredCommands])
 
 	useEffect(() => {
 		setFocusedMessageId(inputMessage.id)

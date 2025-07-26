@@ -17,9 +17,10 @@ export function lexicalNodeToPlainText(node: SerializedLexicalNode): string {
   } else if (node.type === 'linebreak') {
     return '\n'
   } else if (node.type === COMMAND_NODE_TYPE) {
-    // Handle CommandNode - return the command name with / prefix
-    const commandNode = node as SerializedCommandNode
-    return `/${commandNode.commandName}`
+    // Handle CommandNode - return the actual command content, not the command name
+		const commandNode = node as SerializedCommandNode
+		console.log('🔍 CommandNode处理:', commandNode.commandName, '内容:', commandNode.commandContent)
+    return commandNode.commandContent || `/${commandNode.commandName}`
   } else if ('text' in node && typeof node.text === 'string') {
     return node.text
   }

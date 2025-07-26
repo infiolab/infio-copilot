@@ -34,6 +34,12 @@ export type MentionableImage = {
   mimeType: string
   data: string // base64
 }
+export type MentionableCommand = {
+  type: 'command'
+  commandName: string
+  commandId: string
+  content: string
+}
 export type Mentionable =
   | MentionableFile
   | MentionableFolder
@@ -42,6 +48,7 @@ export type Mentionable =
   | MentionableBlock
   | MentionableUrl
   | MentionableImage
+  | MentionableCommand
 export type SerializedMentionableFile = {
   type: 'file'
   file: string
@@ -64,6 +71,12 @@ export type SerializedMentionableBlock = {
 }
 export type SerializedMentionableUrl = MentionableUrl
 export type SerializedMentionableImage = MentionableImage
+export type SerializedMentionableCommand = {
+  type: 'command'
+  commandName: string
+  commandId: string
+  commandContent: string
+}
 export type SerializedMentionable =
   | SerializedMentionableFile
   | SerializedMentionableFolder
@@ -72,3 +85,4 @@ export type SerializedMentionable =
   | SerializedMentionableBlock
   | SerializedMentionableUrl
   | SerializedMentionableImage
+  | SerializedMentionableCommand

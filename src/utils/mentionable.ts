@@ -45,6 +45,12 @@ export const serializeMentionable = (
 				mimeType: mentionable.mimeType,
 				data: mentionable.data,
 			}
+		case 'command':
+			return {
+				type: 'command',
+				commandName: mentionable.commandName,
+				commandId: mentionable.commandId,
+			}
 	}
 }
 
@@ -118,6 +124,16 @@ export const deserializeMentionable = (
 					data: mentionable.data,
 				}
 			}
+			case 'command': {
+				// For commands, the content is already included in the SerializedMentionableCommand
+				// through the CommandNode, so we don't need to query the database
+				return {
+					type: 'command',
+					commandName: mentionable.commandName,
+					commandId: mentionable.commandId,
+					content: mentionable.commandContent,
+				}
+			}
 		}
 	} catch (e) {
 		console.error('Error deserializing mentionable', e)
@@ -141,6 +157,8 @@ export function getMentionableKey(mentionable: SerializedMentionable): string {
 			return `url:${mentionable.url}`
 		case 'image':
 			return `image:${mentionable.name}:${mentionable.data.length}:${mentionable.data.slice(-32)}`
+		case 'command':
+			return `command:${mentionable.commandId}`
 	}
 }
 
@@ -160,5 +178,7 @@ export function getMentionableName(mentionable: Mentionable): string {
 			return mentionable.url
 		case 'image':
 			return mentionable.name
+		case 'command':
+			return mentionable.commandName
 	}
 }

@@ -431,8 +431,7 @@ export class PromptGenerator {
 			}
 		}
 
-		const rawQuery = editorStateToPlainText(message.content)
-		const query = await this.replaceCommandsInQuery(rawQuery)
+		const query = editorStateToPlainText(message.content)
 		let similaritySearchResults = undefined
 
 		useVaultSearch =
@@ -1386,55 +1385,5 @@ ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`,
 		}
 	}
 
-	/**
-	 * Replace command mentions in the query with their actual content
-	 */
-	private async replaceCommandsInQuery(query: string): Promise<string> {
-		// Find all command mentions in the format /commandName
-		const commandRegex = /\/(\w+)/g
-		const commandMatches = Array.from(query.matchAll(commandRegex))
-		
-		if (commandMatches.length === 0) {
-			return query
-		}
 
-		// Get all commands from database
-		const allCommands = await this.commandManager.ListCommands()
-		let processedQuery = query
-
-		// Replace each command mention
-		for (const match of commandMatches) {
-			const [fullMatch, commandName] = match
-			
-			// Find the command by name
-			const command = allCommands.find(cmd => cmd.name === commandName)
-			if (command) {
-				// Convert command content to plain text
-				const commandText = command.content.nodes
-					.map(node => this.lexicalNodeToPlainText(node))
-					.join('')
-				
-				// Replace the command mention with its content
-				processedQuery = processedQuery.replace(fullMatch, commandText)
-			}
-		}
-
-		return processedQuery
-	}
-
-	/**
-	 * Helper method to convert lexical node to plain text (similar to editor-state-to-plain-text.ts)
-	 */
-	private lexicalNodeToPlainText(node: any): string {
-		if (node.children) {
-			return node.children
-				.map((child: any) => this.lexicalNodeToPlainText(child))
-				.join('')
-		} else if (node.type === 'linebreak') {
-			return '\n'
-		} else if (node.text && typeof node.text === 'string') {
-			return node.text
-		}
-		return ''
-	}
 }

@@ -274,6 +274,8 @@ const PromptInputWithActions = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 			)
 		}
 
+
+
 		const handleCreateImageMentionables = useCallback(
 			(mentionableImages: MentionableImage[]) => {
 				const newMentionableImages = mentionableImages.filter(

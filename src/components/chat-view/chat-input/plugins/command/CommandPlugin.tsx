@@ -100,10 +100,15 @@ export default function CommandPlugin() {
 			closeMenu: () => void,
 		) => {
 			editor.update(() => {
-				// Create a CommandNode instead of inserting the full command content
+				// Use the pre-calculated contentText from the command
+				const commandContent = selectedOption.command.contentText
+				console.log('✨ 创建CommandNode:', selectedOption.command.name, '内容:', commandContent)
+
+				// Create a CommandNode with the command content
 				const commandNode = $createCommandNode(
 					selectedOption.command.name,
-					selectedOption.command.id
+					selectedOption.command.id,
+					commandContent || ''
 				)
 				
 				if (nodeToRemove) {

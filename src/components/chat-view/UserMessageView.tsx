@@ -1,10 +1,10 @@
-import { SerializedEditorState } from 'lexical'
+import { SerializedEditorState, SerializedLexicalNode } from 'lexical'
 import { Pencil } from 'lucide-react'
-import React, { useState } from 'react'
+import React from 'react'
 
 import { Mentionable } from '../../types/mentionable'
+import { COMMAND_NODE_TYPE, SerializedCommandNode } from './chat-input/plugins/command/CommandNode'
 
-import { editorStateToPlainText } from './chat-input/utils/editor-state-to-plain-text'
 import { getMentionableIcon } from './chat-input/utils/get-metionable-icon'
 
 interface UserMessageViewProps {
@@ -13,23 +13,44 @@ interface UserMessageViewProps {
 	onEdit: () => void
 }
 
+// 将editor state转换为用户界面显示文本，CommandNode显示为/commandName
+function renderEditorStateForDisplay(editorState: SerializedEditorState): string {
+	return renderNodeForDisplay(editorState.root)
+}
+
+function renderNodeForDisplay(node: SerializedLexicalNode): string {
+	if ('children' in node) {
+		// Process children recursively and join their results
+		return (node.children as SerializedLexicalNode[])
+			.map(renderNodeForDisplay)
+			.join('')
+	} else if (node.type === 'linebreak') {
+		return '\n'
+	} else if (node.type === COMMAND_NODE_TYPE) {
+		// Handle CommandNode - show command name for user display
+		const commandNode = node as SerializedCommandNode
+		return `/${commandNode.commandName}`
+	} else if ('text' in node && typeof node.text === 'string') {
+		return node.text
+	}
+	return ''
+}
+
 const UserMessageView: React.FC<UserMessageViewProps> = ({
 	content,
 	mentionables,
 	onEdit,
 }) => {
-	const [isExpanded, setIsExpanded] = useState(false)
-
-	// 将编辑器状态转换为纯文本
-	const plainText = content ? editorStateToPlainText(content) : ''
+	// 将编辑器状态转换为用户显示文本
+	const plainText = content ? renderEditorStateForDisplay(content) : ''
 
 	// 判断是否需要截断（超过2行或超过80个字符）
 	const lines = plainText.split('\n')
 	const needsTruncation = lines.length > 3 || plainText.length > 80
 
-	// 显示的文本内容
+	// 显示的文本内容 - 暂时禁用展开功能
 	let displayText = plainText
-	if (needsTruncation && !isExpanded) {
+	if (needsTruncation) {
 		// 取前2行或前80个字符，取较小值
 		const truncatedByLines = lines.slice(0, 2).join('\n')
 		displayText = truncatedByLines.length > 80

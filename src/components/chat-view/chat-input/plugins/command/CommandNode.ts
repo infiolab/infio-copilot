@@ -16,15 +16,19 @@ import {
   TextNode,
 } from 'lexical'
 
+import { SerializedMentionableCommand } from '../../../../../types/mentionable'
+
 export const COMMAND_NODE_TYPE = 'command'
 export const COMMAND_NODE_ATTRIBUTE = 'data-lexical-command'
 export const COMMAND_NODE_COMMAND_NAME_ATTRIBUTE = 'data-lexical-command-name'
 export const COMMAND_NODE_COMMAND_ID_ATTRIBUTE = 'data-lexical-command-id'
+export const COMMAND_NODE_COMMAND_CONTENT_ATTRIBUTE = 'data-lexical-command-content'
 
 export type SerializedCommandNode = Spread<
   {
     commandName: string
     commandId: string
+    commandContent: string
   },
   SerializedTextNode
 >
@@ -38,9 +42,10 @@ function $convertCommandElement(
     domNode.textContent ??
     ''
   const commandId = domNode.getAttribute(COMMAND_NODE_COMMAND_ID_ATTRIBUTE) ?? ''
+  const commandContent = domNode.getAttribute(COMMAND_NODE_COMMAND_CONTENT_ATTRIBUTE) ?? ''
 
   if (textContent !== null) {
-    const node = $createCommandNode(commandName, commandId)
+    const node = $createCommandNode(commandName, commandId, commandContent)
     return {
       node,
     }
@@ -52,19 +57,21 @@ function $convertCommandElement(
 export class CommandNode extends TextNode {
   __commandName: string
   __commandId: string
+  __commandContent: string
 
   static getType(): string {
     return COMMAND_NODE_TYPE
   }
 
   static clone(node: CommandNode): CommandNode {
-    return new CommandNode(node.__commandName, node.__commandId, node.__key)
+    return new CommandNode(node.__commandName, node.__commandId, node.__commandContent, node.__key)
   }
   
   static importJSON(serializedNode: SerializedCommandNode): CommandNode {
     const node = $createCommandNode(
       serializedNode.commandName,
       serializedNode.commandId,
+      serializedNode.commandContent || '',
     )
     node.setTextContent(serializedNode.text)
     node.setFormat(serializedNode.format)
@@ -77,11 +84,13 @@ export class CommandNode extends TextNode {
   constructor(
     commandName: string,
     commandId: string,
+    commandContent: string,
     key?: NodeKey,
   ) {
     super(`/${commandName}`, key)
     this.__commandName = commandName
     this.__commandId = commandId
+    this.__commandContent = commandContent
   }
 
   exportJSON(): SerializedCommandNode {
@@ -89,6 +98,7 @@ export class CommandNode extends TextNode {
       ...super.exportJSON(),
       commandName: this.__commandName,
       commandId: this.__commandId,
+      commandContent: this.__commandContent,
       type: COMMAND_NODE_TYPE,
       version: 1,
     }
@@ -110,6 +120,10 @@ export class CommandNode extends TextNode {
     element.setAttribute(
       COMMAND_NODE_COMMAND_ID_ATTRIBUTE,
       this.__commandId,
+    )
+    element.setAttribute(
+      COMMAND_NODE_COMMAND_CONTENT_ATTRIBUTE,
+      this.__commandContent,
     )
     element.textContent = this.__text
     return { element }
@@ -152,13 +166,23 @@ export class CommandNode extends TextNode {
   getCommandId(): string {
     return this.__commandId
   }
+
+  getSerializedCommand(): SerializedMentionableCommand {
+    return {
+      type: 'command',
+      commandName: this.__commandName,
+      commandId: this.__commandId,
+      commandContent: this.__commandContent,
+    }
+  }
 }
 
 export function $createCommandNode(
   commandName: string,
   commandId: string,
+  commandContent: string = '',
 ): CommandNode {
-  const commandNode = new CommandNode(commandName, commandId)
+  const commandNode = new CommandNode(commandName, commandId, commandContent)
   commandNode.setMode('token').toggleDirectionless()
   return $applyNodeReplacement(commandNode)
 }
