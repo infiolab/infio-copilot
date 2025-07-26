@@ -7,6 +7,7 @@ export type Command = {
   name: string
   content: { nodes: SerializedLexicalNode[] }
   icon?: string
+  starred?: boolean
   createdAt: number
   updatedAt: number
   schemaVersion: number

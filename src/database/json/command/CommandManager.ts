@@ -145,4 +145,23 @@ export class CommandManager extends AbstractJsonRepository<
 
 		return commands
 	}
+
+	public async toggleStarCommand(id: string): Promise<Command | null> {
+		const command = await this.findById(id)
+		if (!command) return null
+
+		const updatedCommand: Command = {
+			...command,
+			starred: !command.starred,
+			updatedAt: Date.now(),
+		}
+
+		await this.update(command, updatedCommand)
+		return updatedCommand
+	}
+
+	public async getStarredCommands(): Promise<Command[]> {
+		const allCommands = await this.ListCommands()
+		return allCommands.filter(command => command.starred === true)
+	}
 }

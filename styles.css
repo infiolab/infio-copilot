@@ -165,6 +165,64 @@
 }
 
 /*
+ * Starred Commands Display
+ * - Quick access to starred commands above the input
+ */
+.infio-starred-commands {
+  border: none !important;
+	margin-bottom: var(--size-4-2);
+}
+
+.infio-starred-commands-title {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  margin-bottom: var(--size-4-2);
+}
+
+.infio-starred-commands-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+}
+
+.infio-starred-command-item {
+  display: flex;
+  align-items: center;
+	justify-content: center;
+
+  padding: 1px 8px;
+  background-color: rgba(86, 72, 29, 0.3) !important;
+  border: none !important;
+	box-shadow: none !important;
+  border-radius: var(--radius-l);
+  font-size: var(--font-ui-small);
+  color: #f1c43f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.infio-starred-command-item:hover {
+  background-color: rgba(115, 90, 14, 0.4) !important;
+  color: #f1c43f;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.infio-starred-command-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
  * Markdown Content Styling
  * - Typography and text formatting
  * - Lists, blockquotes, and code blocks
@@ -1462,10 +1520,10 @@ input[type='text'].infio-chat-list-dropdown-item-title-input {
 }
 
 .infio-chat-lexical-content-editable-root .command {
-  background-color: rgba(115, 90, 14, 0.2); /* 黄色背景 */
+  background-color: rgba(115, 90, 14, 0.3); /* 黄色背景 */
   color: #f1c43f; /* 深黄色文字 */
   padding: var(--size-2-1) calc(var(--size-2-1));
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-m);
   word-break: break-all;
 }
 

@@ -96,6 +96,7 @@ export type TemplateRecord = {
 	name: string
 	content: TemplateContent
 	icon?: string
+	starred?: boolean
 	createdAt: Date
 	updatedAt: Date
 }
@@ -110,6 +111,7 @@ export const templateTable: TableDefinition = {
 		name: { type: 'TEXT', notNull: true, unique: true },
 		content: { type: 'JSONB', notNull: true },
 		icon: { type: 'TEXT' },
+		starred: { type: 'BOOLEAN' },
 		createdAt: { type: 'TIMESTAMP', notNull: true, defaultNow: true },
 		updatedAt: { type: 'TIMESTAMP', notNull: true, defaultNow: true }
 	}

@@ -7,6 +7,7 @@ import {
 	Briefcase,
 	Calendar,
 	Camera,
+	Check,
 	CheckSquare,
 	Clock,
 	Code,
@@ -19,6 +20,7 @@ import {
 	Heart,
 	Image,
 	Key,
+	Languages,
 	Lightbulb,
 	Lock,
 	Mail,
@@ -30,10 +32,12 @@ import {
 	Server,
 	Settings,
 	Shield,
+	SquareSlash,
 	Star,
 	Target,
 	Video,
 	Volume2,
+	Wand,
 	Wifi,
 	Zap
 } from 'lucide-react'
@@ -41,7 +45,11 @@ import React, { useEffect, useRef, useState } from 'react'
 
 // Default icon options for commands
 export const DEFAULT_COMMAND_ICONS = [
+	{ name: 'square-slash', icon: SquareSlash, label: 'square-slash' },
 	{ name: 'command', icon: Command, label: '命令' },
+	{ name: 'check', icon: Check, label: '检查' },
+	{ name: 'wand', icon: Wand, label: '魔法棒' },
+	{ name: 'languages', icon: Languages, label: '语言' },
 	{ name: 'settings', icon: Settings, label: '设置' },
 	{ name: 'file-text', icon: FileText, label: '文档' },
 	{ name: 'edit', icon: Edit, label: '编辑' },

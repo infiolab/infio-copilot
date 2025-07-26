@@ -1,8 +1,8 @@
 import { $generateNodesFromSerializedNodes } from '@lexical/clipboard'
 import { BaseSerializedNode } from '@lexical/clipboard/clipboard'
 import { InitialEditorStateType } from '@lexical/react/LexicalComposer'
-import { $getRoot, $insertNodes, LexicalEditor, SerializedLexicalNode } from 'lexical'
-import { ChevronDown, ChevronRight, Download, Pencil, Search, Trash2 } from 'lucide-react'
+import { $getRoot, $insertNodes, LexicalEditor } from 'lexical'
+import { ChevronDown, ChevronRight, Download, Pencil, Search, Star, Trash2 } from 'lucide-react'
 import { Notice } from 'obsidian'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -19,6 +19,7 @@ export interface QuickCommand {
 	content: TemplateContent
 	contentText: string
 	icon?: string
+	starred?: boolean
 	createdAt: number
 	updatedAt: number
 }
@@ -68,7 +69,7 @@ Based **strictly** on the data you retrieve, use \`attempt_completion\` generate
 		description: 'Translate user-provided text',
 		contentText: 'Translate user-provided text accurately, naturally, and contextually into fluent **简体中文**.',
 		category: 'translate',
-		icon: 'globe',
+		icon: 'languages',
 		downloads: 890
 	},
 	{
@@ -110,7 +111,7 @@ While rewriting, you must:
 		description: 'Generate a detailed outline',
 		contentText: `Generate a detailed outline for the user-provided text based on the provided theme. Include: 1. Main sections, 2. Key points for each section, 3. Logical structure.`,
 		category: 'write',
-		icon: 'file-text',
+		icon: 'wand',
 		downloads: 432
 	},
 	{
@@ -149,7 +150,7 @@ While rewriting, you must:
 *   **Do Not Alter Content:** The meaning, grammar, and choice of words must not be changed.
 *   **Maintain Original Formatting:** Your output must perfectly mirror the input's structure, including all line breaks, indentation, and spacing.`,
 		category: 'write',
-		icon: 'check-square',
+		icon: 'check',
 		downloads: 123
 	},
 	{
@@ -158,7 +159,7 @@ While rewriting, you must:
 		description: 'Fix grammar errors in the user-provided text.',
 		contentText: `Please correct the grammar of the content provided by user to ensure it complies with the grammatical conventions of the language it belongs to, contains no grammatical errors, maintains correct sentence structure, uses tenses accurately, and has correct punctuation. Please ensure that the final content is grammatically impeccable while retaining the original information.`,
 		category: 'write',
-		icon: 'settings',
+		icon: 'check',
 		downloads: 123
 	},
 	{
@@ -167,7 +168,7 @@ While rewriting, you must:
 		description: 'Fix punctuation errors in the user-provided text.',
 		contentText: `Please correct the punctuation of the content provided by user to ensure it complies with the punctuation conventions of the language it belongs to, contains no punctuation errors, maintains correct sentence structure, and has correct punctuation. Please ensure that the final content is punctually impeccable while retaining the original information.`,
 		category: 'write',
-		icon: 'edit',
+		icon: 'check',
 		downloads: 123
 	}
 ]
@@ -183,6 +184,7 @@ const CommandsView = (
 		createCommand,
 		deleteCommand,
 		updateCommand,
+		toggleStarCommand,
 		commandList,
 	} = useCommands()
 
@@ -193,7 +195,7 @@ const CommandsView = (
 	const [newCommandName, setNewCommandName] = useState('')
 
 	// new command icon
-	const [newCommandIcon, setNewCommandIcon] = useState<string>('command')
+	const [newCommandIcon, setNewCommandIcon] = useState<string>('square-slash')
 
 	// search term
 	const [searchTerm, setSearchTerm] = useState('')
@@ -374,20 +376,20 @@ const CommandsView = (
 
 	// install market command
 	const handleInstallMarketCommand = async (marketCommand: MarketCommand) => {
-		// 使用简单的文本节点创建模板内容
-		const textNode: SerializedLexicalNode = {
-			detail: 0,
-			format: 0,
-			mode: 'normal',
-			style: '',
-			text: marketCommand.contentText,
-			type: 'text',
-			version: 1,
-		}
-
-		const paragraphNode: SerializedLexicalNode = {
-			children: [textNode],
-			direction: 'ltr',
+		// Create a simple paragraph node with text content
+		const paragraphNode = {
+			children: [
+				{
+					detail: 0,
+					format: 0,
+					mode: 'normal',
+					style: '',
+					text: marketCommand.contentText,
+					type: 'text',
+					version: 1,
+				}
+			],
+			direction: 'ltr' as const,
 			format: '',
 			indent: 0,
 			type: 'paragraph',
@@ -400,6 +402,11 @@ const CommandsView = (
 		
 		await createCommand(marketCommand.name, templateContent, marketCommand.icon)
 		new Notice(`已安装命令: ${marketCommand.name}`)
+	}
+
+	// toggle star for command
+	const handleToggleStar = async (id: string) => {
+		await toggleStarCommand(id)
 	}
 
 	return (
@@ -437,7 +444,7 @@ const CommandsView = (
 										<div className="infio-commands-hub-expander">
 											{isCreateSectionExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
 										</div>
-										<h3 className="infio-commands-create-title">创建新命令</h3>
+										<h3 className="infio-commands-create-title">自定义命令</h3>
 									</div>
 								</div>
 
@@ -551,8 +558,16 @@ const CommandsView = (
 															return <IconComponent size={16} />
 														})()}
 														<span>{command.name}</span>
+														{command.starred && <Star size={14} fill="gold" color="gold" />}
 													</div>
 													<div className="infio-commands-actions">
+														<button
+															onClick={() => handleToggleStar(command.id)}
+															className="infio-commands-btn"
+															title={command.starred ? "取消收藏" : "收藏命令"}
+														>
+															<Star size={16} fill={command.starred ? "gold" : "none"} color={command.starred ? "gold" : "currentColor"} />
+														</button>
 														<button
 															onClick={() => handleEditCommand(command)}
 															className="infio-commands-btn"

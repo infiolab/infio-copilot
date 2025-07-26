@@ -33,7 +33,9 @@ import {
 import { ToolManager, ToolManagerDependencies } from '../../core/tools/tool-manager'
 import { WorkspaceManager } from '../../database/json/workspace/WorkspaceManager'
 import { useChatHistory } from '../../hooks/use-chat-history'
+import { useCommands } from '../../hooks/use-commands'
 import { useCustomModes } from '../../hooks/use-custom-mode'
+import { getIconComponent } from '../../hooks/use-icon-selector'
 import { t } from '../../lang/helpers'
 import { PreviewView } from '../../PreviewView'
 import useChatStore from '../../stores/chat-store'
@@ -119,6 +121,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 	const dataviewManager = useDataview()
 	const { getMcpHub } = useMcpHub()
 	const { customModeList, customModePrompts } = useCustomModes()
+	const { starredCommands } = useCommands()
 
 	const {
 		createOrUpdateConversation,
@@ -583,6 +586,47 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		},
 		[applyEditManager],
 	)
+
+	const handleExecuteStarredCommand = useCallback((commandName: string) => {
+		// Create a simple text editor state with the command name prefixed with /
+		const commandText = `/${commandName}`
+		
+		const textNode = {
+			detail: 0,
+			format: 0,
+			mode: 'normal',
+			style: '',
+			text: commandText,
+			type: 'text',
+			version: 1,
+		}
+
+		const paragraphNode = {
+			children: [textNode],
+			direction: 'ltr' as const,
+			format: '' as const,
+			indent: 0,
+			type: 'paragraph',
+			version: 1,
+		}
+
+		const editorState = {
+			root: {
+				children: [paragraphNode],
+				direction: 'ltr' as const,
+				format: '' as const,
+				indent: 0,
+				type: 'root',
+				version: 1,
+			}
+		}
+
+		// Submit the command with / prefix to trigger command processing
+		handleSubmit([...chatMessages, { ...inputMessage, content: editorState }], false)
+		setInputMessage(getNewInputMessage(app, settings.defaultMention))
+		preventAutoScrollRef.current = false
+		handleScrollToBottom()
+	}, [chatMessages, inputMessage, handleSubmit, app, settings.defaultMention])
 
 	useEffect(() => {
 		setFocusedMessageId(inputMessage.id)
@@ -1113,35 +1157,59 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 						)}
 					</div>
 					{!isInitialLoading && (
-						<PromptInputWithActions
-							key={inputMessage.id}
-							ref={(ref) => registerChatUserInputRef(inputMessage.id, ref)}
-							initialSerializedEditorState={inputMessage.content}
-							placeholder={t('chat.inputPlaceholder')}
-							onSubmit={(content, useVaultSearch) => {
-								if (editorStateToPlainText(content).trim() === '') return
-								handleSubmit(
-									[...chatMessages, { ...inputMessage, content }],
-									useVaultSearch,
-								)
-								setInputMessage(getNewInputMessage(app, settings.defaultMention))
-								preventAutoScrollRef.current = false
-								handleScrollToBottom()
-							}}
-							onFocus={() => {
-								setFocusedMessageId(inputMessage.id)
-							}}
-							onCreateCommand={handleCreateCommand}
-							mentionables={inputMessage.mentionables}
-							setMentionables={(mentionables) => {
-								setInputMessage((prevInputMessage) => ({
-									...prevInputMessage,
-									mentionables,
-								}))
-							}}
-							autoFocus={false}
-							addedBlockKey={addedBlockKey}
-						/>
+						<>
+							{/* Starred Commands Display */}
+							{starredCommands.length > 0 && (
+								<div className="infio-starred-commands">
+									<div className="infio-starred-commands-list">
+										{starredCommands.map(command => (
+											<button
+												key={command.id}
+												onClick={() => handleExecuteStarredCommand(command.name)}
+												className="infio-starred-command-item"
+												title={`/${command.name}`}
+											>
+												{(() => {
+													const IconComponent = getIconComponent(command.icon)
+													return <IconComponent size={14} />
+												})()}
+												<span>{command.name}</span>
+											</button>
+										))}
+									</div>
+								</div>
+							)}
+							{/* Main Input */}
+							<PromptInputWithActions
+								key={inputMessage.id}
+								ref={(ref) => registerChatUserInputRef(inputMessage.id, ref)}
+								initialSerializedEditorState={inputMessage.content}
+								placeholder={t('chat.inputPlaceholder')}
+								onSubmit={(content, useVaultSearch) => {
+									if (editorStateToPlainText(content).trim() === '') return
+									handleSubmit(
+										[...chatMessages, { ...inputMessage, content }],
+										useVaultSearch,
+									)
+									setInputMessage(getNewInputMessage(app, settings.defaultMention))
+									preventAutoScrollRef.current = false
+									handleScrollToBottom()
+								}}
+								onFocus={() => {
+									setFocusedMessageId(inputMessage.id)
+								}}
+								onCreateCommand={handleCreateCommand}
+								mentionables={inputMessage.mentionables}
+								setMentionables={(mentionables) => {
+									setInputMessage((prevInputMessage) => ({
+										...prevInputMessage,
+										mentionables,
+									}))
+								}}
+								autoFocus={false}
+								addedBlockKey={addedBlockKey}
+							/>
+						</>
 					)}
 				</>
 			) : tab === 'search' ? (
