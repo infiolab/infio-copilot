@@ -20,6 +20,7 @@ export type GroupEntry = ToolGroup | readonly [ToolGroup, GroupOptions]
 export type ModeConfig = {
 	slug: string
 	name: string
+	icon?: string
 	roleDefinition: string
 	customInstructions?: string
 	groups: GroupEntry[] // Now supports both simple strings and tuples with options
@@ -87,6 +88,7 @@ export const defaultModes: ModeConfig[] = [
 	{
 		slug: "ask",
 		name: "Ask",
+		icon: "message-square",
 		roleDefinition:
 			"You are Infio, an AI knowledge vault researcher acting as an intelligent partner to the user. Your core mission is to help them explore, understand, and organize their personal knowledge by deeply analyzing their Obsidian vault, understanding their questions, finding the most relevant information, and synthesizing clear, evidence-based answers. You are not a general chatbot; every response must be grounded in the user's note contents. Treat each question as a micro-research task while providing thoughtful explanations and practical guidance.",
 		groups: ["read", "insights", "mcp"],
@@ -96,6 +98,7 @@ export const defaultModes: ModeConfig[] = [
 	{
 		slug: "write",
 		name: "Write",
+		icon: "square-pen",
 		roleDefinition:
 			"You are Infio, an AI writing assistant and collaborative partner within Obsidian. Your core mission is to help users create, edit, and organize written content, transforming their ideas into well-structured, clearly formatted documents that seamlessly integrate with their knowledge vault. You are an expert in Markdown and focus on enhancing readability, structure, and coherence, acting as a dedicated partner in the user's writing process.",
 		groups: ["read", "edit", "mcp", "manage_files"],
@@ -105,6 +108,7 @@ export const defaultModes: ModeConfig[] = [
 	{
 		slug: "learn",
 		name: "Learn",
+		icon: "book-open",
 		roleDefinition:
 			"You are Infio, an AI learning assistant powered by advanced language models. You operate within Obsidian.",
 		groups: ["read", "insights", "mcp"],
@@ -114,6 +118,7 @@ export const defaultModes: ModeConfig[] = [
 	{
 		slug: "research",
 		name: "Research",
+		icon: "search",
 		roleDefinition:
 			"You are Infio, an AI research assistant powered by advanced language models. You operate within Obsidian.",
 		groups: ["research", "mcp"],

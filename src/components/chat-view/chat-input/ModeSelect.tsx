@@ -1,9 +1,10 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { ChevronDown, ChevronUp, MessageSquare, Search, SquarePen } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { useSettings } from '../../../contexts/SettingsContext'
 import { useCustomModes } from '../../../hooks/use-custom-mode'
+import { getIconComponent } from '../../../hooks/use-icon-selector'
 import { defaultModes } from '../../../utils/modes'
 import { onEnt } from '../../../utils/web-search'
 
@@ -44,18 +45,14 @@ export function ModeSelect() {
 		}
 	}
 
-	// 为默认模式定义图标
+	// 为模式获取图标
 	const getModeIcon = (slug: string) => {
-		switch (slug) {
-			case 'ask':
-				return <MessageSquare size={14} />
-			case 'write':
-				return <SquarePen size={14} />
-			case 'research':
-				return <Search size={14} />
-			default:
-				return null
+		const mode = allModes.find(m => m.slug === slug)
+		if (!mode?.icon) {
+			return null
 		}
+		const IconComponent = getIconComponent(mode.icon)
+		return <IconComponent size={14} />
 	}
 
 

@@ -10,7 +10,8 @@ type UseCustomModes = {
 		name: string,
 		roleDefinition: string,
 		customInstructions: string,
-		groups: GroupEntry[]
+		groups: GroupEntry[],
+		icon?: string
 	) => Promise<void>
 	deleteCustomMode: (id: string) => Promise<void>
 	updateCustomMode: (
@@ -18,7 +19,8 @@ type UseCustomModes = {
 		name: string,
 		roleDefinition: string,
 		customInstructions: string,
-		groups: GroupEntry[]
+		groups: GroupEntry[],
+		icon?: string
 	) => Promise<void>
 	FindCustomModeByName: (name: string) => Promise<CustomMode | undefined>
 	customModeList: CustomMode[]
@@ -57,13 +59,15 @@ export function useCustomModes(): UseCustomModes {
 			name: string,
 			roleDefinition: string,
 			customInstructions: string,
-			groups: GroupEntry[]
+			groups: GroupEntry[],
+			icon?: string
 		): Promise<void> => {
 			await customModeManager.createCustomMode({
 				name,
 				roleDefinition,
 				customInstructions,
 				groups,
+				icon,
 			})
 			fetchCustomModeList()
 		},
@@ -79,12 +83,13 @@ export function useCustomModes(): UseCustomModes {
 	)
 
 	const updateCustomMode = useCallback(
-		async (id: string, name: string, roleDefinition: string, customInstructions: string, groups: GroupEntry[]): Promise<void> => {
+		async (id: string, name: string, roleDefinition: string, customInstructions: string, groups: GroupEntry[], icon?: string): Promise<void> => {
 			await customModeManager.updateCustomMode(id, {
 				name,
 				roleDefinition,
 				customInstructions,
 				groups,
+				icon,
 			})
 			fetchCustomModeList()
 		},

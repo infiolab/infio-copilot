@@ -69,6 +69,7 @@ export const modeConfigSchema = z.object({
 	roleDefinition: z.string().min(1, "Role definition is required"),
 	customInstructions: z.string().optional(),
 	groups: groupEntryArraySchema,
+	icon: z.string().optional(),
 	source: z.enum(["global", "project"]).optional(),
 	updatedAt: z.number().int().positive(),
 	schemaVersion: z.literal(CUSTOM_MODE_SCHEMA_VERSION),
