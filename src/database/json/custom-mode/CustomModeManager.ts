@@ -2,6 +2,7 @@ import fuzzysort from 'fuzzysort'
 import { App } from 'obsidian'
 import { v4 as uuidv4 } from 'uuid'
 
+import { defaultModes } from '../../../utils/modes'
 import { AbstractJsonRepository } from '../base'
 import { CUSTOM_MODE_DIR, ROOT_DIR } from '../constants'
 import {
@@ -75,6 +76,22 @@ export class CustomModeManager extends AbstractJsonRepository<
 		return allCustomModes.sort((a, b) => b.updatedAt - a.updatedAt)
 	}
 
+	/**
+	 * List only custom modes (exclude builtin overrides)
+	 */
+	public async listCustomModesOnly(): Promise<CustomMode[]> {
+		const allModes = await this.ListCustomModes()
+		return allModes.filter(mode => !mode.isBuiltinOverride)
+	}
+
+	/**
+	 * List only builtin mode overrides
+	 */
+	public async listBuiltinModeOverrides(): Promise<CustomMode[]> {
+		const allModes = await this.ListCustomModes()
+		return allModes.filter(mode => mode.isBuiltinOverride)
+	}
+
 	public async findById(id: string): Promise<CustomMode | null> {
 		const allMetadata = await this.listMetadata()
 		const targetMetadata = allMetadata.find((meta) => meta.id === id)
@@ -91,6 +108,83 @@ export class CustomModeManager extends AbstractJsonRepository<
 		if (!targetMetadata) return null
 
 		return this.read(targetMetadata.fileName)
+	}
+
+	/**
+	 * Find builtin mode override by slug
+	 */
+	public async findBuiltinModeOverride(slug: string): Promise<CustomMode | null> {
+		const allModes = await this.ListCustomModes()
+		return allModes.find(mode => mode.isBuiltinOverride && mode.slug === slug) || null
+	}
+
+	/**
+	 * Check if a builtin mode has been overridden
+	 */
+	public async isBuiltinModeOverridden(slug: string): Promise<boolean> {
+		const override = await this.findBuiltinModeOverride(slug)
+		return override !== null
+	}
+
+	/**
+	 * Create or update a builtin mode override
+	 */
+	public async createOrUpdateBuiltinModeOverride(
+		slug: string,
+		updates: Partial<Omit<CustomMode, 'id' | 'slug' | 'modeType' | 'isBuiltinOverride' | 'updatedAt' | 'schemaVersion'>>
+	): Promise<CustomMode> {
+		// Find the original builtin mode
+		const builtinMode = defaultModes.find(mode => mode.slug === slug)
+		if (!builtinMode) {
+			throw new Error(`Builtin mode with slug '${slug}' not found`)
+		}
+
+		// Check if override already exists
+		const existingOverride = await this.findBuiltinModeOverride(slug)
+		
+		if (existingOverride) {
+			// Update existing override
+			const updatedOverride: CustomMode = {
+				...existingOverride,
+				...updates,
+				updatedAt: Date.now(),
+			}
+			await this.update(existingOverride, updatedOverride)
+			return updatedOverride
+		} else {
+			// Create new override
+			const newOverride: CustomMode = {
+				id: uuidv4(),
+				slug: slug,
+				name: updates.name || builtinMode.name,
+				roleDefinition: updates.roleDefinition || builtinMode.roleDefinition,
+				customInstructions: updates.customInstructions || builtinMode.customInstructions,
+				tools: updates.tools || builtinMode.tools,
+				icon: updates.icon || builtinMode.icon,
+				enabled: updates.enabled !== undefined ? updates.enabled : true,
+				source: updates.source || 'global',
+				modeType: 'builtin_override',
+				isBuiltinOverride: true,
+				updatedAt: Date.now(),
+				schemaVersion: CUSTOM_MODE_SCHEMA_VERSION,
+			}
+			await this.create(newOverride)
+			return newOverride
+		}
+	}
+
+	/**
+	 * Reset a builtin mode to its default configuration
+	 */
+	public async resetBuiltinModeToDefault(slug: string): Promise<boolean> {
+		const existingOverride = await this.findBuiltinModeOverride(slug)
+		if (!existingOverride) {
+			return false // No override to reset
+		}
+
+		const fileName = this.generateFileName(existingOverride)
+		await this.delete(fileName)
+		return true
 	}
 
 	public async updateCustomMode(

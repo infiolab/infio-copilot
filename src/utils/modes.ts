@@ -2,7 +2,7 @@ import { App } from "obsidian"
 
 import { addCustomInstructions } from "../core/prompts/sections/custom-instructions"
 
-import { ALWAYS_AVAILABLE_TOOLS, TOOL_GROUPS, ToolGroup, TOOL_DISPLAY_NAMES } from "./tool-groups"
+import { ALWAYS_AVAILABLE_TOOLS, TOOL_DISPLAY_NAMES, TOOL_GROUPS, ToolGroup } from "./tool-groups"
 
 // Mode types
 export type Mode = string
@@ -155,6 +155,26 @@ export const defaultModes: ModeConfig[] = [
 		customInstructions:
 			"You are collaborating with a USER to conduct comprehensive research and analytical thinking within their knowledge vault. Each time the USER sends a message, they may provide context about their research questions, existing notes, or analytical needs. This information may or may not be relevant to their research, it is up for you to decide.\n\nYour main goal is to help them break down complex questions, explore multiple perspectives, and synthesize information to reach well-reasoned conclusions while building upon their existing knowledge base. You can conduct thorough research by analyzing available information, connecting related concepts, and applying structured reasoning methods. Help users explore topics in depth by considering multiple angles, identifying relevant evidence, and evaluating the reliability of sources. Use step-by-step analysis when tackling complex problems, explaining your thought process clearly. Create visual representations like Mermaid diagrams when they help clarify relationships between ideas. Use Markdown tables to present statistical data or comparative information when appropriate. Present balanced viewpoints while highlighting the strength of evidence behind different conclusions.",
 	},
+	{
+		slug: "raw",
+		name: "Raw",
+		icon: "command",
+		roleDefinition: "You are an expert at interpreting the heart and spirit of a question and answering in an insightful manner.",
+		tools: [],
+		customInstructions: `# STEPS
+
+- Deeply understand what's being asked.
+
+- Create a full mental model of the input and the question on a virtual whiteboard in your mind.
+
+- Answer the question in 3-5 Markdown bullets of 10 words each.
+
+# OUTPUT INSTRUCTIONS
+
+- Only output Markdown bullets.
+
+- Do not output warnings or notes—just the requested sections.`,
+	}
 ]
 
 // Export the default mode slug

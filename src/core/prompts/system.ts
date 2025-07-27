@@ -2,6 +2,7 @@ import * as path from 'path'
 
 import { App, normalizePath } from 'obsidian'
 
+import { CustomModeManager } from '../../database/json/custom-mode/CustomModeManager'
 import { FilesSearchSettings } from "../../types/settings"
 import {
 	CustomModePrompts,
@@ -10,7 +11,6 @@ import {
 	PromptComponent,
 	defaultModeSlug,
 	defaultModes,
-	getGroupName,
 	getModeBySlug
 } from "../../utils/modes"
 import { DiffStrategy } from "../diff/DiffStrategy"
@@ -36,10 +36,12 @@ import { getToolDescriptionsForMode } from "./tools"
 export class SystemPrompt {
 	protected dataDir: string
 	protected app: App
+	private customModeManager: CustomModeManager
 
 	constructor(app: App) {
 		this.app = app
 		this.dataDir = normalizePath(`${ROOT_DIR}`)
+		this.customModeManager = new CustomModeManager(app)
 		this.ensureDirectory()
 	}
 
@@ -64,6 +66,53 @@ export class SystemPrompt {
 		return content
 	}
 
+	/**
+	 * Get the effective mode configuration, considering builtin overrides
+	 */
+	private async getEffectiveModeConfig(mode: Mode, customModes?: ModeConfig[]): Promise<ModeConfig | null> {
+		// First try to find in custom modes
+		const customMode = getModeBySlug(mode, customModes)
+		if (customMode) {
+			return customMode
+		}
+
+		// Check if there's a builtin mode override in database
+		const builtinOverride = await this.customModeManager.findBuiltinModeOverride(mode)
+		if (builtinOverride) {
+			// Convert CustomMode to ModeConfig
+			return {
+				slug: builtinOverride.slug,
+				name: builtinOverride.name,
+				icon: builtinOverride.icon,
+				roleDefinition: builtinOverride.roleDefinition,
+				customInstructions: builtinOverride.customInstructions,
+				tools: builtinOverride.tools,
+				source: builtinOverride.source,
+			}
+		}
+
+		// Fall back to builtin mode
+		return defaultModes.find((m) => m.slug === mode) || defaultModes[0]
+	}
+
+	/**
+	 * Generate the system prompt for a given mode
+	 * @param cwd - The current working directory
+	 * @param supportsComputerUse - Whether the computer use is supported
+	 * @param mode - The mode to get the system prompt for
+	 * @param searchSettings - The search settings
+	 * @param filesSearchMethod - The files search method
+	 * @param mcpHub - The MCP hub
+	 * @param diffStrategy - The diff strategy
+	 * @param browserViewportSize - The browser viewport size
+	 * @param promptComponent - The prompt component
+	 * @param customModeConfigs - The custom mode configurations
+	 * @param globalCustomInstructions - The global custom instructions
+	 * @param preferredLanguage - The preferred language
+	 * @param diffEnabled - Whether the diff is enabled
+	 * @param experiments - The experiments
+	 * @param enableMcpServerCreation - Whether to enable MCP server creation
+	 */
 	private async generatePrompt(
 		cwd: string,
 		supportsComputerUse: boolean,
@@ -82,8 +131,12 @@ export class SystemPrompt {
 		enableMcpServerCreation?: boolean,
 	): Promise<string> {
 
-		// Get the full mode config to ensure we have the role definition
-		const modeConfig = getModeBySlug(mode, customModeConfigs) || defaultModes.find((m) => m.slug === mode) || defaultModes[0]
+		// Get the effective mode config (including builtin overrides)
+		const modeConfig = await this.getEffectiveModeConfig(mode, customModeConfigs)
+		if (!modeConfig) {
+			throw new Error(`Mode '${mode}' not found`)
+		}
+
 		const roleDefinition = promptComponent?.roleDefinition || modeConfig.roleDefinition
 
 		const [modesSection, mcpServersSection] = await Promise.all([
@@ -140,6 +193,25 @@ ${await addCustomInstructions(this.app, promptComponent?.customInstructions || m
 		return basePrompt
 	}
 
+
+	/**
+	 * Get the system prompt for a given mode
+	 * @param cwd - The current working directory
+	 * @param supportsComputerUse - Whether the computer use is supported
+	 * @param mode - The mode to get the system prompt for
+	 * @param searchSettings - The search settings
+	 * @param filesSearchMethod - The files search method
+	 * @param preferredLanguage - The preferred language
+	 * @param diffStrategy - The diff strategy
+	 * @param customModePrompts - The custom mode prompts
+	 * @param customModes - The custom modes
+	 * @param mcpHub - The MCP hub
+	 * @param browserViewportSize - The browser viewport size
+	 * @param globalCustomInstructions - The global custom instructions
+	 * @param diffEnabled - Whether the diff is enabled
+	 * @param experiments - The experiments
+	 * @param enableMcpServerCreation - Whether to enable MCP server creation
+	 */
 	public async getSystemPrompt(
 		cwd: string,
 		supportsComputerUse: boolean,
@@ -171,10 +243,31 @@ ${await addCustomInstructions(this.app, promptComponent?.customInstructions || m
 		// Check if it's a custom mode
 		const promptComponent = getPromptComponent(customModePrompts?.[mode])
 
-		// Get full mode config from custom modes or fall back to built-in modes
-		const currentMode = getModeBySlug(mode, customModes) || defaultModes.find((m) => m.slug === mode) || defaultModes[0]
+		// Get effective mode config (including builtin overrides)
+		const currentMode = await this.getEffectiveModeConfig(mode, customModes)
+		if (!currentMode) {
+			throw new Error(`Mode '${mode}' not found`)
+		}
 
-		// If a file-based custom system prompt exists, use it
+		// 1. use raw system prompt from mode config
+		if (currentMode.tools.length === 0) {
+			const roleDefinition = promptComponent?.roleDefinition || currentMode.roleDefinition
+			const customInstructions = await addCustomInstructions(
+				this.app,
+				promptComponent?.customInstructions || currentMode.customInstructions || "",
+				globalCustomInstructions || "",
+				cwd,
+				mode,
+				{ preferredLanguage },
+			)
+			return `${roleDefinition}
+
+${markdownFormattingSection()}
+
+${customInstructions}`
+		}
+
+		// 2. If a file-based custom system prompt exists, use it
 		if (fileCustomSystemPrompt) {
 			const roleDefinition = promptComponent?.roleDefinition || currentMode.roleDefinition
 			const customInstructions = await addCustomInstructions(
@@ -192,9 +285,7 @@ ${fileCustomSystemPrompt}
 ${customInstructions}`
 		}
 
-		// // If diff is disabled, don't pass the diffStrategy
-		// const effectiveDiffStrategy = diffEnabled ? diffStrategy : undefined
-
+		// 3. use infio default system prompt
 		return this.generatePrompt(
 			// context,
 			cwd,

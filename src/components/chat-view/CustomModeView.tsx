@@ -1,3 +1,4 @@
+import * as Switch from "@radix-ui/react-switch";
 import { ChevronDown, ChevronRight, Download, Plus, Trash2, Undo2 } from 'lucide-react';
 import { getLanguage } from 'obsidian';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -84,8 +85,15 @@ const CustomModeView = () => {
 		createCustomMode,
 		deleteCustomMode,
 		updateCustomMode,
+		toggleCustomModeEnabled,
 		customModeList,
-		customModePrompts
+		customModePrompts,
+		// New builtin mode management
+		builtinModeOverrides,
+		createOrUpdateBuiltinModeOverride,
+		resetBuiltinModeToDefault,
+		isBuiltinModeOverridden,
+		getEffectiveBuiltinMode,
 	} = useCustomModes()
 	const { settings } = useSettings()
 	const { getRAGEngine } = useRAG()
@@ -115,8 +123,10 @@ const CustomModeView = () => {
 		customInstructions: '',
 		tools: [],
 		icon: 'command',
+		enabled: true,
 		source: 'global',
 		updatedAt: 0,
+		schemaVersion: 1,
 	})
 
 	// Custom mode ID
@@ -137,6 +147,9 @@ const CustomModeView = () => {
 	// Mode icon
 	const [modeIcon, setModeIcon] = useState<string>('command')
 
+	// Mode enabled status
+	const [modeEnabled, setModeEnabled] = useState<boolean>(true)
+
 	// Update form data when mode changes
 	useEffect(() => {
 		//  new mode
@@ -147,6 +160,7 @@ const CustomModeView = () => {
 			setCustomInstructions(newMode.customInstructions || '');
 			setSelectedTools(newMode.tools);
 			setModeIcon(newMode.icon || 'command');
+			setModeEnabled(newMode.enabled ?? true);
 			setCustomModeId('');
 			return;
 		}
@@ -154,12 +168,18 @@ const CustomModeView = () => {
 		const builtinMode = buildinModes.find(m => m.slug === selectedMode);
 		if (builtinMode) {
 			setIsBuiltinMode(true);
-			setModeName(builtinMode.slug);
-			setRoleDefinition(builtinMode.roleDefinition);
-			setCustomInstructions(builtinMode.customInstructions || '');
-			setSelectedTools(builtinMode.tools.slice());
-			setModeIcon(builtinMode.icon || 'command'); // Built-in modes use default icon
-			setCustomModeId(''); // Built-in modes don't have custom IDs
+			
+			// Get effective builtin mode (with overrides)
+			const effectiveMode = getEffectiveBuiltinMode(selectedMode);
+			if (effectiveMode) {
+				setModeName(effectiveMode.name);
+				setRoleDefinition(effectiveMode.roleDefinition);
+				setCustomInstructions(effectiveMode.customInstructions || '');
+				setSelectedTools(effectiveMode.tools.slice());
+				setModeIcon(effectiveMode.icon || 'command');
+				setModeEnabled(effectiveMode.enabled ?? true);
+				setCustomModeId(effectiveMode.id || '');
+			}
 		} else {
 			setIsBuiltinMode(false);
 			const customMode = customModeList.find(m => m.slug === selectedMode);
@@ -170,11 +190,12 @@ const CustomModeView = () => {
 				setCustomInstructions(customMode.customInstructions || '');
 				setSelectedTools(customMode.tools);
 				setModeIcon(customMode.icon || 'command');
+				setModeEnabled(customMode.enabled ?? true);
 			} else {
 				console.error("custom mode not found")
 			}
 		}
-	}, [selectedMode, customModeList]);
+	}, [selectedMode, customModeList, builtinModeOverrides, getEffectiveBuiltinMode]);
 
 
 	// Handle tool selection change
@@ -207,17 +228,30 @@ const CustomModeView = () => {
 
 	// Update mode configuration
 	const handleUpdateMode = React.useCallback(async () => {
-		if (!isBuiltinMode) {
+		if (isBuiltinMode) {
+			// Update builtin mode override
+			await createOrUpdateBuiltinModeOverride(
+				selectedMode,
+				modeName,
+				roleDefinition,
+				customInstructions,
+				selectedTools,
+				modeIcon,
+				modeEnabled
+			);
+		} else {
+			// Update custom mode
 			await updateCustomMode(
 				customModeId,
 				modeName,
 				roleDefinition,
 				customInstructions,
 				selectedTools,
-				modeIcon
+				modeIcon,
+				modeEnabled
 			);
 		}
-	}, [isBuiltinMode, customModeId, modeName, roleDefinition, customInstructions, selectedTools, modeIcon])
+	}, [isBuiltinMode, selectedMode, customModeId, modeName, roleDefinition, customInstructions, selectedTools, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride, updateCustomMode])
 
 	// Create new mode
 	const createNewMode = React.useCallback(async () => {
@@ -227,7 +261,8 @@ const CustomModeView = () => {
 			roleDefinition,
 			customInstructions,
 			selectedTools,
-			modeIcon
+			modeIcon,
+			modeEnabled
 		);
 		// reset
 		setNewMode({
@@ -238,11 +273,13 @@ const CustomModeView = () => {
 			customInstructions: '',
 			tools: [],
 			icon: 'command',
+			enabled: true,
 			source: 'global',
 			updatedAt: 0,
+			schemaVersion: 1,
 		})
 		setSelectedMode("add_new_mode")
-	}, [isNewMode, modeName, roleDefinition, customInstructions, selectedTools, modeIcon])
+	}, [isNewMode, modeName, roleDefinition, customInstructions, selectedTools, modeIcon, modeEnabled, createCustomMode])
 
 	// Delete mode
 	const deleteMode = React.useCallback(async () => {
@@ -253,8 +290,45 @@ const CustomModeView = () => {
 		setCustomInstructions('')
 		setSelectedTools([])
 		setModeIcon('command')
+		setModeEnabled(true)
 		setSelectedMode('add_new_mode')
-	}, [isNewMode, isBuiltinMode, customModeId])
+	}, [isNewMode, isBuiltinMode, customModeId, deleteCustomMode])
+
+	// Reset builtin mode to default
+	const resetBuiltinMode = React.useCallback(async () => {
+		if (!isBuiltinMode) return;
+		await resetBuiltinModeToDefault(selectedMode);
+		
+		// Refresh the form with default values
+		const originalBuiltin = buildinModes.find(m => m.slug === selectedMode);
+		if (originalBuiltin) {
+			setModeName(originalBuiltin.name);
+			setRoleDefinition(originalBuiltin.roleDefinition);
+			setCustomInstructions(originalBuiltin.customInstructions || '');
+			setSelectedTools(originalBuiltin.tools.slice());
+			setModeIcon(originalBuiltin.icon || 'command');
+			setModeEnabled(true);
+		}
+	}, [isBuiltinMode, selectedMode, resetBuiltinModeToDefault])
+
+	// Toggle builtin mode enabled
+	const toggleBuiltinModeEnabled = React.useCallback(async () => {
+		if (!isBuiltinMode) return;
+		
+		const newEnabledState = !modeEnabled;
+		setModeEnabled(newEnabledState);
+		
+		// Create or update the override with the new enabled state
+		await createOrUpdateBuiltinModeOverride(
+			selectedMode,
+			modeName,
+			roleDefinition,
+			customInstructions,
+			selectedTools,
+			modeIcon,
+			newEnabledState
+		);
+	}, [isBuiltinMode, selectedMode, modeName, roleDefinition, customInstructions, selectedTools, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride])
 
 	// Install market mode
 	const handleInstallMarketMode = async (marketMode: MarketMode) => {
@@ -326,15 +400,50 @@ const CustomModeView = () => {
 						<div className="infio-custom-modes-section">
 							<div className="infio-section-header">
 								<h3>{t('prompt.modeName')}</h3>
-								{!isBuiltinMode && !isNewMode && (
-									<button className="infio-section-btn" onClick={deleteMode}>
-										<Trash2 size={16} />
-									</button>
-								)}
+								<div className="infio-section-header-actions">
+									<div className="infio-switch-container">
+										<span className="infio-switch-label">启用</span>
+										<Switch.Root
+											checked={modeEnabled}
+											onCheckedChange={(checked: boolean) => {
+												if (isNewMode) {
+													setNewMode((prev) => ({ ...prev, enabled: checked }))
+													setModeEnabled(checked)
+												} else if (isBuiltinMode) {
+													toggleBuiltinModeEnabled()
+												} else if (customModeId) {
+													setModeEnabled(checked)
+													toggleCustomModeEnabled(customModeId)
+												}
+											}}
+											className="infio-mode-switch"
+										>
+											<Switch.Thumb className="infio-mode-switch-thumb" />
+										</Switch.Root>
+									</div>
+									{isBuiltinMode && isBuiltinModeOverridden(selectedMode) && (
+										<button 
+											className="infio-section-btn" 
+											onClick={resetBuiltinMode}
+											title="重置到默认配置"
+										>
+											<Undo2 size={16} />
+										</button>
+									)}
+									{!isBuiltinMode && !isNewMode && (
+										<button className="infio-section-btn" onClick={deleteMode}>
+											<Trash2 size={16} />
+										</button>
+									)}
+								</div>
 							</div>
 							{
 								isBuiltinMode ? (
-									<p className="infio-section-subtitle">{t('prompt.builtinModeNameWarning')}</p>
+									<p className="infio-section-subtitle">
+										{isBuiltinModeOverridden(selectedMode) 
+											? '已自定义的内置模式 - 修改后将保存为覆盖配置' 
+											: '内置模式 - 修改后将创建覆盖配置'}
+									</p>
 								) : (
 									<p className="infio-section-subtitle">
 										{t('prompt.modeNameRequirements')}
@@ -361,7 +470,6 @@ const CustomModeView = () => {
 									}}
 									className="infio-custom-modes-input"
 									placeholder={t('prompt.modeNamePlaceholder')}
-									disabled={isBuiltinMode}
 								/>
 							</div>
 						</div>
@@ -370,8 +478,17 @@ const CustomModeView = () => {
 						<div className="infio-custom-modes-section">
 							<div className="infio-section-header">
 								<h3>{t('prompt.roleDefinition')}</h3>
-								{isBuiltinMode && (
-									<button className="infio-section-btn">
+								{isBuiltinMode && isBuiltinModeOverridden(selectedMode) && (
+									<button 
+										className="infio-section-btn"
+										onClick={() => {
+											const originalBuiltin = buildinModes.find(m => m.slug === selectedMode);
+											if (originalBuiltin) {
+												setRoleDefinition(originalBuiltin.roleDefinition);
+											}
+										}}
+										title="恢复默认角色定义"
+									>
 										<Undo2 size={16} />
 									</button>
 								)}
@@ -394,10 +511,24 @@ const CustomModeView = () => {
 						<div className="infio-custom-modes-section">
 							<div className="infio-section-header">
 								<h3>可用工具</h3>
+								{isBuiltinMode && isBuiltinModeOverridden(selectedMode) && (
+									<button 
+										className="infio-section-btn"
+										onClick={() => {
+											const originalBuiltin = buildinModes.find(m => m.slug === selectedMode);
+											if (originalBuiltin) {
+												setSelectedTools(originalBuiltin.tools.slice());
+											}
+										}}
+										title="恢复默认工具配置"
+									>
+										<Undo2 size={16} />
+									</button>
+								)}
 							</div>
 							{
-								isBuiltinMode && (
-									<p className="infio-section-subtitle">内置模式的工具配置无法修改</p>
+								isBuiltinMode && !isBuiltinModeOverridden(selectedMode) && (
+									<p className="infio-section-subtitle">修改内置模式的工具配置将创建覆盖配置</p>
 								)
 							}
 							<div className="infio-tools-list">
@@ -406,7 +537,6 @@ const CustomModeView = () => {
 										<label>
 											<input
 												type="checkbox"
-												disabled={isBuiltinMode}
 												checked={selectedTools.includes(tool.name)}
 												onChange={() => handleToolChange(tool.name)}
 											/>
@@ -421,8 +551,17 @@ const CustomModeView = () => {
 						<div className="infio-custom-modes-section">
 							<div className="infio-section-header">
 								<h3>{t('prompt.modeSpecificRules')}</h3>
-								{isBuiltinMode && (
-									<button className="infio-section-btn">
+								{isBuiltinMode && isBuiltinModeOverridden(selectedMode) && (
+									<button 
+										className="infio-section-btn"
+										onClick={() => {
+											const originalBuiltin = buildinModes.find(m => m.slug === selectedMode);
+											if (originalBuiltin) {
+												setCustomInstructions(originalBuiltin.customInstructions || '');
+											}
+										}}
+										title="恢复默认自定义指令"
+									>
 										<Undo2 size={16} />
 									</button>
 								)}
@@ -956,6 +1095,61 @@ const CustomModeView = () => {
 					background-color: var(--interactive-accent);
 					color: var(--text-on-accent);
 					border-color: var(--interactive-accent);
+				}
+
+
+				/* Switch styles - based on Radix UI official example, compact size */
+				button.infio-mode-switch {
+					all: unset;
+					width: 32px;
+					height: 18px;
+					background-color: var(--background-modifier-border);
+					border-radius: 9999px;
+					position: relative;
+					box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+					-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+				}
+
+				button.infio-mode-switch:focus {
+					box-shadow: 0 0 0 1px var(--interactive-accent);
+				}
+
+				button.infio-mode-switch[data-state="checked"] {
+					background-color: var(--interactive-accent);
+				}
+
+				.infio-mode-switch-thumb {
+					display: block;
+					width: 14px;
+					height: 14px;
+					background-color: white;
+					border-radius: 9999px;
+					box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+					transition: transform 100ms;
+					transform: translateX(2px);
+					will-change: transform;
+				}
+
+				.infio-mode-switch-thumb[data-state="checked"] {
+					transform: translateX(16px);
+				}
+
+				/* Section header actions */
+				.infio-section-header-actions {
+					display: flex;
+					align-items: center;
+					gap: 8px;
+				}
+
+				.infio-switch-container {
+					display: flex;
+					align-items: center;
+					gap: 6px;
+				}
+
+				.infio-switch-label {
+					font-size: 14px;
+					color: var(--text-muted);
 				}
 				`}
 			</style>

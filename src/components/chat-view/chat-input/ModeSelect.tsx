@@ -13,18 +13,19 @@ export function ModeSelect() {
 	const [isOpen, setIsOpen] = useState(false)
 	const [mode, setMode] = useState(settings.mode)
 
-	const { customModeList } = useCustomModes()
-
-	// 支持的模式列表
-	const supportedModes = ['ask', 'write', 'research']
+	const { customModeList, getEffectiveBuiltinMode } = useCustomModes()
 
 	const allModes = useMemo(() => {
-		// 过滤默认模式，只保留支持的模式
-		const filteredDefaultModes = defaultModes.filter(mode => supportedModes.includes(mode.slug))
-		// 过滤自定义模式，只保留支持的模式
-		const filteredCustomModes = customModeList.filter(mode => supportedModes.includes(mode.slug))
-		return [...filteredDefaultModes, ...filteredCustomModes]
-	}, [customModeList])
+		// 获取有效的内置模式（包含覆盖配置）
+		const effectiveBuiltinModes = defaultModes.map(mode => {
+			const effectiveMode = getEffectiveBuiltinMode(mode.slug)
+			return effectiveMode
+		}).filter(mode => mode && mode.enabled !== false) // 过滤掉禁用的模式
+
+		// 过滤自定义模式，只保留启用的模式
+		const filteredCustomModes = customModeList.filter(mode => mode.enabled !== false)
+		return [...effectiveBuiltinModes, ...filteredCustomModes]
+	}, [customModeList, getEffectiveBuiltinMode])
 
 	useEffect(() => {
 		onEnt(`switch_mode/${settings.mode}`)

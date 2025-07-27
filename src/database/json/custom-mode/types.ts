@@ -42,6 +42,9 @@ export const groupEntrySchema = z.union([toolGroupsSchema, z.tuple([toolGroupsSc
 
 export type GroupEntry = z.infer<typeof groupEntrySchema>
 
+// Mode type to distinguish between builtin overrides and custom modes
+export const modeTypeSchema = z.enum(["builtin_override", "custom"])
+export type ModeType = z.infer<typeof modeTypeSchema>
 
 const groupEntryArraySchema = z.array(groupEntrySchema).refine(
 	(groups) => {
@@ -70,7 +73,10 @@ export const modeConfigSchema = z.object({
 	customInstructions: z.string().optional(),
 	tools: z.array(z.string()).min(1, "At least one tool must be selected"),
 	icon: z.string().optional(),
+	enabled: z.boolean().optional().default(true),
 	source: z.enum(["global", "project"]).optional(),
+	modeType: modeTypeSchema.optional().default("custom"), // New field to identify mode type
+	isBuiltinOverride: z.boolean().optional().default(false), // Helper field for easier identification
 	updatedAt: z.number().int().positive(),
 	schemaVersion: z.literal(CUSTOM_MODE_SCHEMA_VERSION),
 })
@@ -82,4 +88,6 @@ export type CustomModeMetadata = {
 	name: string
 	updatedAt: number
 	schemaVersion: number
+	modeType?: ModeType
+	isBuiltinOverride?: boolean
 }
