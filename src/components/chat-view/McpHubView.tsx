@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronDown, ChevronRight, ExternalLink, FileText, Folder, Power, RotateCcw, Trash2, Wrench } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronRight, Download, ExternalLink, FileText, Folder, Power, RotateCcw, Trash2, Wrench } from 'lucide-react'
 import { Notice } from 'obsidian'
 import React, { useEffect, useState } from 'react'
 
@@ -7,12 +7,70 @@ import { useSettings } from '../../contexts/SettingsContext'
 import { McpErrorEntry, McpResource, McpResourceTemplate, McpServer, McpTool } from '../../core/mcp/type'
 import { t } from '../../lang/helpers'
 
+// Market MCP Server sample data
+interface MarketMcpServer {
+	id: string
+	name: string
+	description: string
+	category: string
+	author: string
+	version: string
+	downloads?: number
+	config: string
+	tools: MarketMcpTool[]
+}
+
+interface MarketMcpTool {
+	name: string
+	description: string
+	parameters?: string[]
+}
+
+const marketMcpServers: MarketMcpServer[] = [
+	{
+		id: 'github-mcp',
+		name: 'GitHub MCP Server',
+		description: 'Access GitHub repositories, issues, and pull requests directly from MCP',
+		category: 'Development',
+		author: 'ModelContextProtocol',
+		version: '1.0.0',
+		downloads: 1250,
+		config: `{
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "<your_token>"
+  }
+}`,
+		tools: [
+			{
+				name: 'create_repository',
+				description: 'Create a new GitHub repository',
+				parameters: ['name', 'description', 'private']
+			},
+			{
+				name: 'search_repositories',
+				description: 'Search for repositories on GitHub',
+				parameters: ['query', 'sort', 'order']
+			},
+			{
+				name: 'get_file_contents',
+				description: 'Get the contents of a file from a repository',
+				parameters: ['owner', 'repo', 'path']
+			}
+		]
+	}
+]
+
 const McpHubView = () => {
 	const { settings, setSettings } = useSettings()
 	const { getMcpHub } = useMcpHub()
 	const [mcpServers, setMcpServers] = useState<McpServer[]>([])
 	const [expandedServers, setExpandedServers] = useState<Record<string, boolean>>({});
 	const [activeServerDetailTab, setActiveServerDetailTab] = useState<Record<string, 'tools' | 'resources' | 'errors'>>({});
+
+	// Tab state
+	const [activeTab, setActiveTab] = useState<'my-servers' | 'market'>('my-servers')
 
 	// 新增状态变量用于创建新服务器
 	const [newServerName, setNewServerName] = useState('')
@@ -134,6 +192,15 @@ const McpHubView = () => {
 		setIsCreateSectionExpanded(prev => !prev)
 	}
 
+	// Install market MCP server
+	const handleInstallMarketServer = async (marketServer: MarketMcpServer) => {
+		setNewServerName(marketServer.name)
+		setNewServerConfig(marketServer.config)
+		setActiveTab('my-servers')
+		setIsCreateSectionExpanded(true)
+		new Notice(`已加载配置: ${marketServer.name}，请检查配置后创建`)
+	}
+
 	const ToolRow = ({ tool }: { tool: McpTool }) => {
 		return (
 			<div className="infio-mcp-tool-row">
@@ -203,6 +270,46 @@ const McpHubView = () => {
 		</div>
 	);
 
+	const MarketServerRow = ({ server }: { server: MarketMcpServer }) => (
+		<div className="infio-mcp-market-item">
+			<div className="infio-mcp-market-header">
+				<div className="infio-mcp-market-info">
+					<div className="infio-mcp-market-name">
+						<Wrench size={16} />
+						<span>{server.name}</span>
+					</div>
+					<div className="infio-mcp-market-meta">
+						<span className="infio-mcp-market-category">{server.category}</span>
+						<span className="infio-mcp-market-author">by {server.author}</span>
+						<span className="infio-mcp-market-version">v{server.version}</span>
+						{server.downloads && <span className="infio-mcp-market-downloads">{server.downloads} downloads</span>}
+					</div>
+				</div>
+				<button
+					onClick={() => handleInstallMarketServer(server)}
+					className="infio-mcp-install-btn"
+				>
+					<Download size={16} />
+				</button>
+			</div>
+			<div className="infio-mcp-market-description">{server.description}</div>
+			<div className="infio-mcp-market-tools">
+				<h5>Available Tools ({server.tools.length})</h5>
+				{server.tools.map(tool => (
+					<div key={tool.name} className="infio-mcp-market-tool">
+						<code>{tool.name}</code>
+						<span>{tool.description}</span>
+						{tool.parameters && (
+							<div className="infio-mcp-market-tool-params">
+								Parameters: {tool.parameters.join(', ')}
+							</div>
+						)}
+					</div>
+				))}
+			</div>
+		</div>
+	);
+
 	return (
 		<div className="infio-mcp-hub-container">
 			{/* Header Section */}
@@ -218,7 +325,27 @@ const McpHubView = () => {
 				</div>
 			</div>
 
-			{/* MCP Settings */}
+			{/* Tabs */}
+			<div className="infio-commands-tabs">
+				<button
+					className={`infio-commands-tab-button ${activeTab === 'my-servers' ? 'active' : ''}`}
+					onClick={() => setActiveTab('my-servers')}
+				>
+					我的服务器 ({mcpServers.length})
+				</button>
+				<button
+					className={`infio-commands-tab-button ${activeTab === 'market' ? 'active' : ''}`}
+					onClick={() => setActiveTab('market')}
+				>
+					MCP 市场 ({marketMcpServers.length})
+				</button>
+			</div>
+
+			{/* Tab Content */}
+			<div className="infio-commands-tab-content">
+				{activeTab === 'my-servers' && (
+					<>
+						{/* MCP Settings */}
 			<div className="infio-mcp-settings-section">
 				<div className="infio-mcp-setting-item">
 					<label className="infio-mcp-setting-label">
@@ -419,6 +546,21 @@ const McpHubView = () => {
 					)}
 				</div>
 			)}
+					</>
+				)}
+
+				{activeTab === 'market' && (
+					<div className="infio-mcp-market-list">
+						<div className="infio-mcp-market-header-section">
+							<h4>发现优质 MCP 服务器</h4>
+							<p>从社区中选择经过验证的 MCP 服务器，一键安装配置</p>
+						</div>
+						{marketMcpServers.map(server => (
+							<MarketServerRow key={server.id} server={server} />
+						))}
+					</div>
+				)}
+			</div>
 
 			<style>{`
 				.infio-mcp-hub-container {
@@ -1061,6 +1203,146 @@ const McpHubView = () => {
 					opacity: 0.5;
 					cursor: not-allowed;
 					transform: none;
+				}
+
+
+
+				/* Market Styles */
+				.infio-mcp-market-list {
+					display: flex;
+					flex-direction: column;
+					gap: 16px;
+				}
+
+				.infio-mcp-market-header-section {
+					text-align: center;
+					padding: 20px;
+					background-color: var(--background-secondary);
+					border-radius: var(--radius-s);
+				}
+
+				.infio-mcp-market-header-section h4 {
+					margin: 0 0 8px 0;
+					font-size: 18px;
+					color: var(--text-normal);
+				}
+
+				.infio-mcp-market-header-section p {
+					margin: 0;
+					color: var(--text-muted);
+					font-size: 14px;
+				}
+
+				.infio-mcp-market-item {
+					background-color: var(--background-primary);
+					border: 1px solid var(--background-modifier-border);
+					border-radius: var(--radius-s);
+					padding: 16px;
+					transition: all 0.2s ease;
+				}
+
+				.infio-mcp-market-item:hover {
+					border-color: var(--interactive-accent);
+					box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+				}
+
+				.infio-mcp-market-header {
+					display: flex;
+					justify-content: space-between;
+					align-items: flex-start;
+					margin-bottom: 12px;
+				}
+
+				.infio-mcp-market-info {
+					flex: 1;
+				}
+
+				.infio-mcp-market-name {
+					display: flex;
+					align-items: center;
+					gap: 8px;
+					font-size: 16px;
+					font-weight: 600;
+					color: var(--text-normal);
+					margin-bottom: 8px;
+				}
+
+				.infio-mcp-market-meta {
+					display: flex;
+					gap: 12px;
+					font-size: 12px;
+					color: var(--text-muted);
+				}
+
+				.infio-mcp-market-category {
+					background-color: var(--interactive-accent);
+					color: var(--text-on-accent);
+					padding: 2px 8px;
+					border-radius: var(--radius-s);
+					font-weight: 500;
+				}
+
+				.infio-mcp-market-description {
+					color: var(--text-muted);
+					font-size: 14px;
+					line-height: 1.4;
+					margin-bottom: 16px;
+				}
+
+				.infio-mcp-market-tools h5 {
+					margin: 0 0 8px 0;
+					font-size: 14px;
+					font-weight: 600;
+					color: var(--text-normal);
+				}
+
+				.infio-mcp-market-tool {
+					background-color: var(--background-secondary);
+					border-radius: var(--radius-s);
+					padding: 8px;
+					margin-bottom: 8px;
+				}
+
+				.infio-mcp-market-tool code {
+					background-color: var(--background-modifier-border);
+					color: var(--text-accent);
+					padding: 2px 6px;
+					border-radius: 3px;
+					font-family: var(--font-monospace);
+					font-size: 12px;
+					font-weight: 500;
+					margin-right: 8px;
+				}
+
+				.infio-mcp-market-tool span {
+					color: var(--text-normal);
+					font-size: 14px;
+				}
+
+				.infio-mcp-market-tool-params {
+					color: var(--text-muted);
+					font-size: 12px;
+					margin-top: 4px;
+				}
+
+				.infio-mcp-install-btn {
+					background-color: var(--interactive-accent);
+					color: var(--text-on-accent);
+					border: none;
+					border-radius: var(--radius-s);
+					padding: 8px 12px;
+					font-size: 14px;
+					font-weight: 500;
+					cursor: pointer;
+					transition: all 0.2s ease;
+					display: flex;
+					align-items: center;
+					gap: 4px;
+				}
+
+				.infio-mcp-install-btn:hover {
+					background-color: var(--interactive-accent-hover);
+					transform: translateY(-1px);
 				}
 
 				/* Servers List */
