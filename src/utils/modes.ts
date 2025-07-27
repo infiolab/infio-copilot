@@ -2,18 +2,18 @@ import { App } from "obsidian"
 
 import { addCustomInstructions } from "../core/prompts/sections/custom-instructions"
 
-import { ALWAYS_AVAILABLE_TOOLS, TOOL_GROUPS, ToolGroup } from "./tool-groups"
+import { ALWAYS_AVAILABLE_TOOLS, TOOL_GROUPS, ToolGroup, TOOL_DISPLAY_NAMES } from "./tool-groups"
 
 // Mode types
 export type Mode = string
 
-// Group options type
+// Group options type (keeping for backward compatibility during transition)
 export type GroupOptions = {
 	fileRegex?: string // Regular expression pattern
 	description?: string // Human-readable description of the pattern
 }
 
-// Group entry can be either a string or tuple with options
+// Group entry can be either a string or tuple with options (keeping for backward compatibility)
 export type GroupEntry = ToolGroup | readonly [ToolGroup, GroupOptions]
 
 // Mode configuration type
@@ -23,7 +23,7 @@ export type ModeConfig = {
 	icon?: string
 	roleDefinition: string
 	customInstructions?: string
-	groups: GroupEntry[] // Now supports both simple strings and tuples with options
+	tools: string[] // Changed from groups to tools array
 	source?: "global" | "project" // Where this mode was loaded from
 }
 
@@ -37,7 +37,24 @@ export type CustomModePrompts = {
 	[key: string]: PromptComponent | undefined
 }
 
-// Helper to extract group name regardless of format
+// Helper to get all available tools for UI selection
+export function getAllAvailableTools(): { name: string; displayName: string }[] {
+	const allTools = new Set<string>()
+	
+	// Add tools from all groups except always available ones
+	Object.values(TOOL_GROUPS).forEach(group => {
+		if (!group.alwaysAvailable) {
+			group.tools.forEach(tool => allTools.add(tool))
+		}
+	})
+	
+	return Array.from(allTools).map(tool => ({
+		name: tool,
+		displayName: TOOL_DISPLAY_NAMES[tool as keyof typeof TOOL_DISPLAY_NAMES] || tool
+	}))
+}
+
+// Helper to extract group name regardless of format (keeping for backward compatibility)
 export function getGroupName(group: GroupEntry): ToolGroup {
 	if (typeof group === "string") {
 		return group
@@ -46,7 +63,7 @@ export function getGroupName(group: GroupEntry): ToolGroup {
 	return group[0]
 }
 
-// Helper to get group options if they exist
+// Helper to get group options if they exist (keeping for backward compatibility)
 function getGroupOptions(group: GroupEntry): GroupOptions | undefined {
 	return Array.isArray(group) ? group[1] : undefined
 }
@@ -62,8 +79,21 @@ export function doesFileMatchRegex(filePath: string, pattern: string): boolean {
 	}
 }
 
-// Helper to get all tools for a mode
-export function getToolsForMode(groups: readonly GroupEntry[]): string[] {
+// Helper to get all tools for a mode - now directly returns mode.tools + always available
+export function getToolsForMode(mode: ModeConfig): string[] {
+	const tools = new Set<string>()
+
+	// Add tools from mode configuration
+	mode.tools.forEach(tool => tools.add(tool))
+
+	// Always add required tools
+	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
+
+	return Array.from(tools)
+}
+
+// Legacy helper for backward compatibility with groups (can be removed later)
+export function getToolsForModeFromGroups(groups: readonly GroupEntry[]): string[] {
 	const tools = new Set<string>()
 
 	// Add tools from each group
@@ -91,7 +121,7 @@ export const defaultModes: ModeConfig[] = [
 		icon: "message-square",
 		roleDefinition:
 			"You are Infio, an AI knowledge vault researcher acting as an intelligent partner to the user. Your core mission is to help them explore, understand, and organize their personal knowledge by deeply analyzing their Obsidian vault, understanding their questions, finding the most relevant information, and synthesizing clear, evidence-based answers. You are not a general chatbot; every response must be grounded in the user's note contents. Treat each question as a micro-research task while providing thoughtful explanations and practical guidance.",
-		groups: ["read", "insights", "mcp"],
+		tools: ["read_file", "list_files", "search_files", "dataview_query", "insights", "use_mcp_tool", "access_mcp_resource"],
 		customInstructions:
 			"You are collaborating with a USER to help them explore, understand, and organize information within their personal knowledge vault. Each time the USER sends a message, they may provide context about their current notes, vault structure, or specific knowledge needs. This information may or may not be relevant to their inquiry, it is up for you to decide.\n\nYour main goal is to provide informative responses, thoughtful explanations, and practical guidance on any topic or challenge they face, while leveraging their existing knowledge base when relevant. You can analyze information, explain concepts across various domains, and access external resources when helpful. Make sure to address the user's questions thoroughly with thoughtful explanations and practical guidance. Use visual aids like Mermaid diagrams when they help make complex topics clearer. Offer solutions to challenges from diverse fields, not just technical ones, and provide context that helps users better understand the subject matter.",
 	},
@@ -101,7 +131,7 @@ export const defaultModes: ModeConfig[] = [
 		icon: "square-pen",
 		roleDefinition:
 			"You are Infio, an AI writing assistant and collaborative partner within Obsidian. Your core mission is to help users create, edit, and organize written content, transforming their ideas into well-structured, clearly formatted documents that seamlessly integrate with their knowledge vault. You are an expert in Markdown and focus on enhancing readability, structure, and coherence, acting as a dedicated partner in the user's writing process.",
-		groups: ["read", "edit", "mcp", "manage_files"],
+		tools: ["read_file", "list_files", "search_files", "dataview_query", "apply_diff", "write_to_file", "insert_content", "search_and_replace", "use_mcp_tool", "access_mcp_resource", "manage_files"],
 		customInstructions:
 			"You are collaborating with a USER to help them create, edit, and organize various types of written content within their knowledge vault. Each time the USER sends a message, they may provide context about their current documents, writing goals, or organizational needs. This information may or may not be relevant to their writing task, it is up for you to decide.\n\nYour main goal is to help them express their ideas effectively through well-structured, clearly formatted content that integrates seamlessly with their existing knowledge system. You can create and modify any text-based files, with particular expertise in Markdown formatting. Help users organize their thoughts, create documentation, take notes, or draft any written content they need. When appropriate, suggest structural improvements and formatting enhancements that make content more readable and accessible. Consider the purpose and audience of each document to provide the most relevant assistance."
 	},
@@ -111,7 +141,7 @@ export const defaultModes: ModeConfig[] = [
 		icon: "book-open",
 		roleDefinition:
 			"You are Infio, an AI learning assistant powered by advanced language models. You operate within Obsidian.",
-		groups: ["read", "insights", "mcp"],
+		tools: ["read_file", "list_files", "search_files", "dataview_query", "insights", "use_mcp_tool", "access_mcp_resource"],
 		customInstructions:
 			"You are collaborating with a USER to enhance their learning experience within their knowledge vault. Each time the USER sends a message, they may provide context about their learning materials, study goals, or knowledge gaps. This information may or may not be relevant to their learning journey, it is up for you to decide.\n\nYour main goal is to help them actively learn and understand complex topics by transforming information into more digestible formats, creating connections between concepts, and facilitating deep comprehension. You excel at breaking down complex topics into manageable chunks, creating study materials like flashcards and summaries, and helping users build comprehensive understanding through structured learning approaches. Generate visual learning aids like concept maps and flowcharts using Mermaid diagrams when they enhance comprehension. Create organized study materials including key concepts, definitions, and practice questions. Help users connect new information to their existing knowledge base by identifying relationships and patterns across their notes. Focus on active learning techniques that promote retention and understanding rather than passive information consumption."
 	},
@@ -121,7 +151,7 @@ export const defaultModes: ModeConfig[] = [
 		icon: "search",
 		roleDefinition:
 			"You are Infio, an AI research assistant powered by advanced language models. You operate within Obsidian.",
-		groups: ["research", "mcp"],
+		tools: ["search_web", "fetch_urls_content", "use_mcp_tool", "access_mcp_resource"],
 		customInstructions:
 			"You are collaborating with a USER to conduct comprehensive research and analytical thinking within their knowledge vault. Each time the USER sends a message, they may provide context about their research questions, existing notes, or analytical needs. This information may or may not be relevant to their research, it is up for you to decide.\n\nYour main goal is to help them break down complex questions, explore multiple perspectives, and synthesize information to reach well-reasoned conclusions while building upon their existing knowledge base. You can conduct thorough research by analyzing available information, connecting related concepts, and applying structured reasoning methods. Help users explore topics in depth by considering multiple angles, identifying relevant evidence, and evaluating the reliability of sources. Use step-by-step analysis when tackling complex problems, explaining your thought process clearly. Create visual representations like Mermaid diagrams when they help clarify relationships between ideas. Use Markdown tables to present statistical data or comparative information when appropriate. Present balanced viewpoints while highlighting the strength of evidence behind different conclusions.",
 	},
@@ -219,45 +249,8 @@ export function isToolAllowedForMode(
 		return false
 	}
 
-	// Check if tool is in any of the mode's groups and respects any group options
-	for (const group of mode.groups) {
-		const groupName = getGroupName(group)
-		const options = getGroupOptions(group)
-
-		const groupConfig = TOOL_GROUPS[groupName]
-
-		// If the group config doesn't exist, skip this group
-		if (!groupConfig) {
-			console.warn(`Tool group '${groupName}' not found in TOOL_GROUPS`)
-			continue
-		}
-
-		// If the tool isn't in this group's tools, continue to next group
-		if (!groupConfig.tools.includes(tool)) {
-			continue
-		}
-
-		// If there are no options, allow the tool
-		if (!options) {
-			return true
-		}
-
-		// For the edit group, check file regex if specified
-		if (groupName === "edit" && options.fileRegex) {
-			const filePath = toolParams?.path
-			if (
-				filePath &&
-				(toolParams.diff || toolParams.content || toolParams.operations) &&
-				!doesFileMatchRegex(filePath, options.fileRegex)
-			) {
-				throw new FileRestrictionError(mode.name, options.fileRegex, options.description, filePath)
-			}
-		}
-
-		return true
-	}
-
-	return false
+	// Check if tool is in the mode's tools list
+	return mode.tools.includes(tool)
 }
 
 // Create the mode-specific default prompts

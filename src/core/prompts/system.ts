@@ -88,7 +88,7 @@ export class SystemPrompt {
 
 		const [modesSection, mcpServersSection] = await Promise.all([
 			getModesSection(),
-			modeConfig.groups.some((groupEntry) => getGroupName(groupEntry) === "mcp")
+			modeConfig.tools.some((tool) => tool === "use_mcp_tool" || tool === "access_mcp_resource")
 				? getMcpServersSection(mcpHub, diffStrategy, enableMcpServerCreation)
 				: Promise.resolve(""),
 		])

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useApp } from '../contexts/AppContext'
 import { CustomModeManager } from '../database/json/custom-mode/CustomModeManager'
-import { CustomMode, GroupEntry } from '../database/json/custom-mode/types'
+import { CustomMode } from '../database/json/custom-mode/types'
 import { CustomModePrompts } from '../utils/modes'
 
 type UseCustomModes = {
@@ -10,7 +10,7 @@ type UseCustomModes = {
 		name: string,
 		roleDefinition: string,
 		customInstructions: string,
-		groups: GroupEntry[],
+		tools: string[],
 		icon?: string
 	) => Promise<void>
 	deleteCustomMode: (id: string) => Promise<void>
@@ -19,7 +19,7 @@ type UseCustomModes = {
 		name: string,
 		roleDefinition: string,
 		customInstructions: string,
-		groups: GroupEntry[],
+		tools: string[],
 		icon?: string
 	) => Promise<void>
 	FindCustomModeByName: (name: string) => Promise<CustomMode | undefined>
@@ -59,14 +59,14 @@ export function useCustomModes(): UseCustomModes {
 			name: string,
 			roleDefinition: string,
 			customInstructions: string,
-			groups: GroupEntry[],
+			tools: string[],
 			icon?: string
 		): Promise<void> => {
 			await customModeManager.createCustomMode({
 				name,
 				roleDefinition,
 				customInstructions,
-				groups,
+				tools,
 				icon,
 			})
 			fetchCustomModeList()
@@ -83,12 +83,12 @@ export function useCustomModes(): UseCustomModes {
 	)
 
 	const updateCustomMode = useCallback(
-		async (id: string, name: string, roleDefinition: string, customInstructions: string, groups: GroupEntry[], icon?: string): Promise<void> => {
+		async (id: string, name: string, roleDefinition: string, customInstructions: string, tools: string[], icon?: string): Promise<void> => {
 			await customModeManager.updateCustomMode(id, {
 				name,
 				roleDefinition,
 				customInstructions,
-				groups,
+				tools,
 				icon,
 			})
 			fetchCustomModeList()

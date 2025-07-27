@@ -69,33 +69,26 @@ export function getToolDescriptionsForMode(
 
 	const tools = new Set<string>()
 
-	// Add tools from mode's groups
-	config.groups.forEach((groupEntry) => {
-		const groupName = getGroupName(groupEntry)
-		const toolGroup = TOOL_GROUPS[groupName]
-		if (toolGroup) {
-			toolGroup.tools.forEach((tool) => {
-				if (isToolAllowedForMode(tool, mode, customModes ?? [], experiments ?? {})) {
-					tools.add(tool)
-				}
-			})
+	// Add tools from mode's tools list directly
+	config.tools.forEach((tool) => {
+		if (isToolAllowedForMode(tool, mode, customModes ?? [], experiments ?? {})) {
+			tools.add(tool)
 		}
 	})
 
 	// Add always available tools
 	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
-	// console.log("tools", tools)
+	
 	// Map tool descriptions for allowed tools
 	const descriptions = Array.from(tools).map((toolName) => {
 		const descriptionFn = toolDescriptionMap[toolName]
-		// console.log("descriptionFn", descriptionFn)
 		if (!descriptionFn) {
 			return undefined
 		}
 
 		return descriptionFn({
 			...args,
-			toolOptions: undefined, // No tool options in group-based approach
+			toolOptions: undefined, // No tool options in direct tool approach
 		})
 	})
 

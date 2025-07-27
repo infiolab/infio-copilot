@@ -7,12 +7,12 @@ import { useApp } from '../../contexts/AppContext';
 import { useDiffStrategy } from '../../contexts/DiffStrategyContext';
 import { useRAG } from '../../contexts/RAGContext';
 import { useSettings } from '../../contexts/SettingsContext';
-import { CustomMode, GroupEntry, ToolGroup } from '../../database/json/custom-mode/types';
+import { CustomMode } from '../../database/json/custom-mode/types';
 import { useCustomModes } from '../../hooks/use-custom-mode';
 import { IconSelector, getIconComponent } from '../../hooks/use-icon-selector';
 import { t } from '../../lang/helpers';
 import { PreviewView, PreviewViewState } from '../../PreviewView';
-import { defaultModes as buildinModes } from '../../utils/modes';
+import { defaultModes as buildinModes, getAllAvailableTools } from '../../utils/modes';
 import { openOrCreateMarkdownFile } from '../../utils/obsidian';
 import { PromptGenerator, getFullLanguageName } from '../../utils/prompt-generator';
 
@@ -23,13 +23,13 @@ interface MarketMode {
 	description: string
 	roleDefinition: string
 	customInstructions?: string
-	groups: GroupEntry[]
+	tools: string[] // Changed from groups to tools
 	category: string
 	icon?: string
 	downloads?: number
 }
 
-// Sample market modes data
+// Sample market modes data with updated tools
 const marketModes: MarketMode[] = [
 	{
 		id: 'code-reviewer',
@@ -37,7 +37,7 @@ const marketModes: MarketMode[] = [
 		description: '专业的代码审查助手，提供详细的代码分析、性能优化建议和最佳实践指导',
 		roleDefinition: '你是一位经验丰富的高级软件工程师和代码审查专家。你擅长分析代码质量、识别潜在问题、提供性能优化建议，并确保代码符合最佳实践和编程规范。',
 		customInstructions: '在审查代码时，请关注：1. 代码可读性和维护性 2. 性能优化机会 3. 安全漏洞 4. 架构设计问题 5. 测试覆盖率',
-		groups: ['read', 'edit'],
+		tools: ['read_file', 'list_files', 'search_files', 'apply_diff', 'write_to_file'],
 		category: 'development',
 		icon: 'code',
 		downloads: 1250
@@ -48,7 +48,7 @@ const marketModes: MarketMode[] = [
 		description: '专业的学术研究助手，帮助进行文献调研、数据分析和学术写作',
 		roleDefinition: '你是一位专业的学术研究助手，具有广泛的学科知识和研究方法论基础。你能够帮助用户进行文献综述、数据分析、假设检验和学术论文写作。',
 		customInstructions: '在协助研究时，请：1. 提供准确的学术引用 2. 使用严谨的逻辑分析 3. 建议合适的研究方法 4. 确保内容的学术规范性',
-		groups: ['read', 'research'],
+		tools: ['read_file', 'list_files', 'search_files', 'search_web', 'fetch_urls_content'],
 		category: 'academic',
 		icon: 'book-open',
 		downloads: 890
@@ -59,7 +59,7 @@ const marketModes: MarketMode[] = [
 		description: '专业的创意写作指导，帮助提升写作技巧、故事构思和文学创作',
 		roleDefinition: '你是一位经验丰富的创意写作导师和文学编辑。你擅长指导各种文体的写作，包括小说、散文、诗歌等，能够提供专业的写作技巧和创意建议。',
 		customInstructions: '在指导写作时，请注重：1. 故事结构和情节发展 2. 人物塑造和对话写作 3. 文学手法和修辞技巧 4. 风格统一和语言优化',
-		groups: ['read', 'edit'],
+		tools: ['read_file', 'list_files', 'search_files', 'apply_diff', 'write_to_file'],
 		category: 'writing',
 		icon: 'edit',
 		downloads: 756
@@ -70,7 +70,7 @@ const marketModes: MarketMode[] = [
 		description: '专业的数据分析师，擅长数据处理、统计分析和可视化展示',
 		roleDefinition: '你是一位专业的数据分析专家，具有扎实的统计学基础和丰富的数据处理经验。你能够帮助用户进行数据清洗、分析建模和结果解释。',
 		customInstructions: '在数据分析过程中，请：1. 确保数据的准确性和完整性 2. 选择合适的统计方法 3. 提供清晰的可视化展示 4. 给出有实际意义的解释',
-		groups: ['read', 'edit'],
+		tools: ['read_file', 'list_files', 'search_files', 'apply_diff'],
 		category: 'analysis',
 		icon: 'brain',
 		downloads: 432
@@ -113,7 +113,7 @@ const CustomModeView = () => {
 		name: '',
 		roleDefinition: '',
 		customInstructions: '',
-		groups: [],
+		tools: [],
 		icon: 'command',
 		source: 'global',
 		updatedAt: 0,
@@ -129,7 +129,7 @@ const CustomModeView = () => {
 	const [roleDefinition, setRoleDefinition] = useState<string>('')
 
 	// Selected tool groups
-	const [selectedTools, setSelectedTools] = useState<GroupEntry[]>([]);
+	const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
 	// Custom instructions
 	const [customInstructions, setCustomInstructions] = useState<string>('')
@@ -145,7 +145,7 @@ const CustomModeView = () => {
 			setModeName(newMode.name);
 			setRoleDefinition(newMode.roleDefinition);
 			setCustomInstructions(newMode.customInstructions || '');
-			setSelectedTools(newMode.groups);
+			setSelectedTools(newMode.tools);
 			setModeIcon(newMode.icon || 'command');
 			setCustomModeId('');
 			return;
@@ -157,8 +157,8 @@ const CustomModeView = () => {
 			setModeName(builtinMode.slug);
 			setRoleDefinition(builtinMode.roleDefinition);
 			setCustomInstructions(builtinMode.customInstructions || '');
-			setSelectedTools(builtinMode.groups.slice());
-			setModeIcon('command'); // Built-in modes use default icon
+			setSelectedTools(builtinMode.tools.slice());
+			setModeIcon(builtinMode.icon || 'command'); // Built-in modes use default icon
 			setCustomModeId(''); // Built-in modes don't have custom IDs
 		} else {
 			setIsBuiltinMode(false);
@@ -168,7 +168,7 @@ const CustomModeView = () => {
 				setModeName(customMode.name);
 				setRoleDefinition(customMode.roleDefinition);
 				setCustomInstructions(customMode.customInstructions || '');
-				setSelectedTools(customMode.groups);
+				setSelectedTools(customMode.tools);
 				setModeIcon(customMode.icon || 'command');
 			} else {
 				console.error("custom mode not found")
@@ -177,12 +177,12 @@ const CustomModeView = () => {
 	}, [selectedMode, customModeList]);
 
 
-	// Handle tool group selection change
-	const handleToolChange = React.useCallback((tool: ToolGroup) => {
+	// Handle tool selection change
+	const handleToolChange = React.useCallback((tool: string) => {
 		if (isNewMode) {
 			setNewMode((prev) => ({
 				...prev,
-				groups: prev.groups.includes(tool) ? prev.groups.filter(t => t !== tool) : [...prev.groups, tool]
+				tools: prev.tools.includes(tool) ? prev.tools.filter(t => t !== tool) : [...prev.tools, tool]
 			}))
 		}
 		setSelectedTools(prev => {
@@ -236,7 +236,7 @@ const CustomModeView = () => {
 			name: '',
 			roleDefinition: '',
 			customInstructions: '',
-			groups: [],
+			tools: [],
 			icon: 'command',
 			source: 'global',
 			updatedAt: 0,
@@ -262,7 +262,7 @@ const CustomModeView = () => {
 			marketMode.name,
 			marketMode.roleDefinition,
 			marketMode.customInstructions || '',
-			marketMode.groups,
+			marketMode.tools,
 			marketMode.icon || 'command'
 		);
 		// Switch to my-modes tab and select the newly created mode
@@ -390,50 +390,30 @@ const CustomModeView = () => {
 							/>
 						</div>
 
-						{/* Available features */}
+						{/* Available tools */}
 						<div className="infio-custom-modes-section">
 							<div className="infio-section-header">
-								<h3>{t('prompt.availableFeatures')}</h3>
+								<h3>可用工具</h3>
 							</div>
 							{
 								isBuiltinMode && (
-									<p className="infio-section-subtitle">{t('prompt.builtinFeaturesWarning')}</p>
+									<p className="infio-section-subtitle">内置模式的工具配置无法修改</p>
 								)
 							}
 							<div className="infio-tools-list">
-								<div className="infio-tool-item">
-									<label>
-										<input
-											type="checkbox"
-											disabled={isBuiltinMode}
-											checked={selectedTools.includes('read')}
-											onChange={() => handleToolChange('read')}
-										/>
-										{t('prompt.readFiles')}
-									</label>
-								</div>
-								<div className="infio-tool-item">
-									<label>
-										<input
-											type="checkbox"
-											disabled={isBuiltinMode}
-											checked={selectedTools.includes('edit')}
-											onChange={() => handleToolChange('edit')}
-										/>
-										{t('prompt.editFiles')}
-									</label>
-								</div>
-								<div className="infio-tool-item">
-									<label>
-										<input
-											type="checkbox"
-											disabled={isBuiltinMode}
-											checked={selectedTools.includes('research')}
-											onChange={() => handleToolChange('research')}
-										/>
-										{t('prompt.webSearch')}
-									</label>
-								</div>
+								{getAllAvailableTools().map(tool => (
+									<div key={tool.name} className="infio-tool-item">
+										<label>
+											<input
+												type="checkbox"
+												disabled={isBuiltinMode}
+												checked={selectedTools.includes(tool.name)}
+												onChange={() => handleToolChange(tool.name)}
+											/>
+											{tool.displayName}
+										</label>
+									</div>
+								))}
 							</div>
 						</div>
 
