@@ -120,7 +120,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 	const diffStrategy = useDiffStrategy()
 	const dataviewManager = useDataview()
 	const { getMcpHub } = useMcpHub()
-	const { customModeList, customModePrompts } = useCustomModes()
+	const { customModeList, customModePrompts, getAllEffectiveModes } = useCustomModes()
 	const { starredCommands } = useCommands()
 
 	const {
@@ -144,8 +144,8 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 
 	const promptGenerator = useMemo(() => {
 		// @ts-expect-error TODO: Review PromptGenerator constructor parameters and types
-		return new PromptGenerator(getRAGEngine, app, settings, diffStrategy, customModePrompts, customModeList, getMcpHub)
-	}, [getRAGEngine, app, settings, diffStrategy, customModePrompts, customModeList, getMcpHub])
+		return new PromptGenerator(getRAGEngine, app, settings, diffStrategy, customModePrompts, getAllEffectiveModes, getMcpHub)
+	}, [getRAGEngine, app, settings, diffStrategy, customModePrompts, getAllEffectiveModes, getMcpHub])
 
 	const workspaceManager = useMemo(() => {
 		return new WorkspaceManager(app)

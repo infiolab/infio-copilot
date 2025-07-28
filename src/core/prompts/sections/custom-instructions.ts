@@ -88,7 +88,7 @@ export async function addCustomInstructions(
 		? `
 ====
 
-USER'S CUSTOM INSTRUCTIONS
+INSTRUCTIONS
 
 ${joinedSections}`
 		: ""

@@ -49,11 +49,11 @@ You accomplish a given task iteratively, breaking it down into clear steps and w
  - Never use bare filenames without links (e.g., ✗ "26.md")`
 }
 
-export function getObjectiveSection(mode: string): string {
-	if (mode === 'research') {
+export function getObjectiveSection(modeStrategy: string): string {
+	if (modeStrategy === 'research') {	
 		return getDeepResearchObjectiveSection();
 	}
-	if (mode === 'learn') {
+	if (modeStrategy === 'learn') {
 		return getLearnModeObjectiveSection();
 	}
 	return getObsidianObjectiveSection();

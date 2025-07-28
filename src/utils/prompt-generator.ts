@@ -87,7 +87,7 @@ export class PromptGenerator {
 	private diffStrategy: DiffStrategy
 	private systemPrompt: SystemPrompt
 	private customModePrompts: CustomModePrompts | null = null
-	private customModeList: ModeConfig[] | null = null
+	private getCustomModeList: () => Promise<ModeConfig[]> | null = null
 	private getMcpHub: () => Promise<McpHub> | null = null
 	private convertDataManager: ConvertDataManager
 	private workspaceManager: WorkspaceManager
@@ -103,7 +103,7 @@ export class PromptGenerator {
 		settings: InfioSettings,
 		diffStrategy?: DiffStrategy,
 		customModePrompts?: CustomModePrompts,
-		customModeList?: ModeConfig[],
+		getCustomModeList?: () => Promise<ModeConfig[]>,
 		getMcpHub?: () => Promise<McpHub>,
 	) {
 		this.getRagEngine = getRagEngine
@@ -112,7 +112,7 @@ export class PromptGenerator {
 		this.diffStrategy = diffStrategy
 		this.systemPrompt = new SystemPrompt(this.app)
 		this.customModePrompts = customModePrompts ?? null
-		this.customModeList = customModeList ?? null
+		this.getCustomModeList = getCustomModeList ?? null
 		this.getMcpHub = getMcpHub ?? null
 		this.convertDataManager = new ConvertDataManager(app)
 		this.workspaceManager = new WorkspaceManager(app)
@@ -393,7 +393,8 @@ export class PromptGenerator {
 		state += `\n## Current Time\n${timeDetails}`
 
 		const currentMode = this.settings.mode
-		const modeDetails = await getFullModeDetails(this.app, currentMode, this.customModeList, this.customModePrompts)
+		const customModeList = await this.getCustomModeList?.() ?? null
+		const modeDetails = await getFullModeDetails(this.app, currentMode, customModeList, this.customModePrompts)
 		const modeInfo = `<slug>${currentMode}</slug>\n<name>${modeDetails.name}</name>`
 		state += `\n\n## Current Mode\n${modeInfo}`
 
@@ -819,6 +820,8 @@ export class PromptGenerator {
 
 	public async getSystemMessageNew(mode: Mode, filesSearchMethod: string, preferredLanguage: string): Promise<RequestMessage> {
 		const mcpHub = await this.getMcpHub?.()
+		const customModeList = await this.getCustomModeList?.() ?? null
+		console.log("customModeList", customModeList)
 		const prompt = await this.systemPrompt.getSystemPrompt(
 			this.app.vault.getRoot().path,
 			false,
@@ -828,7 +831,7 @@ export class PromptGenerator {
 			preferredLanguage,
 			this.diffStrategy,
 			this.customModePrompts,
-			this.customModeList,
+			customModeList,
 			mcpHub,
 		)
 

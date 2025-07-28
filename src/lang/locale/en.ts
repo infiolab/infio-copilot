@@ -244,6 +244,8 @@ export default {
 		selectTextFirst: 'Please select some text first',
 		migrationFailed: 'Failed to migrate to JSON storage. Please check the console for details.',
 		reloadingInfio: 'Reloading "infio" due to migration',
+		customModeSaved: 'Custom mode saved successfully',
+		customModeCreated: 'Custom mode created successfully',
 	},
 	applyView: {
 		applyingFile: 'Applying: {{file}}',

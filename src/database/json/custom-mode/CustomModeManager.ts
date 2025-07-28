@@ -160,6 +160,7 @@ export class CustomModeManager extends AbstractJsonRepository<
 				roleDefinition: updates.roleDefinition || builtinMode.roleDefinition,
 				customInstructions: updates.customInstructions || builtinMode.customInstructions,
 				tools: updates.tools || builtinMode.tools,
+				strategy: updates.strategy || builtinMode.strategy || "ask",
 				icon: updates.icon || builtinMode.icon,
 				enabled: updates.enabled !== undefined ? updates.enabled : true,
 				source: updates.source || 'global',

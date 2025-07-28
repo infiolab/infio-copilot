@@ -87,14 +87,14 @@ CAPABILITIES
 }
 
 export function getCapabilitiesSection(
-	mode: string,
+	modeStrategy: string,
 	cwd: string,
 	searchFileTool: string,
 ): string {
-	if (mode === 'research') {
+	if (modeStrategy === 'research') {
 		return getDeepResearchCapabilitiesSection();
 	}
-	if (mode === 'learn') {
+	if (modeStrategy === 'learn') {
 		return getLearnModeCapabilitiesSection(cwd, searchFileTool);
 	}
 	return getObsidianCapabilitiesSection(cwd, searchFileTool);

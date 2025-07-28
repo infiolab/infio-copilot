@@ -46,6 +46,11 @@ export type GroupEntry = z.infer<typeof groupEntrySchema>
 export const modeTypeSchema = z.enum(["builtin_override", "custom"])
 export type ModeType = z.infer<typeof modeTypeSchema>
 
+// System prompt generation strategies
+export const promptStrategies = ["ask", "write", "research", "raw"] as const
+export const promptStrategySchema = z.enum(promptStrategies)
+export type PromptStrategy = z.infer<typeof promptStrategySchema>
+
 const groupEntryArraySchema = z.array(groupEntrySchema).refine(
 	(groups) => {
 		const seen = new Set()
@@ -66,12 +71,13 @@ const groupEntryArraySchema = z.array(groupEntrySchema).refine(
 )
 
 export const modeConfigSchema = z.object({
-	id: z.string().uuid("Invalid ID"),
+	id: z.string(),
 	slug: z.string().regex(/^[a-zA-Z0-9-]+$/, "Slug must contain only letters numbers and dashes"),
 	name: z.string().min(1, "Name is required"),
 	roleDefinition: z.string().min(1, "Role definition is required"),
 	customInstructions: z.string().optional(),
 	tools: z.array(z.string()).min(1, "At least one tool must be selected"),
+	strategy: promptStrategySchema.optional().default("ask"), // New field for system prompt strategy
 	icon: z.string().optional(),
 	enabled: z.boolean().optional().default(true),
 	source: z.enum(["global", "project"]).optional(),

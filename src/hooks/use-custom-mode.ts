@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useApp } from '../contexts/AppContext'
 import { CustomModeManager } from '../database/json/custom-mode/CustomModeManager'
 import { CustomMode } from '../database/json/custom-mode/types'
-import { defaultModes } from '../utils/modes'
+import { ModeConfig, defaultModes } from '../utils/modes'
 
 export type CustomModePrompts = {
 	[slug: string]: {
@@ -18,6 +18,7 @@ export interface UseCustomModes {
 		roleDefinition: string,
 		customInstructions: string,
 		tools: string[],
+		strategy?: "ask" | "write" | "research" | "raw",
 		icon?: string,
 		enabled?: boolean
 	) => Promise<void>
@@ -28,6 +29,7 @@ export interface UseCustomModes {
 		roleDefinition: string,
 		customInstructions: string,
 		tools: string[],
+		strategy?: "ask" | "write" | "research" | "raw",
 		icon?: string,
 		enabled?: boolean
 	) => Promise<void>
@@ -43,12 +45,15 @@ export interface UseCustomModes {
 		roleDefinition: string,
 		customInstructions: string,
 		tools: string[],
+		strategy?: "ask" | "write" | "research" | "raw",
 		icon?: string,
 		enabled?: boolean
 	) => Promise<void>
 	resetBuiltinModeToDefault: (slug: string) => Promise<void>
 	isBuiltinModeOverridden: (slug: string) => boolean
 	getEffectiveBuiltinMode: (slug: string) => CustomMode | undefined
+	// New method to get all effective modes for PromptGenerator
+	getAllEffectiveModes: () => Promise<ModeConfig[]>
 }
 
 export function useCustomModes(): UseCustomModes {
@@ -72,14 +77,26 @@ export function useCustomModes(): UseCustomModes {
 	}, [customModeManager])
 
 	const customModePrompts = useMemo(() => {
-		return customModeList.reduce((acc, customMode) => {
-			acc[customMode.slug] = {
+		const prompts: CustomModePrompts = {}
+
+		// Add custom modes
+		for (const customMode of customModeList) {
+			prompts[customMode.slug] = {
 				roleDefinition: customMode.roleDefinition,
 				customInstructions: customMode.customInstructions,
 			}
-			return acc
-		}, {} as CustomModePrompts)
-	}, [customModeList])
+		}
+
+		// Add builtin mode overrides
+		for (const override of builtinModeOverrides) {
+			prompts[override.slug] = {
+				roleDefinition: override.roleDefinition,
+				customInstructions: override.customInstructions,
+			}
+		}
+
+		return prompts
+	}, [customModeList, builtinModeOverrides])
 
 	useEffect(() => {
 		void fetchCustomModeList()
@@ -92,6 +109,7 @@ export function useCustomModes(): UseCustomModes {
 			roleDefinition: string,
 			customInstructions: string,
 			tools: string[],
+			strategy?: "ask" | "write" | "research" | "raw",
 			icon?: string,
 			enabled?: boolean
 		): Promise<void> => {
@@ -100,6 +118,7 @@ export function useCustomModes(): UseCustomModes {
 				roleDefinition,
 				customInstructions,
 				tools,
+				strategy,
 				icon,
 				enabled: enabled ?? true,
 			})
@@ -117,12 +136,13 @@ export function useCustomModes(): UseCustomModes {
 	)
 
 	const updateCustomMode = useCallback(
-		async (id: string, name: string, roleDefinition: string, customInstructions: string, tools: string[], icon?: string, enabled?: boolean): Promise<void> => {
+		async (id: string, name: string, roleDefinition: string, customInstructions: string, tools: string[], strategy?: "ask" | "write" | "research" | "raw", icon?: string, enabled?: boolean): Promise<void> => {
 			await customModeManager.updateCustomMode(id, {
 				name,
 				roleDefinition,
 				customInstructions,
 				tools,
+				strategy,
 				icon,
 				enabled,
 			})
@@ -157,6 +177,7 @@ export function useCustomModes(): UseCustomModes {
 			roleDefinition: string,
 			customInstructions: string,
 			tools: string[],
+			strategy?: "ask" | "write" | "research" | "raw",
 			icon?: string,
 			enabled?: boolean
 		): Promise<void> => {
@@ -165,20 +186,25 @@ export function useCustomModes(): UseCustomModes {
 				roleDefinition,
 				customInstructions,
 				tools,
+				strategy,
 				icon,
 				enabled,
 			})
 			await fetchBuiltinModeOverrides()
+			// Also refresh custom mode list to ensure consistency
+			await fetchCustomModeList()
 		},
-		[customModeManager, fetchBuiltinModeOverrides],
+		[customModeManager, fetchBuiltinModeOverrides, fetchCustomModeList],
 	)
 
 	const resetBuiltinModeToDefault = useCallback(
 		async (slug: string): Promise<void> => {
 			await customModeManager.resetBuiltinModeToDefault(slug)
 			await fetchBuiltinModeOverrides()
+			// Also refresh custom mode list to ensure consistency
+			await fetchCustomModeList()
 		},
-		[customModeManager, fetchBuiltinModeOverrides],
+		[customModeManager, fetchBuiltinModeOverrides, fetchCustomModeList],
 	)
 
 	const isBuiltinModeOverridden = useCallback(
@@ -199,27 +225,82 @@ export function useCustomModes(): UseCustomModes {
 			// Fall back to default builtin mode (convert to CustomMode format)
 			const builtinMode = defaultModes.find(mode => mode.slug === slug)
 			if (builtinMode) {
-				return {
+				const customMode: CustomMode = {
 					id: `builtin_${slug}`, // Temporary ID for builtin modes
 					slug: builtinMode.slug,
 					name: builtinMode.name,
 					roleDefinition: builtinMode.roleDefinition,
 					customInstructions: builtinMode.customInstructions || '',
 					tools: builtinMode.tools,
+					strategy: builtinMode.strategy || "ask",
 					icon: builtinMode.icon || 'command',
 					enabled: true, // Builtin modes are always enabled by default
 					source: builtinMode.source || 'global',
 					modeType: 'custom', // This will be ignored for display purposes
 					isBuiltinOverride: false,
-					updatedAt: 0,
+					updatedAt: Date.now(),
 					schemaVersion: 1,
-				} as CustomMode
+				}
+				return customMode
 			}
 
 			return undefined
 		},
 		[builtinModeOverrides],
 	)
+
+	const getAllEffectiveModes = useCallback(async (): Promise<ModeConfig[]> => {
+		// 实时获取最新数据而不是依赖状态，避免异步状态更新导致的数据不一致问题
+		const [currentCustomModeList, currentBuiltinModeOverrides] = await Promise.all([
+			customModeManager.listCustomModesOnly(),
+			customModeManager.listBuiltinModeOverrides()
+		])
+
+		const effectiveModes: ModeConfig[] = []
+
+		// Add custom modes first (convert to ModeConfig format)
+		effectiveModes.push(...currentCustomModeList.map(mode => ({
+			slug: mode.slug,
+			name: mode.name,
+			icon: mode.icon,
+			roleDefinition: mode.roleDefinition,
+			customInstructions: mode.customInstructions,
+			tools: mode.tools,
+			strategy: mode.strategy,
+			source: mode.source,
+			enabled: mode.enabled,
+		})))
+
+		// Process builtin modes - add overrides or defaults
+		for (const builtinMode of defaultModes) {
+			// Skip if already exists in custom modes (to avoid duplicates)
+			if (currentCustomModeList.some(cm => cm.slug === builtinMode.slug)) {
+				continue
+			}
+
+			// Check if there's an override for this builtin mode
+			const override = currentBuiltinModeOverrides.find(override => override.slug === builtinMode.slug)
+			if (override) {
+				// Use override configuration (convert to ModeConfig format)
+				effectiveModes.push({
+					slug: override.slug,
+					name: override.name,
+					icon: override.icon,
+					roleDefinition: override.roleDefinition,
+					customInstructions: override.customInstructions,
+					tools: override.tools,
+					strategy: override.strategy,
+					source: override.source,
+					enabled: override.enabled,
+				})
+			} else {
+				// Use original builtin mode
+				effectiveModes.push(builtinMode)
+			}
+		}
+		console.log("getAllEffectiveModes", effectiveModes)
+		return effectiveModes
+	}, [customModeManager])
 
 	return {
 		createCustomMode,
@@ -235,5 +316,7 @@ export function useCustomModes(): UseCustomModes {
 		resetBuiltinModeToDefault,
 		isBuiltinModeOverridden,
 		getEffectiveBuiltinMode,
+		// New method to get all effective modes for PromptGenerator
+		getAllEffectiveModes,
 	}
 }

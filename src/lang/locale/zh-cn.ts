@@ -245,6 +245,8 @@ export default {
 		selectTextFirst: '请先选择一些文本',
 		migrationFailed: '迁移到 JSON 存储失败。请检查控制台以获取详细信息。',
 		reloadingInfio: '因迁移而重新加载 "infio"',
+		customModeSaved: '自定义模式保存成功',
+		customModeCreated: '自定义模式创建成功',
 	},
 	applyView: {
 		applyingFile: '正在应用: {{file}}',

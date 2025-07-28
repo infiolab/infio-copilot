@@ -1,7 +1,7 @@
 import { DiffStrategy } from "../../diff/DiffStrategy"
 
-function getEditingInstructions(mode: string): string {
-	if (mode !== 'write') {
+function getEditingInstructions(modeStrategy: string): string {
+	if (modeStrategy !== 'write') {
 		return ""
 	}
 
@@ -72,7 +72,7 @@ RULES
 }
 
 function getObsidianRulesSection(
-	mode: string,
+	modeStrategy: string,
 	cwd: string,
 	searchTool: string,
 ): string {
@@ -83,7 +83,7 @@ RULES
 - Your current working directory is: ${cwd.toPosix()}
 ${getSearchInstructions(searchTool)}
 - When creating new notes in Obsidian, organize them according to the existing vault structure unless the user specifies otherwise. Use appropriate file paths when writing files, as the write_to_file tool will automatically create any necessary directories. Structure the content logically, adhering to Obsidian conventions with appropriate frontmatter, headings, lists, and formatting. Unless otherwise specified, new notes should follow Markdown syntax with appropriate use of links ([[note name]]), tags (#tag), callouts, and other Obsidian-specific formatting.
-${getEditingInstructions(mode)}
+${getEditingInstructions(modeStrategy)}
 - Be sure to consider the structure of the Obsidian vault (folders, naming conventions, note organization) when determining the appropriate format and content for new or modified notes. Also consider what files may be most relevant to accomplishing the task, for example examining backlinks, linked mentions, or tags would help you understand the relationships between notes, which you could incorporate into any content you write.
 - When making changes to content, always consider the context within the broader vault. Ensure that your changes maintain existing links, tags, and references, and that they follow the user's established formatting standards and organization.
 - Do not ask for more information than necessary. Use the tools provided to accomplish the user's request efficiently and effectively. When you've completed your task, you must use the attempt_completion tool to present the result to the user. The user may provide feedback, which you can use to make improvements and try again.
@@ -99,18 +99,18 @@ ${getEditingInstructions(mode)}
 }
 
 export function getRulesSection(
-	mode: string,
+	modeStrategy: string,
 	cwd: string,
 	searchTool: string,
 	supportsComputerUse: boolean,
 	diffStrategy?: DiffStrategy,
 	experiments?: Record<string, boolean> | undefined,
 ): string {
-	if (mode === 'research') {
+	if (modeStrategy === 'research') {
 		return getDeepResearchRulesSection();
 	}
-	if (mode === 'learn') {
+	if (modeStrategy === 'learn') {
 		return getLearnModeRulesSection(cwd, searchTool);
 	}
-	return getObsidianRulesSection(mode, cwd, searchTool);
+	return getObsidianRulesSection(modeStrategy, cwd, searchTool);
 }

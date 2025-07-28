@@ -1,6 +1,6 @@
 import * as Switch from "@radix-ui/react-switch";
 import { ChevronDown, ChevronRight, Download, Plus, Trash2, Undo2 } from 'lucide-react';
-import { getLanguage } from 'obsidian';
+import { getLanguage, Notice } from 'obsidian';
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { PREVIEW_VIEW_TYPE } from '../../constants';
@@ -19,12 +19,14 @@ import { PromptGenerator, getFullLanguageName } from '../../utils/prompt-generat
 
 // Market mode interface
 interface MarketMode {
-	id: string
+	slug: string
 	name: string
 	description: string
 	roleDefinition: string
 	customInstructions?: string
 	tools: string[] // Changed from groups to tools
+	strategy?: "ask" | "write" | "research" | "raw"
+	enabled?: boolean
 	category: string
 	icon?: string
 	downloads?: number
@@ -33,45 +35,49 @@ interface MarketMode {
 // Sample market modes data with updated tools
 const marketModes: MarketMode[] = [
 	{
-		id: 'code-reviewer',
+		slug: 'code-reviewer',
 		name: '代码审查专家',
 		description: '专业的代码审查助手，提供详细的代码分析、性能优化建议和最佳实践指导',
 		roleDefinition: '你是一位经验丰富的高级软件工程师和代码审查专家。你擅长分析代码质量、识别潜在问题、提供性能优化建议，并确保代码符合最佳实践和编程规范。',
 		customInstructions: '在审查代码时，请关注：1. 代码可读性和维护性 2. 性能优化机会 3. 安全漏洞 4. 架构设计问题 5. 测试覆盖率',
 		tools: ['read_file', 'list_files', 'search_files', 'apply_diff', 'write_to_file'],
+		strategy: 'write',
 		category: 'development',
 		icon: 'code',
 		downloads: 1250
 	},
 	{
-		id: 'research-assistant',
+		slug: 'research-assistant',
 		name: '学术研究助手',
 		description: '专业的学术研究助手，帮助进行文献调研、数据分析和学术写作',
 		roleDefinition: '你是一位专业的学术研究助手，具有广泛的学科知识和研究方法论基础。你能够帮助用户进行文献综述、数据分析、假设检验和学术论文写作。',
 		customInstructions: '在协助研究时，请：1. 提供准确的学术引用 2. 使用严谨的逻辑分析 3. 建议合适的研究方法 4. 确保内容的学术规范性',
 		tools: ['read_file', 'list_files', 'search_files', 'search_web', 'fetch_urls_content'],
+		strategy: 'research',
 		category: 'academic',
 		icon: 'book-open',
 		downloads: 890
 	},
 	{
-		id: 'creative-writer',
+		slug: 'creative-writer',
 		name: '创意写作导师',
 		description: '专业的创意写作指导，帮助提升写作技巧、故事构思和文学创作',
 		roleDefinition: '你是一位经验丰富的创意写作导师和文学编辑。你擅长指导各种文体的写作，包括小说、散文、诗歌等，能够提供专业的写作技巧和创意建议。',
 		customInstructions: '在指导写作时，请注重：1. 故事结构和情节发展 2. 人物塑造和对话写作 3. 文学手法和修辞技巧 4. 风格统一和语言优化',
 		tools: ['read_file', 'list_files', 'search_files', 'apply_diff', 'write_to_file'],
+		strategy: 'write',
 		category: 'writing',
 		icon: 'edit',
 		downloads: 756
 	},
 	{
-		id: 'data-analyst',
+		slug: 'data-analyst',
 		name: '数据分析专家',
 		description: '专业的数据分析师，擅长数据处理、统计分析和可视化展示',
 		roleDefinition: '你是一位专业的数据分析专家，具有扎实的统计学基础和丰富的数据处理经验。你能够帮助用户进行数据清洗、分析建模和结果解释。',
 		customInstructions: '在数据分析过程中，请：1. 确保数据的准确性和完整性 2. 选择合适的统计方法 3. 提供清晰的可视化展示 4. 给出有实际意义的解释',
 		tools: ['read_file', 'list_files', 'search_files', 'apply_diff'],
+		strategy: 'ask',
 		category: 'analysis',
 		icon: 'brain',
 		downloads: 432
@@ -94,6 +100,7 @@ const CustomModeView = () => {
 		resetBuiltinModeToDefault,
 		isBuiltinModeOverridden,
 		getEffectiveBuiltinMode,
+		getAllEffectiveModes,
 	} = useCustomModes()
 	const { settings } = useSettings()
 	const { getRAGEngine } = useRAG()
@@ -101,8 +108,8 @@ const CustomModeView = () => {
 
 	const promptGenerator = useMemo(() => {
 		// @ts-expect-error PromptGenerator constructor parameter types need to be reviewed
-		return new PromptGenerator(getRAGEngine, app, settings, diffStrategy, customModePrompts, customModeList)
-	}, [app, settings, diffStrategy, customModePrompts, customModeList])
+		return new PromptGenerator(getRAGEngine, app, settings, diffStrategy, customModePrompts, getAllEffectiveModes)
+	}, [app, settings, diffStrategy, customModePrompts, getAllEffectiveModes])
 
 	// Tab state
 	const [activeTab, setActiveTab] = useState<'my-modes' | 'market'>('my-modes')
@@ -122,6 +129,7 @@ const CustomModeView = () => {
 		roleDefinition: '',
 		customInstructions: '',
 		tools: [],
+		strategy: "ask",
 		icon: 'command',
 		enabled: true,
 		source: 'global',
@@ -141,6 +149,9 @@ const CustomModeView = () => {
 	// Selected tool groups
 	const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
+	// Mode strategy
+	const [modeStrategy, setModeStrategy] = useState<"ask" | "write" | "research" | "raw">("ask")
+
 	// Custom instructions
 	const [customInstructions, setCustomInstructions] = useState<string>('')
 
@@ -159,6 +170,7 @@ const CustomModeView = () => {
 			setRoleDefinition(newMode.roleDefinition);
 			setCustomInstructions(newMode.customInstructions || '');
 			setSelectedTools(newMode.tools);
+			setModeStrategy(newMode.strategy || "ask");
 			setModeIcon(newMode.icon || 'command');
 			setModeEnabled(newMode.enabled ?? true);
 			setCustomModeId('');
@@ -176,6 +188,7 @@ const CustomModeView = () => {
 				setRoleDefinition(effectiveMode.roleDefinition);
 				setCustomInstructions(effectiveMode.customInstructions || '');
 				setSelectedTools([...effectiveMode.tools]);
+				setModeStrategy(effectiveMode.strategy || builtinMode.strategy || "ask");
 				setModeIcon(effectiveMode.icon || 'command');
 				setModeEnabled(effectiveMode.enabled ?? true);
 				setCustomModeId(effectiveMode.id || '');
@@ -189,6 +202,7 @@ const CustomModeView = () => {
 				setRoleDefinition(customMode.roleDefinition);
 				setCustomInstructions(customMode.customInstructions || '');
 				setSelectedTools(customMode.tools);
+				setModeStrategy(customMode.strategy || "ask");
 				setModeIcon(customMode.icon || 'command');
 				setModeEnabled(customMode.enabled ?? true);
 			} else {
@@ -236,6 +250,7 @@ const CustomModeView = () => {
 				roleDefinition,
 				customInstructions,
 				selectedTools,
+				modeStrategy,
 				modeIcon,
 				modeEnabled
 			);
@@ -247,11 +262,14 @@ const CustomModeView = () => {
 				roleDefinition,
 				customInstructions,
 				selectedTools,
+				modeStrategy,
 				modeIcon,
 				modeEnabled
 			);
 		}
-	}, [isBuiltinMode, selectedMode, customModeId, modeName, roleDefinition, customInstructions, selectedTools, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride, updateCustomMode])
+		// Show success notification
+		new Notice(t('notifications.customModeSaved'));
+	}, [isBuiltinMode, selectedMode, customModeId, modeName, roleDefinition, customInstructions, selectedTools, modeStrategy, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride, updateCustomMode])
 
 	// Create new mode
 	const createNewMode = React.useCallback(async () => {
@@ -261,9 +279,12 @@ const CustomModeView = () => {
 			roleDefinition,
 			customInstructions,
 			selectedTools,
+			modeStrategy,
 			modeIcon,
 			modeEnabled
 		);
+		// Show success notification
+		new Notice(t('notifications.customModeCreated'));
 		// reset
 		setNewMode({
 			id: '',
@@ -272,6 +293,7 @@ const CustomModeView = () => {
 			roleDefinition: '',
 			customInstructions: '',
 			tools: [],
+			strategy: "ask",
 			icon: 'command',
 			enabled: true,
 			source: 'global',
@@ -279,7 +301,7 @@ const CustomModeView = () => {
 			schemaVersion: 1,
 		})
 		setSelectedMode("add_new_mode")
-	}, [isNewMode, modeName, roleDefinition, customInstructions, selectedTools, modeIcon, modeEnabled, createCustomMode])
+	}, [isNewMode, modeName, roleDefinition, customInstructions, selectedTools, modeStrategy, modeIcon, modeEnabled, createCustomMode])
 
 	// Delete mode
 	const deleteMode = React.useCallback(async () => {
@@ -325,22 +347,25 @@ const CustomModeView = () => {
 			roleDefinition,
 			customInstructions,
 			selectedTools,
+			modeStrategy,
 			modeIcon,
 			newEnabledState
 		);
-	}, [isBuiltinMode, selectedMode, modeName, roleDefinition, customInstructions, selectedTools, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride])
+	}, [isBuiltinMode, selectedMode, modeName, roleDefinition, customInstructions, selectedTools, modeStrategy, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride])
 
 	// Install market mode
 	const handleInstallMarketMode = async (marketMode: MarketMode) => {
 		await createCustomMode(
-			marketMode.name,
+			marketMode.slug,
 			marketMode.roleDefinition,
 			marketMode.customInstructions || '',
 			marketMode.tools,
+			marketMode.strategy || "ask",
 			marketMode.icon || 'command'
 		);
 		// Switch to my-modes tab and select the newly created mode
 		setActiveTab('my-modes');
+		setSelectedMode(marketMode.slug);
 	}
 
 	return (
@@ -507,6 +532,44 @@ const CustomModeView = () => {
 							/>
 						</div>
 
+						{/* Strategy selection */}
+						<div className="infio-custom-modes-section">
+							<div className="infio-section-header">
+								<h3>系统提示策略</h3>
+								{isBuiltinMode && isBuiltinModeOverridden(selectedMode) && (
+									<button 
+										className="infio-section-btn"
+										onClick={() => {
+											const originalBuiltin = buildinModes.find(m => m.slug === selectedMode);
+											if (originalBuiltin) {
+												setModeStrategy(originalBuiltin.strategy || "ask");
+											}
+										}}
+										title="恢复默认策略配置"
+									>
+										<Undo2 size={16} />
+									</button>
+								)}
+							</div>
+							<p className="infio-section-subtitle">选择系统提示的生成策略，不同策略适用于不同的使用场景</p>
+							<select
+								className="infio-select"
+								value={modeStrategy}
+								onChange={(e) => {
+									const strategy = e.target.value as "ask" | "write" | "research" | "raw";
+									if (isNewMode) {
+										setNewMode((prev) => ({ ...prev, strategy: strategy }))
+									}
+									setModeStrategy(strategy)
+								}}
+							>
+								<option value="ask">Ask - 问答交互模式</option>
+								<option value="write">Write - 写作编辑模式</option>
+								<option value="research">Research - 研究分析模式</option>
+								<option value="raw">Raw - 原始模式</option>
+							</select>
+						</div>
+
 						{/* Available tools */}
 						<div className="infio-custom-modes-section">
 							<div className="infio-section-header">
@@ -663,14 +726,14 @@ const CustomModeView = () => {
 							{marketModes.map(mode => {
 								const IconComponent = getIconComponent(mode.icon);
 								return (
-									<div key={mode.id} className="infio-market-mode-item">
+									<div key={mode.slug} className="infio-market-mode-item">
 										<div className="infio-market-mode-header">
 											<div className="infio-market-mode-info">
 												<div className="infio-market-mode-name">
 													<IconComponent size={16} />
 													{mode.name}
 												</div>
-												<div className="infio-market-mode-category">{mode.category}</div>
+												<div className="infio-market-mode-category">{mode.strategy}</div>
 											</div>
 											<button
 												onClick={() => handleInstallMarketMode(mode)}
@@ -853,12 +916,15 @@ const CustomModeView = () => {
 				}
 				
 				.infio-select {
-					width: 100%;
-					border: 1px solid #444;
-					border-radius: 4px;
+					background-color: var(--background-primary) !important;
+					border: 1px solid var(--background-modifier-border);
+					border-radius: var(--radius-s);
 					color: var(--text-normal);
-					padding: 8px 12px;
-					margin-bottom: 8px;
+					padding: var(--size-4-2);
+					font-size: var(--font-ui-small);
+					width: 100%;
+					box-sizing: border-box;
+					height: 36px;
 				}
 				
 				.infio-tools-list {

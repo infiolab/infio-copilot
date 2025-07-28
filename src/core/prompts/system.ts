@@ -11,7 +11,6 @@ import {
 	PromptComponent,
 	defaultModeSlug,
 	defaultModes,
-	getModeBySlug
 } from "../../utils/modes"
 import { DiffStrategy } from "../diff/DiffStrategy"
 import { McpHub } from "../mcp/McpHub"
@@ -72,6 +71,7 @@ export class SystemPrompt {
 	private async getEffectiveModeConfig(mode: Mode, customModes?: ModeConfig[]): Promise<ModeConfig | null> {
 		// Get the complete effective modes array and find the specific mode
 		const effectiveModes = await this.getEffectiveModesArray(customModes)
+		console.log("effectiveModes", effectiveModes)
 		return effectiveModes.find(m => m.slug === mode) || null
 	}
 
@@ -194,7 +194,7 @@ ${getToolUseGuidelinesSection(mode)}
 ${mcpServersSection}
 
 ${getCapabilitiesSection(
-			mode,
+			modeConfig.strategy || "ask",
 			cwd,
 			filesSearchMethod,
 		)}
@@ -202,7 +202,7 @@ ${getCapabilitiesSection(
 ${modesSection}
 
 ${getRulesSection(
-			mode,
+			modeConfig.strategy || "ask",
 			cwd,
 			filesSearchMethod,
 			supportsComputerUse,
@@ -210,7 +210,7 @@ ${getRulesSection(
 			experiments,
 		)}
 
-${getObjectiveSection(mode)}
+${getObjectiveSection(modeConfig.strategy || "ask")}
 
 ${await addCustomInstructions(this.app, promptComponent?.customInstructions || modeConfig.customInstructions || "", globalCustomInstructions || "", cwd, mode, { preferredLanguage })}`
 
