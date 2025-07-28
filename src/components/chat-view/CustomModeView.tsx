@@ -175,7 +175,7 @@ const CustomModeView = () => {
 				setModeName(effectiveMode.name);
 				setRoleDefinition(effectiveMode.roleDefinition);
 				setCustomInstructions(effectiveMode.customInstructions || '');
-				setSelectedTools(effectiveMode.tools.slice());
+				setSelectedTools([...effectiveMode.tools]);
 				setModeIcon(effectiveMode.icon || 'command');
 				setModeEnabled(effectiveMode.enabled ?? true);
 				setCustomModeId(effectiveMode.id || '');

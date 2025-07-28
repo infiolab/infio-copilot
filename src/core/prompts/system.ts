@@ -70,29 +70,50 @@ export class SystemPrompt {
 	 * Get the effective mode configuration, considering builtin overrides
 	 */
 	private async getEffectiveModeConfig(mode: Mode, customModes?: ModeConfig[]): Promise<ModeConfig | null> {
-		// First try to find in custom modes
-		const customMode = getModeBySlug(mode, customModes)
-		if (customMode) {
-			return customMode
-		}
+		// Get the complete effective modes array and find the specific mode
+		const effectiveModes = await this.getEffectiveModesArray(customModes)
+		return effectiveModes.find(m => m.slug === mode) || null
+	}
 
-		// Check if there's a builtin mode override in database
-		const builtinOverride = await this.customModeManager.findBuiltinModeOverride(mode)
-		if (builtinOverride) {
-			// Convert CustomMode to ModeConfig
-			return {
-				slug: builtinOverride.slug,
-				name: builtinOverride.name,
-				icon: builtinOverride.icon,
-				roleDefinition: builtinOverride.roleDefinition,
-				customInstructions: builtinOverride.customInstructions,
-				tools: builtinOverride.tools,
-				source: builtinOverride.source,
+	/**
+	 * Get effective modes array that includes builtin overrides
+	 * This is the core method that ensures all mode configurations include overrides
+	 */
+	private async getEffectiveModesArray(customModes?: ModeConfig[]): Promise<ModeConfig[]> {
+		const effectiveModes: ModeConfig[] = []
+		
+		// Add custom modes first
+		if (customModes) {
+			effectiveModes.push(...customModes)
+		}
+		
+		// Process each builtin mode
+		for (const builtinMode of defaultModes) {
+			// Skip if already exists in custom modes (to avoid duplicates)
+			if (customModes?.some(cm => cm.slug === builtinMode.slug)) {
+				continue
+			}
+			
+			// Check if there's an override for this builtin mode
+			const override = await this.customModeManager.findBuiltinModeOverride(builtinMode.slug)
+			if (override) {
+				// Use override configuration
+				effectiveModes.push({
+					slug: override.slug,
+					name: override.name,
+					icon: override.icon,
+					roleDefinition: override.roleDefinition,
+					customInstructions: override.customInstructions,
+					tools: override.tools,
+					source: override.source,
+				})
+			} else {
+				// Use original builtin mode
+				effectiveModes.push(builtinMode)
 			}
 		}
-
-		// Fall back to builtin mode
-		return defaultModes.find((m) => m.slug === mode) || defaultModes[0]
+		
+		return effectiveModes
 	}
 
 	/**
@@ -137,6 +158,9 @@ export class SystemPrompt {
 			throw new Error(`Mode '${mode}' not found`)
 		}
 
+		// Create effective modes array that includes builtin overrides
+		const effectiveModes = await this.getEffectiveModesArray(customModeConfigs)
+
 		const roleDefinition = promptComponent?.roleDefinition || modeConfig.roleDefinition
 
 		const [modesSection, mcpServersSection] = await Promise.all([
@@ -161,7 +185,7 @@ ${getToolDescriptionsForMode(
 			diffStrategy,
 			browserViewportSize,
 			mcpHub,
-			customModeConfigs,
+			effectiveModes, // Use effective modes instead of customModeConfigs
 			experiments,
 		)}
 
@@ -192,7 +216,6 @@ ${await addCustomInstructions(this.app, promptComponent?.customInstructions || m
 
 		return basePrompt
 	}
-
 
 	/**
 	 * Get the system prompt for a given mode
@@ -287,7 +310,6 @@ ${customInstructions}`
 
 		// 3. use infio default system prompt
 		return this.generatePrompt(
-			// context,
 			cwd,
 			supportsComputerUse,
 			currentMode.slug,
