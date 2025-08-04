@@ -1,6 +1,6 @@
 import * as Switch from "@radix-ui/react-switch";
 import { ChevronDown, ChevronRight, Download, Plus, Trash2, Undo2 } from 'lucide-react';
-import { getLanguage, Notice } from 'obsidian';
+import { Notice, getLanguage } from 'obsidian';
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { PREVIEW_VIEW_TYPE } from '../../constants';
@@ -596,14 +596,14 @@ const CustomModeView = () => {
 							}
 							<div className="infio-tools-list">
 								{getAllAvailableTools().map(tool => (
-									<div key={tool.name} className="infio-tool-item">
+									<div key={tool} className="infio-tool-item">
 										<label>
 											<input
 												type="checkbox"
-												checked={selectedTools.includes(tool.name)}
-												onChange={() => handleToolChange(tool.name)}
+												checked={selectedTools.includes(tool)}
+												onChange={() => handleToolChange(tool)}
 											/>
-											{tool.displayName}
+											{tool}
 										</label>
 									</div>
 								))}
@@ -737,10 +737,9 @@ const CustomModeView = () => {
 											</div>
 											<button
 												onClick={() => handleInstallMarketMode(mode)}
-												className="infio-market-install-btn"
+												className="infio-commands-install-btn"
 											>
 												<Download size={16} />
-												安装
 											</button>
 										</div>
 										<div className="infio-market-mode-description">{mode.description}</div>
@@ -928,8 +927,8 @@ const CustomModeView = () => {
 				}
 				
 				.infio-tools-list {
-					display: flex;
-					flex-direction: column;
+					display: grid;
+					grid-template-columns: 1fr 1fr;
 					gap: 10px;
 				}
 				

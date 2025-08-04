@@ -2,7 +2,7 @@ import { App } from "obsidian"
 
 import { addCustomInstructions } from "../core/prompts/sections/custom-instructions"
 
-import { ALWAYS_AVAILABLE_TOOLS, TOOL_DISPLAY_NAMES, TOOL_GROUPS, ToolGroup } from "./tool-groups"
+import { ALWAYS_AVAILABLE_TOOLS, TOOL_GROUPS, ToolGroup } from "./tool-groups"
 
 // Mode types
 export type Mode = string
@@ -40,20 +40,17 @@ export type CustomModePrompts = {
 }
 
 // Helper to get all available tools for UI selection
-export function getAllAvailableTools(): { name: string; displayName: string }[] {
+export function getAllAvailableTools(): string[] {
 	const allTools = new Set<string>()
-	
+
 	// Add tools from all groups except always available ones
 	Object.values(TOOL_GROUPS).forEach(group => {
 		if (!group.alwaysAvailable) {
 			group.tools.forEach(tool => allTools.add(tool))
 		}
 	})
-	
-	return Array.from(allTools).map(tool => ({
-		name: tool,
-		displayName: TOOL_DISPLAY_NAMES[tool as keyof typeof TOOL_DISPLAY_NAMES] || tool
-	}))
+
+	return Array.from(allTools)
 }
 
 // Helper to extract group name regardless of format (keeping for backward compatibility)
@@ -63,11 +60,6 @@ export function getGroupName(group: GroupEntry): ToolGroup {
 	}
 
 	return group[0]
-}
-
-// Helper to get group options if they exist (keeping for backward compatibility)
-function getGroupOptions(group: GroupEntry): GroupOptions | undefined {
-	return Array.isArray(group) ? group[1] : undefined
 }
 
 // Helper to check if a file path matches a regex pattern
@@ -227,11 +219,11 @@ export function isToolAllowedForMode(
 	modeSlug: string,
 	customModes: ModeConfig[],
 	toolRequirements?: Record<string, boolean>,
-	toolParams?: Record<string, any>, // All tool parameters
+	toolParams?: Record<string, unknown>, // All tool parameters
 	experiments?: Record<string, boolean>,
 ): boolean {
 	// Always allow these tools
-	if (ALWAYS_AVAILABLE_TOOLS.includes(tool as any)) {
+	if (ALWAYS_AVAILABLE_TOOLS.includes(tool as keyof typeof ALWAYS_AVAILABLE_TOOLS)) {
 		return true
 	}
 

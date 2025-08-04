@@ -18,7 +18,7 @@ export const TOOL_DISPLAY_NAMES = {
 	dataview_query: "query dataview",
 	attempt_completion: "complete tasks",
 	switch_mode: "switch modes",
-  insights: "call insights",
+	insights: "call insights",
 	manage_files: "manage files",
 } as const
 
