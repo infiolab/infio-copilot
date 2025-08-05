@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react'
+import { ChevronDown, ChevronRight, GitCommitVertical, RefreshCcwDot, RotateCcw, ScanText, MessageSquareText } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useApp } from '../../contexts/AppContext'
@@ -23,10 +23,33 @@ interface InsightFileGroup {
 	groupType?: 'file' | 'folder' | 'workspace'
 }
 
+// 时间线项目接口
+interface TimelineItem {
+	id: number
+	date: string
+	time: string
+	type: 'created' | 'modified' | 'insight'
+	title: string
+	description: string
+	filePath?: string
+	category: string
+}
+
+// Flashcard 接口
+interface Flashcard {
+	id: number
+	front: string
+	back: string
+	source?: string // 标识从哪个文件来的，可以为空
+}
+
 const InsightView = () => {
 	const { getTransEngine } = useTrans()
 	const app = useApp()
 	const { settings } = useSettings()
+
+	// Tab 状态管理
+	const [activeTab, setActiveTab] = useState<'summary' | 'timeline' | 'flashcards'>('summary')
 
 	// 工作区管理器
 	const workspaceManager = useMemo(() => {
@@ -61,6 +84,98 @@ const InsightView = () => {
 	// 确认对话框状态
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 	const [showInitConfirm, setShowInitConfirm] = useState(false)
+
+	// Flashcards 展示模式状态
+	const [flashcardDisplayMode, setFlashcardDisplayMode] = useState<'front' | 'full'>('front')
+	const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set())
+
+	// 模拟时间线数据
+	const mockTimelineData: TimelineItem[] = useMemo(() => [
+		{
+			id: 1,
+			date: '2024-01-15',
+			time: '14:30',
+			type: 'created',
+			title: '创建新文档：项目计划.md',
+			description: '开始了新的项目规划文档，包含了主要的里程碑和时间安排',
+			filePath: '项目管理/项目计划.md',
+			category: '文档创建'
+		},
+		{
+			id: 2,
+			date: '2024-01-15',
+			time: '15:45',
+			type: 'insight',
+			title: '生成项目洞察',
+			description: '基于项目计划文档生成了关键洞察，识别了潜在风险点',
+			filePath: '项目管理/项目计划.md',
+			category: '洞察生成'
+		},
+		{
+			id: 3,
+			date: '2024-01-14',
+			time: '10:20',
+			type: 'modified',
+			title: '更新研究笔记.md',
+			description: '添加了最新的研究发现和相关参考文献',
+			filePath: '研究/研究笔记.md',
+			category: '文档更新'
+		},
+		{
+			id: 4,
+			date: '2024-01-14',
+			time: '11:00',
+			type: 'insight',
+			title: '研究总结洞察',
+			description: '基于最新研究笔记生成了详细的摘要和关键发现',
+			filePath: '研究/研究笔记.md',
+			category: '洞察生成'
+		},
+		{
+			id: 5,
+			date: '2024-01-13',
+			time: '16:15',
+			type: 'created',
+			title: '创建会议记录.md',
+			description: '记录了与客户的重要会议内容和后续行动项',
+			filePath: '会议/20240113-客户会议.md',
+			category: '会议记录'
+		}
+	], [])
+
+	// 模拟 Flashcards 数据
+	const mockFlashcardsData: Flashcard[] = useMemo(() => [
+		{
+			id: 1,
+			front: '什么是敏捷开发？',
+			back: '敏捷开发是一种迭代式的软件开发方法，强调个体和互动胜过流程和工具，工作的软件胜过综合文档，客户合作胜过合同谈判，响应变化胜过遵循计划。',
+			source: '项目管理/敏捷开发指南.md'
+		},
+		{
+			id: 2,
+			front: 'React Hooks 的主要优势是什么？',
+			back: 'React Hooks 允许你在不编写 class 的情况下使用 state 和其他 React 特性。主要优势包括：代码复用更简单、组件逻辑更清晰、减少了 this 绑定的复杂性。',
+			source: '技术学习/React学习笔记.md'
+		},
+		{
+			id: 3,
+			front: 'SWOT 分析包含哪四个方面？',
+			back: 'SWOT 分析包含：Strengths (优势)、Weaknesses (劣势)、Opportunities (机会)、Threats (威胁)。这是一种战略规划工具，用于评估项目或企业的内外部环境。',
+			source: '商业分析/战略分析方法.md'
+		},
+		{
+			id: 4,
+			front: '什么是微服务架构？',
+			back: '微服务架构是一种架构模式，将单个应用程序开发为一套小型服务，每个服务运行在独立的进程中，服务间通过轻量级机制（通常是HTTP资源API）进行通信。',
+			source: '系统架构/微服务设计.md'
+		},
+		{
+			id: 5,
+			front: 'OKR 的全称是什么？',
+			back: 'OKR 的全称是 Objectives and Key Results（目标与关键结果）。这是一种目标管理框架，帮助组织设定、跟踪和实现目标。',
+			source: '目标管理/OKR实践指南.md'
+		}
+	], [])
 
 	const loadInsights = useCallback(async () => {
 		setIsLoading(true)
@@ -495,91 +610,40 @@ const InsightView = () => {
 		return typeMapping[insightType] || insightType.toUpperCase()
 	}
 
-	return (
-		<div className="obsidian-insight-container">
-			{/* 头部信息 */}
-			<div className="obsidian-insight-header">
-				<div className="obsidian-insight-title">
-					<h3>{t('insights.title')}</h3>
-					<div className="obsidian-insight-actions">
-						{/* <button
-							onClick={handleDeleteWorkspaceInsights}
-							disabled={isDeleting || isLoading || isInitializing}
-							className="obsidian-insight-delete-btn"
-							title={t('insights.tooltips.clear')}
-						>
-							{isDeleting ? t('insights.deleting') : t('insights.clearInsights')}
-						</button> */}
-						<button
-							onClick={loadInsights}
-							disabled={isLoading || isInitializing || isDeleting}
-							className="obsidian-insight-refresh-btn"
-							title={isLoading ? t('insights.loading') : t('insights.refresh')}
-						>
-							<RotateCcw size={16} className={isLoading ? 'spinning' : ''} />
-						</button>
-					</div>
-				</div>
+	// 切换卡片翻转状态
+	const toggleCardFlip = (cardId: number) => {
+		const newFlippedCards = new Set(flippedCards)
+		if (newFlippedCards.has(cardId)) {
+			newFlippedCards.delete(cardId)
+		} else {
+			newFlippedCards.add(cardId)
+		}
+		setFlippedCards(newFlippedCards)
+	}
 
-				{/* 结果统计 & 洞察操作 */}
-				<div className="infio-insight-stats">
-					{hasLoaded && !isLoading && (
-						<div className="infio-insight-stats-overview">
-							<div className="infio-insight-stats-main">
-								<span className="infio-insight-stats-number">{insightResults.length}</span>
-								<span className="infio-insight-stats-label">{t('insights.stats.insightCount')}</span>
-							</div>
-							<div className="infio-insight-stats-breakdown">
-								{insightGroupedResults.length > 0 && (
-									<div className="infio-insight-stats-items">
-										{insightGroupedResults.filter(g => g.groupType === 'workspace').length > 0 && (
-											<div className="infio-insight-stats-item">
-												<span className="infio-insight-stats-item-icon">🌐</span>
-												<span className="infio-insight-stats-item-value">
-													{insightGroupedResults.filter(g => g.groupType === 'workspace').length}
-												</span>
-												<span className="infio-insight-stats-item-label">{t('insights.stats.workspaceCount')}</span>
-											</div>
-										)}
-										{insightGroupedResults.filter(g => g.groupType === 'folder').length > 0 && (
-											<div className="infio-insight-stats-item">
-												<span className="infio-insight-stats-item-icon">📂</span>
-												<span className="infio-insight-stats-item-value">
-													{insightGroupedResults.filter(g => g.groupType === 'folder').length}
-												</span>
-												<span className="infio-insight-stats-item-label">{t('insights.stats.folderCount')}</span>
-											</div>
-										)}
-										{insightGroupedResults.filter(g => g.groupType === 'file').length > 0 && (
-											<div className="infio-insight-stats-item">
-												<span className="infio-insight-stats-item-icon">📄</span>
-												<span className="infio-insight-stats-item-value">
-													{insightGroupedResults.filter(g => g.groupType === 'file').length}
-												</span>
-												<span className="infio-insight-stats-item-label">{t('insights.stats.fileCount')}</span>
-											</div>
-										)}
-									</div>
-								)}
-							</div>
-						</div>
-					)}
-					<div className="infio-insight-model-info">
-						<div className="infio-insight-model-row">
-							<span className="infio-insight-model-label">{t('insights.stats.insightModelLabel')}</span>
-							<ModelSelect modelType="insight" />
-						</div>
-						<div className="infio-insight-actions">
-							<button
-								onClick={handleInitWorkspaceInsights}
-								disabled={isInitializing || isLoading || isDeleting}
-								className="infio-insight-primary-btn"
-								title={hasLoaded && insightResults.length > 0 ? t('insights.tooltips.update') : t('insights.tooltips.initialize')}
-							>
-								{isInitializing ? t('insights.initializing') : (hasLoaded && insightResults.length > 0 ? t('insights.updateInsights') : t('insights.initializeInsights'))}
-							</button>
-						</div>
-					</div>
+	// 切换展示模式
+	const toggleDisplayMode = () => {
+		setFlashcardDisplayMode(prev => prev === 'front' ? 'full' : 'front')
+		// 切换到前面模式时，清空所有翻转状态
+		if (flashcardDisplayMode === 'full') {
+			setFlippedCards(new Set())
+		}
+	}
+
+	return (
+		<div className="infio-insight-container">
+			{/* Header Section */}
+			<div className="infio-insight-header">
+				<h3 className="infio-insight-title">{t('insights.title')}</h3>
+				<div className="infio-insight-actions">
+					<button
+						onClick={loadInsights}
+						disabled={isLoading || isInitializing || isDeleting}
+						className="obsidian-insight-refresh-btn"
+						title={isLoading ? t('insights.loading') : t('insights.refresh')}
+					>
+						<RotateCcw size={16} className={isLoading ? 'spinning' : ''} />
+					</button>
 				</div>
 			</div>
 
@@ -744,8 +808,98 @@ const InsightView = () => {
 				</div>
 			)}
 
-			{/* 洞察结果 */}
-			<div className="obsidian-insight-results">
+			{/* Tabs */}
+			<div className="infio-commands-tabs">
+				<button
+					className={`infio-commands-tab-button ${activeTab === 'summary' ? 'active' : ''}`}
+					onClick={() => setActiveTab('summary')}
+				>
+					<ScanText size={16} />
+					摘要 ({insightResults.length})
+				</button>
+				<button
+					className={`infio-commands-tab-button ${activeTab === 'timeline' ? 'active' : ''}`}
+					onClick={() => setActiveTab('timeline')}
+				>
+					<GitCommitVertical size={16} />
+					时间线 ({mockTimelineData.length})
+				</button>
+				<button
+					className={`infio-commands-tab-button ${activeTab === 'flashcards' ? 'active' : ''}`}
+					onClick={() => setActiveTab('flashcards')}
+				>
+					<MessageSquareText size={16} />
+					问答 ({mockFlashcardsData.length})
+				</button>
+			</div>
+
+			{/* Tab Content */}
+			<div className="infio-commands-tab-content">
+				{/* 摘要 Tab - 原有的洞察结果 */}
+				{activeTab === 'summary' && (
+					<>
+						{/* 摘要统计 & 操作 */}
+						<div className="infio-insight-stats">
+							{hasLoaded && !isLoading && (
+								<div className="infio-insight-stats-overview">
+									<div className="infio-insight-stats-main">
+										<span className="infio-insight-stats-number">{insightResults.length}</span>
+										<span className="infio-insight-stats-label">{t('insights.stats.insightCount')}</span>
+									</div>
+									<div className="infio-insight-stats-breakdown">
+										{insightGroupedResults.length > 0 && (
+											<div className="infio-insight-stats-items">
+												{insightGroupedResults.filter(g => g.groupType === 'workspace').length > 0 && (
+													<div className="infio-insight-stats-item">
+														<span className="infio-insight-stats-item-icon">🌐</span>
+														<span className="infio-insight-stats-item-value">
+															{insightGroupedResults.filter(g => g.groupType === 'workspace').length}
+														</span>
+														<span className="infio-insight-stats-item-label">{t('insights.stats.workspaceCount')}</span>
+													</div>
+												)}
+												{insightGroupedResults.filter(g => g.groupType === 'folder').length > 0 && (
+													<div className="infio-insight-stats-item">
+														<span className="infio-insight-stats-item-icon">📂</span>
+														<span className="infio-insight-stats-item-value">
+															{insightGroupedResults.filter(g => g.groupType === 'folder').length}
+														</span>
+														<span className="infio-insight-stats-item-label">{t('insights.stats.folderCount')}</span>
+													</div>
+												)}
+												{insightGroupedResults.filter(g => g.groupType === 'file').length > 0 && (
+													<div className="infio-insight-stats-item">
+														<span className="infio-insight-stats-item-icon">📄</span>
+														<span className="infio-insight-stats-item-value">
+															{insightGroupedResults.filter(g => g.groupType === 'file').length}
+														</span>
+														<span className="infio-insight-stats-item-label">{t('insights.stats.fileCount')}</span>
+													</div>
+												)}
+											</div>
+										)}
+									</div>
+								</div>
+							)}
+							<div className="infio-insight-model-info">
+								<div className="infio-insight-model-row">
+									<span className="infio-insight-model-label">{t('insights.stats.insightModelLabel')}</span>
+									<ModelSelect modelType="insight" />
+								</div>
+								<div className="infio-insight-actions">
+									<button
+										onClick={handleInitWorkspaceInsights}
+										disabled={isInitializing || isLoading || isDeleting}
+										className="infio-insight-primary-btn"
+										title={hasLoaded && insightResults.length > 0 ? t('insights.tooltips.update') : t('insights.tooltips.initialize')}
+									>
+										{isInitializing ? t('insights.initializing') : (hasLoaded && insightResults.length > 0 ? t('insights.updateInsights') : t('insights.initializeInsights'))}
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<div className="obsidian-insight-results">
 				{!isLoading && insightGroupedResults.length > 0 && (
 					<div className="obsidian-results-list">
 						{insightGroupedResults.map((fileGroup) => (
@@ -841,40 +995,228 @@ const InsightView = () => {
 						</p>
 					</div>
 				)}
+					</div>
+					</>
+				)}
+
+				{/* 时间线 Tab */}
+				{activeTab === 'timeline' && (
+					<>
+						{/* 时间线统计 & 操作 */}
+						<div className="infio-insight-stats">
+							<div className="infio-insight-stats-overview">
+								<div className="infio-insight-stats-main">
+									<span className="infio-insight-stats-number">{mockTimelineData.length}</span>
+									<span className="infio-insight-stats-label">时间线事件</span>
+								</div>
+								<div className="infio-insight-stats-breakdown">
+									<div className="infio-insight-stats-items">
+										<div className="infio-insight-stats-item">
+											<span className="infio-insight-stats-item-icon">📝</span>
+											<span className="infio-insight-stats-item-value">
+												{mockTimelineData.filter(item => item.type === 'created').length}
+											</span>
+											<span className="infio-insight-stats-item-label">创建</span>
+										</div>
+										<div className="infio-insight-stats-item">
+											<span className="infio-insight-stats-item-icon">✏️</span>
+											<span className="infio-insight-stats-item-value">
+												{mockTimelineData.filter(item => item.type === 'modified').length}
+											</span>
+											<span className="infio-insight-stats-item-label">修改</span>
+										</div>
+										<div className="infio-insight-stats-item">
+											<span className="infio-insight-stats-item-icon">💡</span>
+											<span className="infio-insight-stats-item-value">
+												{mockTimelineData.filter(item => item.type === 'insight').length}
+											</span>
+											<span className="infio-insight-stats-item-label">洞察</span>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div className="infio-insight-model-info">
+								<div className="infio-insight-model-row">
+									<span className="infio-insight-model-label">时间线范围</span>
+									<span className="infio-insight-model-value">最近 30 天</span>
+								</div>
+								<div className="infio-insight-actions">
+									<button
+										onClick={() => console.log('导出时间线')}
+										className="infio-insight-primary-btn"
+										title="导出时间线数据"
+									>
+										导出时间线
+									</button>
+									<button
+										onClick={() => console.log('清理时间线')}
+										className="infio-insight-primary-btn"
+										title="清理过期时间线"
+									>
+										清理时间线
+									</button>
+								</div>
+							</div>
+						</div>
+					
+					<div className="obsidian-timeline-container">
+						{mockTimelineData.map((item) => (
+							<div key={item.id} className="obsidian-timeline-item">
+								<div className="obsidian-timeline-date">
+									<div className="obsidian-timeline-date-text">{item.date}</div>
+									<div className="obsidian-timeline-time">{item.time}</div>
+								</div>
+								<div className="obsidian-timeline-line">
+									<div className={`obsidian-timeline-dot ${item.type}`}></div>
+								</div>
+								<div className="obsidian-timeline-content">
+									<div className="obsidian-timeline-header">
+										<span className="obsidian-timeline-title">{item.title}</span>
+										<span className={`obsidian-timeline-type ${item.type}`}>
+											{item.type === 'created' ? '创建' : item.type === 'modified' ? '修改' : '洞察'}
+										</span>
+									</div>
+									<div className="obsidian-timeline-description">{item.description}</div>
+									{item.filePath && (
+										<div className="obsidian-timeline-path">{item.filePath}</div>
+									)}
+									<div className="obsidian-timeline-category">{item.category}</div>
+								</div>
+							</div>
+						))}
+					</div>
+					</>
+				)}
+
+				{/* Flashcards Tab */}
+				{activeTab === 'flashcards' && (
+					<>
+						{/* Flashcards 统计 & 操作 */}
+						<div className="infio-insight-stats">
+							<div className="infio-insight-stats-overview">
+								<div className="infio-insight-stats-main">
+									<span className="infio-insight-stats-number">{mockFlashcardsData.length}</span>
+									<span className="infio-insight-stats-label">记忆卡片</span>
+								</div>
+								<div className="infio-insight-stats-breakdown">
+									<div className="infio-insight-stats-items">
+										<div className="infio-insight-stats-item">
+											<span className="infio-insight-stats-item-icon">📄</span>
+											<span className="infio-insight-stats-item-value">
+												{mockFlashcardsData.filter(card => card.source).length}
+											</span>
+											<span className="infio-insight-stats-item-label">有来源</span>
+										</div>
+										<div className="infio-insight-stats-item">
+											<span className="infio-insight-stats-item-icon">💭</span>
+											<span className="infio-insight-stats-item-value">
+												{mockFlashcardsData.filter(card => !card.source).length}
+											</span>
+											<span className="infio-insight-stats-item-label">无来源</span>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div className="infio-insight-model-info">
+								<div className="infio-insight-model-row">
+									<span className="infio-insight-model-label">展示模式</span>
+									<span className="infio-insight-model-value">
+										{flashcardDisplayMode === 'front' ? '问题模式' : '完整模式'}
+									</span>
+								</div>
+								<div className="infio-insight-actions">
+									<button
+										onClick={toggleDisplayMode}
+										className="infio-insight-primary-btn"
+										title={flashcardDisplayMode === 'front' ? '切换到完整模式' : '切换到问题模式'}
+									>
+										{flashcardDisplayMode === 'front' ? '完整模式' : '问题模式'}
+									</button>
+									<button
+										onClick={() => console.log('添加卡片')}
+										className="infio-insight-primary-btn"
+										title="添加新的记忆卡片"
+									>
+										添加卡片
+									</button>
+								</div>
+							</div>
+						</div>
+					
+					<div className="obsidian-flashcards-container">
+						<div className="obsidian-flashcards-grid">
+							{mockFlashcardsData.map((card) => (
+								<div 
+									key={card.id} 
+									className={`obsidian-flashcard ${flashcardDisplayMode === 'front' ? 'clickable' : ''}`}
+									onClick={() => flashcardDisplayMode === 'front' && toggleCardFlip(card.id)}
+									title={flashcardDisplayMode === 'front' ? (flippedCards.has(card.id) ? '点击隐藏答案' : '点击显示答案') : ''}
+								>
+									<div className="obsidian-flashcard-header">
+										{card.source && (
+											<span className="obsidian-flashcard-source">{card.source}</span>
+										)}
+									</div>
+									<div className="obsidian-flashcard-content">
+										{flashcardDisplayMode === 'full' ? (
+											// 完整模式：同时显示问题和答案
+											<>
+												<div className="obsidian-flashcard-question">
+													{card.front}
+												</div>
+												<div className="obsidian-flashcard-answer">
+													{card.back}
+												</div>
+											</>
+										) : (
+											// 问题模式：默认显示问题，点击卡片显示答案
+											<>
+												<div className="obsidian-flashcard-question">
+													{card.front}
+												</div>
+												{flippedCards.has(card.id) && (
+													<div className="obsidian-flashcard-answer">
+														{card.back}
+													</div>
+												)}
+											</>
+										)}
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+					</>
+				)}
 			</div>
 
 			{/* 样式 */}
 			<style>
 				{`
-				.obsidian-insight-container {
+				.infio-insight-container {
 					display: flex;
 					flex-direction: column;
-					height: 100%;
-					font-family: var(--font-interface);
-				}
-
-				.obsidian-insight-header {
-					padding: var(--size-4-3);
-					border-bottom: 1px solid var(--background-modifier-border);
-				}
-
-				.obsidian-insight-title {
-					display: flex;
-					align-items: center;
-					justify-content: space-between;
-					margin-bottom: var(--size-4-2);
-				}
-
-				.obsidian-insight-title h3 {
-					margin: 0;
+					padding: 16px;
+					gap: 16px;
 					color: var(--text-normal);
-					font-size: var(--font-ui-large);
-					font-weight: 600;
+					scroll-behavior: smooth;
 				}
 
-				.obsidian-insight-actions {
+				/* Header Styles */
+				.infio-insight-header {
 					display: flex;
-					gap: var(--size-4-2);
+					justify-content: space-between;
+					align-items: center;
+				}
+
+				.infio-insight-title {
+					margin: 0;
+					font-size: 24px;
+				}
+
+				.infio-insight-actions {
+					display: flex;
+					gap: var(--size-2-2);
 				}
 
 				.obsidian-insight-refresh-btn {
@@ -911,7 +1253,7 @@ const InsightView = () => {
 					padding: var(--size-4-2);
 					display: flex;
 					flex-direction: column;
-					gap: var(--size-4-4);
+					gap: var(--size-2-2);
 				}
 
 				.infio-insight-stats-overview {
@@ -1008,6 +1350,7 @@ const InsightView = () => {
 				.infio-insight-actions {
 					display: flex;
 					gap: var(--size-2-2);
+					flex-wrap: wrap;
 				}
 
 				.infio-insight-primary-btn {
@@ -1243,16 +1586,13 @@ const InsightView = () => {
 					flex-direction: column;
 				}
 
-				.obsidian-file-group {
-					border-bottom: 1px solid var(--background-modifier-border);
-				}
+
 
 				.obsidian-file-header {
-					padding: var(--size-4-3);
+					padding: var(--size-4-2) 0;
 					background-color: var(--background-secondary);
 					cursor: pointer;
 					transition: background-color 0.15s ease-in-out;
-					border-bottom: 1px solid var(--background-modifier-border);
 				}
 
 				.obsidian-file-header:hover {
@@ -1614,6 +1954,265 @@ const InsightView = () => {
 				.obsidian-confirm-dialog-confirm-btn:hover {
 					background-color: var(--text-error);
 					opacity: 0.8;
+				}
+
+				/* Tabs styles - 参考 CustomModeView.tsx */
+				.infio-commands-tabs {
+					display: flex;
+					margin: 0;
+				}
+
+				.infio-commands-tab-button {
+					background: none;
+					border: none;
+					padding: var(--size-4-3) var(--size-4-4);
+					color: var(--text-muted);
+					font-size: var(--font-ui-medium);
+					cursor: pointer;
+					border-bottom: 2px solid transparent;
+					transition: all 0.2s ease;
+					font-weight: var(--font-medium);
+					display: flex;
+					align-items: center;
+					gap: var(--size-2-2);
+				}
+
+				.infio-commands-tab-button:hover {
+					color: var(--text-normal);
+					background-color: var(--background-modifier-hover);
+				}
+
+				.infio-commands-tab-button.active {
+					color: var(--text-accent);
+					border-bottom-color: var(--text-accent);
+					background-color: var(--background-secondary);
+				}
+
+				.infio-commands-tab-content {
+					flex: 1;
+					overflow-y: auto;
+					padding: 0;
+				}
+
+				/* Timeline styles */
+				.obsidian-timeline-container {
+					padding: 0;
+				}
+
+				.obsidian-timeline-item {
+					display: flex;
+					gap: var(--size-4-3);
+					margin-bottom: var(--size-4-4);
+					position: relative;
+				}
+
+				.obsidian-timeline-item:last-child {
+					margin-bottom: 0;
+				}
+
+				.obsidian-timeline-date {
+					flex-shrink: 0;
+					width: 80px;
+					text-align: right;
+				}
+
+				.obsidian-timeline-date-text {
+					font-size: var(--font-ui-small);
+					color: var(--text-normal);
+					font-weight: 600;
+					margin-bottom: var(--size-2-1);
+				}
+
+				.obsidian-timeline-time {
+					font-size: var(--font-ui-smaller);
+					color: var(--text-muted);
+					font-family: var(--font-monospace);
+				}
+
+				.obsidian-timeline-line {
+					flex-shrink: 0;
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					position: relative;
+				}
+
+				.obsidian-timeline-line::after {
+					content: '';
+					position: absolute;
+					top: 20px;
+					bottom: -20px;
+					left: 50%;
+					transform: translateX(-50%);
+					width: 2px;
+					background-color: var(--background-modifier-border);
+				}
+
+				.obsidian-timeline-item:last-child .obsidian-timeline-line::after {
+					display: none;
+				}
+
+				.obsidian-timeline-dot {
+					width: 12px;
+					height: 12px;
+					border-radius: 50%;
+					border: 2px solid var(--background-primary);
+					margin-top: 4px;
+				}
+
+				.obsidian-timeline-dot.created {
+					background-color: var(--color-green, #10b981);
+				}
+
+				.obsidian-timeline-dot.modified {
+					background-color: var(--color-orange, #f59e0b);
+				}
+
+				.obsidian-timeline-dot.insight {
+					background-color: var(--interactive-accent);
+				}
+
+				.obsidian-timeline-content {
+					flex: 1;
+					background-color: var(--background-secondary);
+					border: 1px solid var(--background-modifier-border);
+					border-radius: var(--radius-s);
+					padding: var(--size-4-3);
+				}
+
+				.obsidian-timeline-header {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					margin-bottom: var(--size-2-2);
+					gap: var(--size-2-2);
+				}
+
+				.obsidian-timeline-title {
+					font-size: var(--font-ui-medium);
+					font-weight: 600;
+					color: var(--text-normal);
+					flex: 1;
+				}
+
+				.obsidian-timeline-type {
+					font-size: var(--font-ui-smaller);
+					padding: var(--size-2-1) var(--size-2-2);
+					border-radius: var(--radius-s);
+					font-weight: var(--font-medium);
+					flex-shrink: 0;
+				}
+
+				.obsidian-timeline-type.created {
+					background-color: var(--color-green, #10b981);
+					color: white;
+				}
+
+				.obsidian-timeline-type.modified {
+					background-color: var(--color-orange, #f59e0b);
+					color: white;
+				}
+
+				.obsidian-timeline-type.insight {
+					background-color: var(--interactive-accent);
+					color: var(--text-on-accent);
+				}
+
+				.obsidian-timeline-description {
+					color: var(--text-normal);
+					font-size: var(--font-ui-medium);
+					line-height: 1.5;
+					margin-bottom: var(--size-2-2);
+				}
+
+				.obsidian-timeline-path {
+					color: var(--text-muted);
+					font-size: var(--font-ui-small);
+					font-family: var(--font-monospace);
+					background-color: var(--background-modifier-border);
+					padding: var(--size-2-1) var(--size-2-2);
+					border-radius: var(--radius-s);
+					margin-bottom: var(--size-2-2);
+					display: inline-block;
+				}
+
+				.obsidian-timeline-category {
+					color: var(--text-accent);
+					font-size: var(--font-ui-smaller);
+					font-weight: var(--font-medium);
+				}
+
+				/* Flashcards styles */
+				.obsidian-flashcards-container {
+					padding: 0;
+				}
+
+				.obsidian-flashcards-grid {
+					display: grid;
+					grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+					gap: var(--size-4-3);
+				}
+
+				.obsidian-flashcard {
+					background-color: var(--background-primary);
+					border: 1px solid var(--background-modifier-border);
+					border-radius: var(--radius-m);
+					padding: var(--size-4-4);
+					transition: all 0.3s ease;
+					box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+					display: flex;
+					flex-direction: column;
+					min-height: 120px;
+					cursor: default;
+				}
+
+				.obsidian-flashcard:hover {
+					box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+				}
+
+				.obsidian-flashcard.clickable {
+					cursor: pointer;
+				}
+
+				.obsidian-flashcard.clickable:hover {
+					border-color: var(--interactive-accent);
+					box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+				}
+
+				.obsidian-flashcard-header {
+					margin-bottom: var(--size-4-3);
+					min-height: 20px;
+				}
+
+				.obsidian-flashcard-source {
+					color: var(--text-faint);
+					font-size: 10px;
+					font-weight: 400;
+					opacity: 0.6;
+					font-family: var(--font-monospace);
+				}
+
+				.obsidian-flashcard-content {
+					flex: 1;
+				}
+
+				.obsidian-flashcard-question {
+					color: var(--text-normal);
+					font-size: var(--font-ui-large);
+					font-weight: 600;
+					line-height: 1.4;
+					margin-bottom: var(--size-4-4);
+					letter-spacing: -0.01em;
+				}
+
+				.obsidian-flashcard-answer {
+					color: var(--text-muted);
+					font-size: var(--font-ui-larger);
+					line-height: 1.6;
+					background-color: var(--background-modifier-border);
+					padding: var(--size-4-3);
+					border-radius: var(--radius-s);
+					margin-top: var(--size-4-4);
 				}
 				`}
 			</style>

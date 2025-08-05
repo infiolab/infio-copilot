@@ -11,6 +11,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { CustomMode } from '../../database/json/custom-mode/types';
 import { useCustomModes } from '../../hooks/use-custom-mode';
 import { IconSelector, getIconComponent } from '../../hooks/use-icon-selector';
+import { fetchPromptsList } from '../../hooks/use-infio';
 import { t } from '../../lang/helpers';
 import { PreviewView, PreviewViewState } from '../../PreviewView';
 import { defaultModes as buildinModes, getAllAvailableTools } from '../../utils/modes';
@@ -27,62 +28,29 @@ interface MarketMode {
 	tools: string[] // Changed from groups to tools
 	strategy?: "ask" | "write" | "research" | "raw"
 	enabled?: boolean
-	category: string
+	category: string[] // Changed from string to string[]
 	icon?: string
 	downloads?: number
 }
 
-// Sample market modes data with updated tools
-const marketModes: MarketMode[] = [
-	{
-		slug: 'code-reviewer',
-		name: '代码审查专家',
-		description: '专业的代码审查助手，提供详细的代码分析、性能优化建议和最佳实践指导',
-		roleDefinition: '你是一位经验丰富的高级软件工程师和代码审查专家。你擅长分析代码质量、识别潜在问题、提供性能优化建议，并确保代码符合最佳实践和编程规范。',
-		customInstructions: '在审查代码时，请关注：1. 代码可读性和维护性 2. 性能优化机会 3. 安全漏洞 4. 架构设计问题 5. 测试覆盖率',
-		tools: ['read_file', 'list_files', 'search_files', 'apply_diff', 'write_to_file'],
-		strategy: 'write',
-		category: 'development',
-		icon: 'code',
-		downloads: 1250
-	},
-	{
-		slug: 'research-assistant',
-		name: '学术研究助手',
-		description: '专业的学术研究助手，帮助进行文献调研、数据分析和学术写作',
-		roleDefinition: '你是一位专业的学术研究助手，具有广泛的学科知识和研究方法论基础。你能够帮助用户进行文献综述、数据分析、假设检验和学术论文写作。',
-		customInstructions: '在协助研究时，请：1. 提供准确的学术引用 2. 使用严谨的逻辑分析 3. 建议合适的研究方法 4. 确保内容的学术规范性',
-		tools: ['read_file', 'list_files', 'search_files', 'search_web', 'fetch_urls_content'],
-		strategy: 'research',
-		category: 'academic',
-		icon: 'book-open',
-		downloads: 890
-	},
-	{
-		slug: 'creative-writer',
-		name: '创意写作导师',
-		description: '专业的创意写作指导，帮助提升写作技巧、故事构思和文学创作',
-		roleDefinition: '你是一位经验丰富的创意写作导师和文学编辑。你擅长指导各种文体的写作，包括小说、散文、诗歌等，能够提供专业的写作技巧和创意建议。',
-		customInstructions: '在指导写作时，请注重：1. 故事结构和情节发展 2. 人物塑造和对话写作 3. 文学手法和修辞技巧 4. 风格统一和语言优化',
-		tools: ['read_file', 'list_files', 'search_files', 'apply_diff', 'write_to_file'],
-		strategy: 'write',
-		category: 'writing',
-		icon: 'edit',
-		downloads: 756
-	},
-	{
-		slug: 'data-analyst',
-		name: '数据分析专家',
-		description: '专业的数据分析师，擅长数据处理、统计分析和可视化展示',
-		roleDefinition: '你是一位专业的数据分析专家，具有扎实的统计学基础和丰富的数据处理经验。你能够帮助用户进行数据清洗、分析建模和结果解释。',
-		customInstructions: '在数据分析过程中，请：1. 确保数据的准确性和完整性 2. 选择合适的统计方法 3. 提供清晰的可视化展示 4. 给出有实际意义的解释',
-		tools: ['read_file', 'list_files', 'search_files', 'apply_diff'],
-		strategy: 'ask',
-		category: 'analysis',
-		icon: 'brain',
-		downloads: 432
-	}
-]
+// API response interface for prompts
+interface ApiPromptItem {
+	id?: string
+	slug?: string // Added slug field
+	name?: string
+	description?: string
+	category?: string[] // Changed from string to string[]
+	role_definition?: string
+	custom_instructions?: string
+	tools?: string[]
+	strategy?: "ask" | "write" | "research" | "raw"
+	icon?: string
+	downloads?: number
+}
+
+interface ApiPromptResponse {
+	data?: ApiPromptItem[]
+}
 
 const CustomModeView = () => {
 	const app = useApp()
@@ -113,6 +81,11 @@ const CustomModeView = () => {
 
 	// Tab state
 	const [activeTab, setActiveTab] = useState<'my-modes' | 'market'>('my-modes')
+
+	// Market data state
+	const [marketModes, setMarketModes] = useState<MarketMode[]>([])
+	const [isLoadingMarket, setIsLoadingMarket] = useState(false)
+	const [marketError, setMarketError] = useState<string | null>(null)
 
 	// Currently selected mode
 	const [selectedMode, setSelectedMode] = useState<string>('ask')
@@ -210,6 +183,69 @@ const CustomModeView = () => {
 			}
 		}
 	}, [selectedMode, customModeList, builtinModeOverrides, getEffectiveBuiltinMode]);
+
+	// Open settings tab
+	const openSettingsTab = () => {
+		try {
+			// Use proper interface for Obsidian app with settings
+			interface AppWithSettings {
+				setting?: {
+					open(): void
+					openTabById(id: string): void
+				}
+			}
+			const appWithSettings = app as unknown as AppWithSettings
+			if (appWithSettings.setting) {
+				appWithSettings.setting.open()
+				appWithSettings.setting.openTabById('infio-copilot')
+			}
+		} catch (error) {
+			console.error('Failed to open settings:', error)
+		}
+	}
+
+	// Fetch market prompts data
+	const fetchMarketPrompts = React.useCallback(async () => {
+		if (!settings.infioProvider.apiKey) {
+			setMarketError('请先配置 Infio API Key')
+			return
+		}
+
+		setIsLoadingMarket(true)
+		setMarketError(null)
+
+		try {
+			const response: ApiPromptResponse = await fetchPromptsList(settings.infioProvider.apiKey)
+
+			// Transform API response to MarketMode format
+			const transformedModes: MarketMode[] = (response.data || []).map((item: ApiPromptItem) => ({
+				slug: item.slug || item.id || item.name || 'unknown-id', // Use slug first, then fallback to id
+				name: item.name || 'Unknown',
+				description: item.description || 'No description available',
+				roleDefinition: item.role_definition || '',
+				customInstructions: item.custom_instructions || '',
+				tools: item.tools || [],
+				strategy: item.strategy || "ask",
+				category: Array.isArray(item.category) ? item.category : (item.category ? [item.category] : ['Uncategorized']), // Handle both array and string
+				icon: item.icon || 'command',
+				downloads: item.downloads || 0
+			}))
+
+			setMarketModes(transformedModes)
+		} catch (error) {
+			console.error('Failed to fetch market prompts:', error)
+			setMarketError(error instanceof Error ? error.message : '获取市场数据失败')
+		} finally {
+			setIsLoadingMarket(false)
+		}
+	}, [settings.infioProvider.apiKey])
+
+	// Fetch market data when market tab is active
+	useEffect(() => {
+		if (activeTab === 'market' && marketModes.length === 0 && !isLoadingMarket) {
+			fetchMarketPrompts()
+		}
+	}, [activeTab, marketModes.length, isLoadingMarket, fetchMarketPrompts]);
 
 
 	// Handle tool selection change
@@ -353,19 +389,31 @@ const CustomModeView = () => {
 		);
 	}, [isBuiltinMode, selectedMode, modeName, roleDefinition, customInstructions, selectedTools, modeStrategy, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride])
 
-	// Install market mode
+	// Install market mode - fixed version
 	const handleInstallMarketMode = async (marketMode: MarketMode) => {
-		await createCustomMode(
-			marketMode.slug,
-			marketMode.roleDefinition,
-			marketMode.customInstructions || '',
-			marketMode.tools,
-			marketMode.strategy || "ask",
-			marketMode.icon || 'command'
-		);
-		// Switch to my-modes tab and select the newly created mode
-		setActiveTab('my-modes');
-		setSelectedMode(marketMode.slug);
+		try {
+			await createCustomMode(
+				marketMode.name,
+				marketMode.roleDefinition,
+				marketMode.customInstructions || '',
+				marketMode.tools,
+				marketMode.strategy || "ask",
+				marketMode.icon || 'command',
+				true // enabled parameter
+			);
+			
+			// Show success notification
+			new Notice(`已成功安装模式: ${marketMode.name}`);
+			
+			// Switch to my-modes tab and refresh the list
+			setActiveTab('my-modes');
+			
+			// Don't try to select the mode immediately as the slug will be different
+			// The user can select it manually from the list
+		} catch (error) {
+			console.error('Failed to install market mode:', error);
+			new Notice(`安装模式失败: ${error instanceof Error ? error.message : '未知错误'}`);
+		}
 	}
 
 	return (
@@ -720,10 +768,36 @@ const CustomModeView = () => {
 				)}
 
 				{activeTab === 'market' && (
-					<>
-						{/* Market modes list */}
-						<div className="infio-market-modes-list">
-							{marketModes.map(mode => {
+					<div className="infio-market-modes-list">
+						{isLoadingMarket ? (
+							<div className="infio-market-empty">
+								<p>加载中...</p>
+							</div>
+						) : marketError ? (
+							<div className="infio-market-empty">
+								<p>{marketError}</p>
+								{marketError.includes('API Key') && (
+									<button
+										onClick={openSettingsTab}
+										className="infio-market-config-button infio-market-error-action-button"
+									>
+										配置 API Key
+									</button>
+								)}
+								<button
+									onClick={fetchMarketPrompts}
+									disabled={isLoadingMarket}
+									className="infio-market-config-button infio-market-retry-button"
+								>
+									重试
+								</button>
+							</div>
+						) : marketModes.length === 0 ? (
+							<div className="infio-market-empty">
+								<p>未找到提示模式</p>
+							</div>
+						) : (
+							marketModes.map(mode => {
 								const IconComponent = getIconComponent(mode.icon);
 								return (
 									<div key={mode.slug} className="infio-market-mode-item">
@@ -733,11 +807,21 @@ const CustomModeView = () => {
 													<IconComponent size={16} />
 													{mode.name}
 												</div>
-												<div className="infio-market-mode-category">{mode.strategy}</div>
+												<div className="infio-market-mode-meta">
+													<div className="infio-market-mode-strategy">{mode.strategy}</div>
+													<div className="infio-market-mode-categories">
+														{mode.category.map((cat, index) => (
+															<span key={cat} className="infio-market-mode-category">
+																{cat}
+															</span>
+														))}
+													</div>
+												</div>
 											</div>
 											<button
 												onClick={() => handleInstallMarketMode(mode)}
 												className="infio-commands-install-btn"
+												title="一键安装到我的模式"
 											>
 												<Download size={16} />
 											</button>
@@ -745,9 +829,9 @@ const CustomModeView = () => {
 										<div className="infio-market-mode-description">{mode.description}</div>
 									</div>
 								);
-							})}
-						</div>
-					</>
+							})
+						)}
+					</div>
 				)}
 			</div>
 
@@ -1068,6 +1152,66 @@ const CustomModeView = () => {
 					line-height: 1.4;
 				}
 
+				/* Market empty state */
+				.infio-market-empty {
+					text-align: center;
+					padding: 40px 20px;
+					color: var(--text-muted);
+					background-color: var(--background-primary);
+					border: 1px solid var(--background-modifier-border);
+					border-radius: var(--radius-s);
+				}
+
+				.infio-market-config-button {
+					display: flex;
+					align-items: center;
+					gap: 8px;
+					background-color: var(--interactive-normal);
+					color: var(--text-normal);
+					border: 1px solid var(--background-modifier-border);
+					border-radius: var(--radius-s);
+					padding: 8px 16px;
+					font-size: 14px;
+					font-weight: 500;
+					cursor: pointer;
+					transition: all 0.2s ease;
+					margin: 0 auto;
+				}
+
+				.infio-market-config-button:hover {
+					background-color: var(--interactive-hover);
+					border-color: var(--interactive-accent);
+				}
+
+				.infio-market-error-action-button {
+					margin-top: 12px;
+				}
+
+				.infio-market-retry-button {
+					margin-top: 8px;
+				}
+
+				/* Market mode meta info */
+				.infio-market-mode-meta {
+					display: flex;
+					gap: 12px;
+					font-size: 12px;
+					color: var(--text-muted);
+					align-items: center;
+				}
+
+				.infio-market-mode-strategy {
+					background-color: var(--interactive-accent);
+					color: var(--text-on-accent);
+					padding: 2px 8px;
+					border-radius: var(--radius-s);
+					font-weight: 500;
+				}
+
+				.infio-market-mode-downloads {
+					color: var(--text-accent);
+				}
+
 				/* Mode name and icon row */
 				.infio-mode-name-icon-row {
 					display: flex;
@@ -1215,6 +1359,21 @@ const CustomModeView = () => {
 				.infio-switch-label {
 					font-size: 14px;
 					color: var(--text-muted);
+				}
+				/* Market mode categories container */
+				.infio-market-mode-categories {
+					display: flex;
+					gap: 6px;
+					flex-wrap: wrap;
+				}
+
+				.infio-market-mode-category {
+					font-size: 12px;
+					color: var(--text-muted);
+					background-color: var(--background-modifier-border);
+					padding: 2px 8px;
+					border-radius: var(--radius-s);
+					display: inline-block;
 				}
 				`}
 			</style>
