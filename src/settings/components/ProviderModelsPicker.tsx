@@ -322,9 +322,20 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 					<label className="infio-llm-setting-model-label">{t("settings.ModelProvider.model")}</label>
 					<Popover.Root modal={false} open={isOpen} onOpenChange={setIsOpen}>
 						<Popover.Trigger asChild>
-							<button className="infio-llm-setting-model-trigger clickable-icon" type="button">
+							<button 
+								className={`infio-llm-setting-model-trigger clickable-icon ${
+									modelId && modelId.startsWith('infio/') ? 'infio-model-selected' : ''
+								}`} 
+								type="button"
+							>
 								<span className="infio-llm-setting-model-display">
 									{modelId || t("settings.ModelProvider.selectModel")}
+									{modelId && modelId.startsWith('infio/') && (
+										<span className="infio-model-badge infio-model-badge-inline">Pro</span>
+									)}
+									{modelId && modelProvider === 'Infio' && !modelId.startsWith('infio/') && (
+										<span className="infio-api-badge infio-model-badge-inline">API</span>
+									)}
 								</span>
 								<svg
 									className="infio-llm-setting-model-arrow"
@@ -398,22 +409,35 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 								</div>
 								{filteredOptions.length > 0 ? (
 									<div className="infio-llm-setting-options-list">
-										{filteredOptions.map((option, index) => (
-											<Popover.Close key={option.id} asChild>
-												<div
-													ref={(el) => (itemRefs.current[index] = el)}
-													onMouseEnter={() => setSelectedIndex(index)}
-													onClick={() => {
-														handleModelSelect(modelProvider, option.id, option.isCustom);
-														setSearchTerm("");
-														setIsOpen(false);
-													}}
-													className={`infio-llm-setting-combobox-option ${index === selectedIndex ? 'is-selected' : ''}`}
-												>
-													<HighlightedText segments={option.html} />
-												</div>
-											</Popover.Close>
-										))}
+										{filteredOptions.map((option, index) => {
+											// 检测是否是 infio/ 开头的模型
+											const isInfioModel = option.id.startsWith('infio/');
+											// 检测是否是 Infio 提供商的其他模型
+											const isInfioProviderModel = modelProvider === 'Infio' && !isInfioModel;
+											
+											return (
+												<Popover.Close key={option.id} asChild>
+													<div
+														ref={(el) => (itemRefs.current[index] = el)}
+														onMouseEnter={() => setSelectedIndex(index)}
+														onClick={() => {
+															handleModelSelect(modelProvider, option.id, option.isCustom);
+															setSearchTerm("");
+															setIsOpen(false);
+														}}
+														className={`infio-llm-setting-combobox-option ${index === selectedIndex ? 'is-selected' : ''} ${isInfioModel ? 'infio-model' : ''}`}
+													>
+														<HighlightedText segments={option.html} />
+														{isInfioModel && (
+															<span className="infio-model-badge">Pro</span>
+														)}
+														{isInfioProviderModel && (
+															<span className="infio-api-badge">API</span>
+														)}
+													</div>
+												</Popover.Close>
+											);
+										})}
 									</div>
 								) : null}
 							</div>
@@ -524,6 +548,17 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 					box-shadow: 0 0 0 2px var(--interactive-accent-hover);
 				}
 
+				/* 选择了 Infio 模型时触发器的特殊样式 */
+				.infio-llm-setting-model-trigger.infio-model-selected {
+					background: linear-gradient(135deg, rgba(116, 97, 238, 0.08), rgba(139, 92, 246, 0.03));
+					border-color: rgba(116, 97, 238, 0.3);
+				}
+
+				.infio-llm-setting-model-trigger.infio-model-selected:hover {
+					background: linear-gradient(135deg, rgba(116, 97, 238, 0.12), rgba(139, 92, 246, 0.05));
+					border-color: rgba(116, 97, 238, 0.5);
+				}
+
 				.infio-llm-setting-model-display {
 					flex: 1;
 					text-align: left;
@@ -591,12 +626,68 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 					color: var(--text-normal);
 					transition: all 0.15s ease;
 					word-break: break-all;
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					position: relative;
 				}
 
 				.infio-llm-setting-combobox-option:hover,
 				.infio-llm-setting-combobox-option.is-selected {
 					background: var(--background-modifier-hover);
 					color: var(--text-accent);
+				}
+
+				/* Infio 模型特殊样式 */
+				.infio-llm-setting-combobox-option.infio-model {
+					background: linear-gradient(135deg, rgba(116, 97, 238, 0.1), rgba(139, 92, 246, 0.05));
+					border: 1px solid rgba(116, 97, 238, 0.2);
+					border-radius: 4px;
+				}
+
+				.infio-llm-setting-combobox-option.infio-model:hover,
+				.infio-llm-setting-combobox-option.infio-model.is-selected {
+					background: linear-gradient(135deg, rgba(116, 97, 238, 0.2), rgba(139, 92, 246, 0.1));
+					border-color: rgba(116, 97, 238, 0.4);
+					color: var(--text-accent);
+				}
+
+				/* Infio 模型标识徽章 */
+				.infio-model-badge {
+					background: var(--interactive-accent);
+					color: var(--text-on-accent);
+					padding: 1px 6px;
+					border-radius: 8px;
+					font-size: 10px;
+					font-weight: 600;
+					text-transform: uppercase;
+					letter-spacing: 0.5px;
+					margin-left: 8px;
+					white-space: nowrap;
+					box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+				}
+
+				/* Infio API 模型标识徽章（灰色） */
+				.infio-api-badge {
+					background: var(--background-modifier-border);
+					color: var(--text-muted);
+					padding: 1px 6px;
+					border-radius: 8px;
+					font-size: 10px;
+					font-weight: 500;
+					text-transform: uppercase;
+					letter-spacing: 0.5px;
+					margin-left: 8px;
+					white-space: nowrap;
+					box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+				}
+
+				/* 触发器中的内联徽章样式 */
+				.infio-model-badge-inline {
+					margin-left: 6px;
+					font-size: 9px;
+					padding: 1px 4px;
+					border-radius: 6px;
 				}
 
 				.infio-llm-setting-model-item-highlight {
@@ -627,6 +718,12 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 
 				.infio-llm-setting-options-list::-webkit-scrollbar-thumb:hover {
 					background: var(--text-muted);
+				}
+
+				/* 深色模式下的 API 徽章样式 */
+				.theme-dark .infio-api-badge {
+					background: var(--background-modifier-border-hover);
+					color: var(--text-faint);
 				}
 
 				/* 响应式设计 */

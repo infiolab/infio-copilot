@@ -379,6 +379,8 @@ export function ModelSelect({ modelType = 'chat' }: ModelSelectProps) {
 										return settings.collectedInsightModels || []
 									case 'apply':
 										return settings.collectedApplyModels || []
+									// case 'edit':
+									// 	return settings.collectedEditModels || []
 									case 'embedding':
 										return settings.collectedEmbeddingModels || []
 									default:

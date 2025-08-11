@@ -170,15 +170,41 @@ async function fetchInfioModels(apiKey?: string): Promise<Record<string, ModelIn
 		const data = await response.json();
 		const models: Record<string, ModelInfo> = {};
 		if (data?.data) {
+			// 先收集所有模型数据
+			const modelList: Array<{key: string, info: ModelInfo}> = [];
 			for (const model of data.data) {
-				models[model.model_group] = {
-					maxTokens: model.max_output_tokens,
-					contextWindow: model.max_input_tokens,
-					supportsImages: false,
-					supportsPromptCache: false,
-					inputPrice: model.input_cost_per_token ? model.input_cost_per_token * 1000000 : 0,
-					outputPrice: model.output_cost_per_token ? model.output_cost_per_token * 1000000 : 0,
-				};
+				modelList.push({
+					key: model.model_group,
+					info: {
+						maxTokens: model.max_output_tokens,
+						contextWindow: model.max_input_tokens,
+						supportsImages: false,
+						supportsPromptCache: false,
+						inputPrice: model.input_cost_per_token ? model.input_cost_per_token * 1000000 : 0,
+						outputPrice: model.output_cost_per_token ? model.output_cost_per_token * 1000000 : 0,
+					}
+				});
+			}
+			
+			// 排序：infio/ 前缀的模型排在前面
+			modelList.sort((a, b) => {
+				const aHasInfioPrefix = a.key.startsWith('infio/');
+				const bHasInfioPrefix = b.key.startsWith('infio/');
+				
+				if (aHasInfioPrefix && !bHasInfioPrefix) {
+					return -1; // a 排在前面
+				}
+				if (!aHasInfioPrefix && bHasInfioPrefix) {
+					return 1; // b 排在前面
+				}
+				
+				// 同类型的按字母顺序排序
+				return a.key.localeCompare(b.key);
+			});
+			
+			// 按排序后的顺序添加到 models 对象中
+			for (const modelItem of modelList) {
+				models[modelItem.key] = modelItem.info;
 			}
 		}
 
