@@ -1,20 +1,24 @@
-import { App } from 'obsidian'
-
 import * as pathUtils from 'path'
+import { App } from 'obsidian'
 
 import { ApplyViewState } from '../../ApplyView'
 import { APPLY_VIEW_TYPE } from '../../constants'
 import { EditLog, EditLogManager, EditLogStatus } from '../../database/json/edit-log'
 import {
 	ApplyDiffToolArgs,
+	EditFileToolArgs,
 	InsertContentToolArgs,
 	SearchAndReplaceToolArgs,
 	ToolArgs,
 	WriteToFileToolArgs
 } from '../../types/apply'
+import { LLMModel } from '../../types/llm/model'
+import { LLMRequestNonStreaming } from '../../types/llm/request'
+import { InfioSettings } from '../../types/settings'
 import { ApplyEditToFile, SearchAndReplace } from '../../utils/apply'
 import { readTFileContent } from '../../utils/obsidian'
 import { DiffStrategy } from '../diff/DiffStrategy'
+import LLMManager from '../llm/manager'
 
 // 事件类型定义
 export interface EditStatusChangeEvent {
@@ -30,12 +34,16 @@ export class ApplyEditManager {
 	private app: App
 	private editLogManager: EditLogManager
 	private diffStrategy: DiffStrategy
+	private llmManager: LLMManager
+	private settings: InfioSettings
 	private statusChangeListeners: Map<string, EditStatusChangeListener[]> = new Map()
 
-	constructor(app: App, diffStrategy: DiffStrategy) {
+	constructor(app: App, diffStrategy: DiffStrategy, llmManager: LLMManager, settings: InfioSettings) {
 		this.app = app
 		this.editLogManager = new EditLogManager(app)
 		this.diffStrategy = diffStrategy
+		this.llmManager = llmManager
+		this.settings = settings
 		console.log('[ApplyEditManager] Construction completed successfully')
 	}
 
@@ -46,7 +54,10 @@ export class ApplyEditManager {
 		if (!this.statusChangeListeners.has(editId)) {
 			this.statusChangeListeners.set(editId, [])
 		}
-		this.statusChangeListeners.get(editId)!.push(listener)
+		const listeners = this.statusChangeListeners.get(editId)
+		if (listeners) {
+			listeners.push(listener)
+		}
 	}
 
 	/**
@@ -102,16 +113,21 @@ export class ApplyEditManager {
 	 */
 	async registerEdit(msgId: string, toolArgs: ToolArgs): Promise<EditLog> {
 
+		// 检查 toolArgs 是否有 filepath 属性
+		if (!('filepath' in toolArgs)) {
+			throw new Error(`Tool type ${toolArgs.type} does not support file operations`)
+		}
+
 		// 获取文件原始内容
 		let originalContent = ''
-		const file = this.app.vault.getFileByPath(toolArgs.filepath as string)
+		const file = this.app.vault.getFileByPath(toolArgs.filepath)
 		if (file) {
 			originalContent = await readTFileContent(file, this.app.vault)
 		}
 
 		const editLog = await this.editLogManager.createEditLog({
 			msgId,
-			type: toolArgs.type as any,
+			type: toolArgs.type,
 			params: toolArgs,
 			originalContent,
 		})
@@ -137,8 +153,18 @@ export class ApplyEditManager {
 			return
 		}
 
-		// 计算新内容
-		const newContent = await this.calculateNewContent(log)
+		// 检查是否已缓存新内容，如果没有则计算并缓存
+		let newContent = log.newContent
+		if (!newContent) {
+			newContent = await this.calculateNewContent(log)
+			// 缓存计算结果到 EditLog
+			await this.editLogManager.updateNewContent(editId, newContent)
+		}
+
+		// 检查参数是否有 filepath 属性
+		if (!('filepath' in log.params)) {
+			throw new Error(`Edit log ${editId} does not have filepath parameter`)
+		}
 
 		// 打开ApplyView
 		const leaf = this.app.workspace.getLeaf(true)
@@ -146,7 +172,7 @@ export class ApplyEditManager {
 			type: APPLY_VIEW_TYPE,
 			active: true,
 			state: {
-				file: log.params.filepath as string,
+				file: log.params.filepath,
 				oldContent: log.originalContent || '',
 				newContent: newContent,
 				editId: log.id, // 传递editId给ApplyView
@@ -169,8 +195,20 @@ export class ApplyEditManager {
 			return
 		}
 
+		// 检查参数是否有 filepath 属性
+		if (!('filepath' in log.params)) {
+			throw new Error(`Edit log ${editId} does not have filepath parameter`)
+		}
+
 		try {
-			const newContent = await this.calculateNewContent(log)
+			// 使用缓存的新内容，如果没有缓存则计算
+			let newContent = log.newContent
+			if (!newContent) {
+				newContent = await this.calculateNewContent(log)
+				// 缓存计算结果
+				await this.editLogManager.updateNewContent(editId, newContent)
+			}
+
 			let opFile = this.app.vault.getFileByPath(log.params.filepath)
 			let newFile = false
 
@@ -233,6 +271,11 @@ export class ApplyEditManager {
 			return
 		}
 
+		// 检查参数是否有 filepath 属性
+		if (!('filepath' in log.params)) {
+			throw new Error(`Edit log ${editId} does not have filepath parameter`)
+		}
+
 		const file = this.app.vault.getFileByPath(log.params.filepath)
 		if (file && log.originalContent !== undefined) {
 			await this.app.vault.modify(file, log.originalContent)
@@ -262,8 +305,11 @@ export class ApplyEditManager {
 	private findApplyViewByEditId(editId: string) {
 		const leaves = this.app.workspace.getLeavesOfType(APPLY_VIEW_TYPE)
 		return leaves.find(leaf => {
-			const viewState = leaf.view.getState() as ApplyViewState & { editId?: string }
-			return viewState.editId === editId
+			const viewState = leaf.view.getState()
+			if (typeof viewState === 'object' && viewState !== null && 'editId' in viewState) {
+				return (viewState as { editId: string }).editId === editId
+			}
+			return false
 		})
 	}
 
@@ -287,14 +333,14 @@ export class ApplyEditManager {
 		switch (log.type) {
 			case 'write_to_file': {
 				const writeParams = params as WriteToFileToolArgs
-				return writeParams.content
+				return writeParams.content || ''
 			}
 
 			case 'insert_content': {
 				const insertParams = params as InsertContentToolArgs
 				return await ApplyEditToFile(
 					originalContent,
-					insertParams.content,
+					insertParams.content || '',
 					insertParams.startLine,
 					insertParams.endLine
 				)
@@ -309,13 +355,73 @@ export class ApplyEditManager {
 				const applyDiffParams = params as ApplyDiffToolArgs
 				const result = await this.diffStrategy.applyDiff(originalContent, applyDiffParams.diff)
 				if (!result.success) {
-					throw new Error(`Failed to apply diff: ${result.error}`)
+					throw new Error(`Failed to apply diff`)
 				}
 				return result.content
 			}
 
+			case 'edit_file': {
+				const editParams = params as EditFileToolArgs
+				
+				// 构建编辑模型
+				const editModel: LLMModel = {
+					provider: this.settings.editModelProvider,
+					modelId: this.settings.editModelId,
+				}
+
+				const systemMessage = {
+					role: 'system',
+					content: `You are a hyper-specialized, automated text-merging engine. You function as a surgical \`patch\` utility. Your behavior must be 100% deterministic and precise.
+
+**The Golden Rule:** Your single most important directive is: **Only the lines present in the \`<update>\` snippet can be different in the final output. All other lines from the original \`<code>\` block MUST be preserved verbatim, character-for-character.** You do not have creative license.
+
+You will receive input in a strict XML format: \`<instruction>\`, \`<code>\`, and \`<update>\`.
+
+**Understanding the Context Markers (\`// ... existing content ...\`):**
+
+					* The markers are ** placeholders **, not real content.They show how the snippet fits into the original file.
+* A marker at the ** start ** of \`<update>\` means the original file has unchanged content * before * the snippet.
+* A marker at the ** end ** of \`<update>\` means the original file has unchanged content * after * the snippet.
+* Your job is to find the exact, corresponding lines in \`<code>\` that match the non - marker lines in \`<update>\` and perform a precise replacement.
+
+** CRITICAL RULES:**
+
+					1. ** ADHERE TO THE GOLDEN RULE:** Never add, remove, or modify * any * content not explicitly part of the \`<update>\` snippet.Do not fix typos, change formatting, or refactor code outside the scope of the update.
+2. ** OUTPUT THE COMPLETE FILE:** Your response MUST be the full, complete content of the file after the edit.
+3. ** RAW OUTPUT ONLY:** Your entire response must be the raw content of the final file.Do not include * any * other text, explanations, or markdown code fences(\`\`\`).
+4.  **PRESERVE FORMATTING:** All original indentation, spacing, and line endings for the unchanged parts of the file MUST be maintained exactly.`
+				}
+
+				// 构建请求消息
+				const messages: any[] = []
+				
+				// 当模型不是 "infio/edit" 时，添加 system message
+				if (this.settings.editModelId !== "infio/edit") {
+					messages.push(systemMessage)
+				}
+				
+				messages.push({
+					role: 'user',
+					content: `<instruction>${editParams.instruction}</instruction>
+<code>${originalContent}</code>
+<update>${editParams.content_changes}</update>`
+				})
+
+				const request: LLMRequestNonStreaming = {
+					model: this.settings.editModelId,
+					messages: messages,
+					stream: false
+				}
+
+				// 调用 LLM 进行编辑
+				const response = await this.llmManager.generateResponse(editModel, request)
+				
+				// 返回编辑后的内容
+				return response.choices[0].message.content || originalContent
+			}
+
 			default:
-				throw new Error(`Unsupported edit type: ${log.type}`)
+				throw new Error(`Unsupported edit type: ${String(log.type)}`)
 		}
 	}
 } 

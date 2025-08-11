@@ -96,6 +96,23 @@ export class EditLogManager extends AbstractJsonRepository<EditLog, EditLogMetad
 	}
 
 	/**
+	 * 更新编辑日志的新内容缓存
+	 */
+	async updateNewContent(msgId: string, newContent: string): Promise<void> {
+		const editLog = await this.findByMsgId(msgId)
+		if (!editLog) {
+			throw new Error(`Edit log not found: ${msgId}`)
+		}
+
+		const updatedEditLog: EditLog = {
+			...editLog,
+			newContent,
+		}
+
+		await this.update(editLog, updatedEditLog)
+	}
+
+	/**
 	 * 获取指定状态的编辑日志
 	 */
 	async findByStatus(status: EditLogStatus): Promise<EditLog[]> {

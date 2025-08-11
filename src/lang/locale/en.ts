@@ -276,6 +276,8 @@ export default {
 			chatModelDescription: 'Model used for daily conversations and Q&A, handling most chat interactions',
 			autocompleteModel: 'Autocomplete model:',
 			autocompleteModelDescription: 'Model used for code and text autocompletion, providing intelligent writing suggestions',
+			applyModel: 'Edit model:',
+			applyModelDescription: 'Model used for quickly applying AI-generated content and edits to your original files',
 			embeddingModel: 'Embedding model:',
 			embeddingModelDescription: 'Model used for document vectorization and semantic search, supporting RAG functionality',
 			insightModel: 'Insight model:',

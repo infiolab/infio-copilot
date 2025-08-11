@@ -9,6 +9,7 @@ import { ChatProps } from './components/chat-view/ChatView'
 import { APPLY_VIEW_TYPE, CHAT_VIEW_TYPE, JSON_VIEW_TYPE, PREVIEW_VIEW_TYPE } from './constants'
 import { ApplyEditManager } from './core/apply/ApplyEditManager'
 import { getDiffStrategy, DiffStrategy } from "./core/diff/DiffStrategy"
+import LLMManager from './core/llm/manager'
 import { InlineEdit } from './core/edit/inline-edit-processor'
 import { McpHub } from './core/mcp/McpHub'
 import { RAGEngine } from './core/rag/rag-engine'
@@ -93,7 +94,8 @@ export default class InfioPlugin extends Plugin {
 
 		// initialize apply edit manager BEFORE view registration
 		try {
-			this.applyEditManager = new ApplyEditManager(this.app, this.diffStrategy as DiffStrategy)
+			const llmManager = new LLMManager(this.settings)
+			this.applyEditManager = new ApplyEditManager(this.app, this.diffStrategy as DiffStrategy, llmManager, this.settings)
 		} catch (error) {
 			console.error('[main.ts] Failed to initialize ApplyEditManager:', error)
 			this.applyEditManager = null
@@ -141,7 +143,8 @@ export default class InfioPlugin extends Plugin {
 
 			// Update apply edit manager when settings change
 			try {
-				this.applyEditManager = new ApplyEditManager(this.app, this.diffStrategy as DiffStrategy)
+				const llmManager = new LLMManager(this.settings)
+				this.applyEditManager = new ApplyEditManager(this.app, this.diffStrategy as DiffStrategy, llmManager, this.settings)
 			} catch (error) {
 				console.error('Failed to re-initialize ApplyEditManager:', error)
 				this.applyEditManager = null

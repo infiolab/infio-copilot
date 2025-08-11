@@ -137,7 +137,15 @@ export type ManageFilesToolArgs = {
 	finish?: boolean;
 }
 
-export type ToolArgs = ReadFileToolArgs | WriteToFileToolArgs | InsertContentToolArgs | SearchAndReplaceToolArgs | ListFilesToolArgs | MatchSearchFilesToolArgs | RegexSearchFilesToolArgs | SemanticSearchFilesToolArgs | SearchWebToolArgs | FetchUrlsContentToolArgs | SwitchModeToolArgs | ApplyDiffToolArgs | UseMcpToolArgs | DataviewQueryToolArgs | CallTransformationsToolArgs | ManageFilesToolArgs;
+export type EditFileToolArgs = {
+	type: 'edit_file';
+	filepath: string;
+	instruction: string;
+	content_changes: string;
+	finish?: boolean;
+}
+
+export type ToolArgs = ReadFileToolArgs | WriteToFileToolArgs | InsertContentToolArgs | SearchAndReplaceToolArgs | ListFilesToolArgs | MatchSearchFilesToolArgs | RegexSearchFilesToolArgs | SemanticSearchFilesToolArgs | SearchWebToolArgs | FetchUrlsContentToolArgs | SwitchModeToolArgs | ApplyDiffToolArgs | UseMcpToolArgs | DataviewQueryToolArgs | CallTransformationsToolArgs | ManageFilesToolArgs | EditFileToolArgs;
 
 // 工具执行结果的统一接口
 export interface ToolExecutionResult {

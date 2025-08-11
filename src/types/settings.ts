@@ -327,9 +327,13 @@ export const InfioSettingsSchema = z.object({
 	insightModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	insightModelId: z.string().catch(''),
 
-	// Apply Model
+	// autocomplete Model (this is for autocomplete, but we can't change the name)
 	applyModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
 	applyModelId: z.string().catch(''),
+
+	// edit Model
+	editModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),
+	editModelId: z.string().catch(''),
 
 	// Embedding Model
 	embeddingModelProvider: z.nativeEnum(ApiProvider).catch(ApiProvider.Infio),

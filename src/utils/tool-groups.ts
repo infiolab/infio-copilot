@@ -9,6 +9,7 @@ export const TOOL_DISPLAY_NAMES = {
 	execute_command: "run commands",
 	read_file: "read files",
 	write_to_file: "write files",
+	edit_file: "edit files",
 	apply_diff: "apply changes",
 	search_files: "search files",
 	list_files: "list files",
@@ -28,7 +29,7 @@ export const TOOL_GROUPS: Record<string, ToolGroupConfig> = {
 		tools: ["read_file", "list_files", "search_files", "dataview_query"],
 	},
 	edit: {
-		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace"],
+		tools: ["apply_diff", "write_to_file", "edit_file", "insert_content", "search_and_replace"],
 	},
 	manage_files: {
 		tools: ["manage_files"],

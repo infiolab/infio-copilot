@@ -353,6 +353,28 @@ const CustomProviderSettings: React.FC<CustomProviderSettingsProps> = ({ plugin,
 		});
 	};
 
+	const updateEditModelId = (provider: ApiProvider, modelId: string, isCustom: boolean = false) => {
+		console.debug(`updateEditModelId: ${provider} -> ${modelId}, isCustom: ${isCustom}`)
+		const providerSettingKey = getProviderSettingKey(provider);
+		const providerSettings = settings[providerSettingKey] || {};
+		const currentModels = providerSettings.models || [];
+
+		// 如果是自定义模型且不在列表中，则添加
+		const updatedModels = isCustom && !currentModels.includes(modelId)
+			? [...currentModels, modelId]
+			: currentModels;
+
+		handleSettingsUpdate({
+			...settings,
+			editModelProvider: provider,
+			editModelId: modelId,
+			[providerSettingKey]: {
+				...providerSettings,
+				models: updatedModels
+			}
+		});
+	};
+
 	const updateEmbeddingModelId = (provider: ApiProvider, modelId: string, isCustom: boolean = false) => {
 		console.debug(`updateEmbeddingModelId: ${provider} -> ${modelId}, isCustom: ${isCustom}`)
 		const providerSettingKey = getProviderSettingKey(provider);
@@ -530,6 +552,15 @@ const CustomProviderSettings: React.FC<CustomProviderSettingsProps> = ({ plugin,
 						provider={settings.insightModelProvider || ApiProvider.Infio}
 						modelId={settings.insightModelId}
 						updateModel={updateInsightModelId}
+					/>
+
+					<ComboBoxComponent
+						name={t("settings.Models.applyModel")}
+						description={t("settings.Models.applyModelDescription")}
+						settings={settings}
+						provider={settings.editModelProvider || ApiProvider.OpenAI}
+						modelId={settings.editModelId}
+						updateModel={updateEditModelId}
 					/>
 
 					<ComboBoxComponent

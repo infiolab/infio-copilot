@@ -122,6 +122,12 @@ export type ParsedMsgBlock =
 	} | {
 		type: 'tool_result'
 		content: string
+	} | {
+		type: 'edit_file'
+		path: string
+		instruction: string
+		content_changes: string
+		finish: boolean
 	}
 
 export function parseMsgBlocks(
@@ -415,11 +421,12 @@ export function parseMsgBlocks(
 						path = childNode.childNodes[0].value
 					} else if (childNode.nodeName === 'content' && childNode.childNodes.length > 0) {
 						// 如果内容有多个子节点，需要合并它们
-						content = childNode.childNodes.map(n => (n as any).value || '').join('')
+						// @ts-expect-error - parse5 node value type
+						content = childNode.childNodes.map(n => n.value || '').join('')
 					} else if (childNode.nodeName === 'line_count' && childNode.childNodes.length > 0) {
 						// @ts-expect-error - parse5 node value type
 						const lineCountStr = childNode.childNodes[0].value
-						lineCount = lineCountStr ? parseInt(lineCountStr) : undefined
+						lineCount = lineCountStr ? parseInt(String(lineCountStr)) : undefined
 					}
 				}
 				parsedResult.push({
@@ -456,7 +463,7 @@ export function parseMsgBlocks(
 						try {
 							// @ts-expect-error - parse5 node value type
 							const operationsJson = childNode.childNodes[0].value
-							const operations = JSON5.parse(operationsJson)
+							const operations = JSON5.parse(String(operationsJson))
 							if (Array.isArray(operations) && operations.length > 0) {
 								const operation = operations[0]
 								startLine = operation.start_line || 1
@@ -676,7 +683,7 @@ export function parseMsgBlocks(
 						try {
 							// @ts-expect-error - parse5 node value type
 							const urlsJson = childNode.childNodes[0].value
-							const parsedUrls = JSON5.parse(urlsJson)
+							const parsedUrls = JSON5.parse(String(urlsJson))
 							if (Array.isArray(parsedUrls)) {
 								urls = parsedUrls
 							}
@@ -723,7 +730,7 @@ export function parseMsgBlocks(
 						try {
 							// @ts-expect-error - parse5 node value type
 							const parametersJson = childNode.childNodes[0].value
-							parameters = JSON5.parse(parametersJson)
+							parameters = JSON5.parse(String(parametersJson))
 						} catch (error) {
 							console.debug('Failed to parse parameters JSON', error)
 						}
@@ -836,6 +843,44 @@ export function parseMsgBlocks(
 						content: input.slice(innerContentStartOffset, innerContentEndOffset),
 					})
 				}
+				lastEndOffset = endOffset
+			} else if (node.nodeName === 'edit_file') {
+				if (!node.sourceCodeLocation) {
+					throw new Error('sourceCodeLocation is undefined')
+				}
+				const startOffset = node.sourceCodeLocation.startOffset
+				const endOffset = node.sourceCodeLocation.endOffset
+				if (startOffset > lastEndOffset) {
+					parsedResult.push({
+						type: 'string',
+						content: input.slice(lastEndOffset, startOffset),
+					})
+				}
+
+				let path: string | undefined
+				let instruction: string | undefined
+				let content_changes: string | undefined
+
+				for (const childNode of node.childNodes) {
+					if (childNode.nodeName === 'path' && childNode.childNodes.length > 0) {
+						// @ts-expect-error - parse5 node value type
+						path = childNode.childNodes[0].value
+					} else if (childNode.nodeName === 'instruction' && childNode.childNodes.length > 0) {
+						// @ts-expect-error - parse5 node value type
+						instruction = childNode.childNodes[0].value
+					} else if (childNode.nodeName === 'content_changes' && childNode.childNodes.length > 0) {
+						// @ts-expect-error - parse5 node value type
+						content_changes = childNode.childNodes[0].value
+					}
+				}
+
+				parsedResult.push({
+					type: 'edit_file',
+					path: path || '',
+					instruction: instruction || '',
+					content_changes: content_changes || '',
+					finish: node.sourceCodeLocation.endTag !== undefined
+				})
 				lastEndOffset = endOffset
 			} else if (node.nodeName === 'manage_files') {
 				if (!node.sourceCodeLocation) {

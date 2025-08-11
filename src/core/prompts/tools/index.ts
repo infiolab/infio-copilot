@@ -1,5 +1,5 @@
 import { FilesSearchSettings } from "../../../types/settings"
-import { Mode, ModeConfig, getGroupName, getModeConfig, isToolAllowedForMode } from "../../../utils/modes"
+import { Mode, ModeConfig, getModeConfig, isToolAllowedForMode } from "../../../utils/modes"
 import { DiffStrategy } from "../../diff/DiffStrategy"
 import { McpHub } from "../../mcp/McpHub"
 
@@ -8,6 +8,7 @@ import { getAskFollowupQuestionDescription } from "./ask-followup-question"
 import { getAttemptCompletionDescription } from "./attempt-completion"
 import { getCallInsightsDescription } from "./call-insights"
 import { getDataviewQueryDescription } from "./dataview-query"
+import { getEditFileDescription } from "./edit-file"
 import { getFetchUrlsContentDescription } from "./fetch-url-content"
 import { getInsertContentDescription } from "./insert-content"
 import { getListFilesDescription } from "./list-files"
@@ -17,7 +18,7 @@ import { getSearchAndReplaceDescription } from "./search-and-replace"
 import { getSearchFilesDescription } from "./search-files"
 import { getSearchWebDescription } from "./search-web"
 import { getSwitchModeDescription } from "./switch-mode"
-import { ALWAYS_AVAILABLE_TOOLS, TOOL_GROUPS } from "./tool-groups"
+import { ALWAYS_AVAILABLE_TOOLS } from "./tool-groups"
 import { ToolArgs } from "./types"
 import { getUseMcpToolDescription } from "./use-mcp-tool"
 import { getWriteToFileDescription } from "./write-to-file"
@@ -26,6 +27,7 @@ import { getWriteToFileDescription } from "./write-to-file"
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
 	read_file: (args) => getReadFileDescription(args),
 	write_to_file: (args) => getWriteToFileDescription(args),
+	edit_file: (args) => getEditFileDescription(args),
 	search_files: (args) => getSearchFilesDescription(args),
 	list_files: (args) => getListFilesDescription(args),
 	insights: (args) => getCallInsightsDescription(args),
@@ -97,8 +99,6 @@ export function getToolDescriptionsForMode(
 
 // Export individual description functions for backward compatibility
 export {
-	getAccessMcpResourceDescription, getReadFileDescription, getWriteToFileDescription, getSearchFilesDescription, getListFilesDescription,
-	getDataviewQueryDescription, getAskFollowupQuestionDescription, getAttemptCompletionDescription, getSwitchModeDescription, getInsertContentDescription,
-	getUseMcpToolDescription, getSearchAndReplaceDescription, getManageFilesDescription, getSearchWebDescription, getFetchUrlsContentDescription, getCallInsightsDescription as getCallInsightsDescription
+	getAccessMcpResourceDescription, getAskFollowupQuestionDescription, getAttemptCompletionDescription, getCallInsightsDescription as getCallInsightsDescription, getDataviewQueryDescription, getEditFileDescription, getFetchUrlsContentDescription, getInsertContentDescription, getListFilesDescription, getManageFilesDescription, getReadFileDescription, getSearchAndReplaceDescription, getSearchFilesDescription, getSearchWebDescription, getSwitchModeDescription, getUseMcpToolDescription, getWriteToFileDescription
 }
 

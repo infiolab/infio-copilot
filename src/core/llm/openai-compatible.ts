@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 
-import { ALIBABA_QWEN_BASE_URL, MOONSHOT_BASE_URL } from '../../constants'
+import { ALIBABA_QWEN_BASE_URL, INFIO_BASE_URL, MOONSHOT_BASE_URL } from '../../constants'
 import { LLMModel } from '../../types/llm/model'
 import {
   LLMOptions,
@@ -51,7 +51,11 @@ export class OpenAICompatibleProvider implements BaseLLMProvider {
   private isAlibabaQwen(): boolean {
     return this.baseURL === ALIBABA_QWEN_BASE_URL || 
            this.baseURL?.includes('dashscope.aliyuncs.com')
-  }
+	}
+	
+	private isInfio(): boolean {
+		return this.baseURL === INFIO_BASE_URL
+	}
 
   // 获取提供商特定的额外参数
   private getExtraParams(isStreaming: boolean): Record<string, unknown> {
@@ -60,8 +64,7 @@ export class OpenAICompatibleProvider implements BaseLLMProvider {
     // 阿里云Qwen API需要在非流式调用中设置 enable_thinking: false
     if (this.isAlibabaQwen() && !isStreaming) {
       extraParams.enable_thinking = false
-    }
-    
+		}    
     return extraParams
   }
 
@@ -89,9 +92,13 @@ export class OpenAICompatibleProvider implements BaseLLMProvider {
       throw new LLMBaseUrlNotSetException(
         'OpenAI Compatible base URL or API key is missing. Please set it in settings menu.',
       )
-    }
-
+		}
     const extraParams = this.getExtraParams(true) // 流式调用
+
+		if (this.isInfio()) {
+			extraParams.reasoning_effort = 'none'
+		}
+
     return this.adapter.streamResponse(this.client as OpenAI, request, options, extraParams)
   }
 }

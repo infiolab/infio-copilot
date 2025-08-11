@@ -146,7 +146,7 @@ const HighlightedText: React.FC<{ segments: TextSegment[] }> = ({ segments }) =>
 	);
 };
 
-type ModelType = 'chat' | 'insight' | 'apply' | 'embedding'
+type ModelType = 'chat' | 'insight' | 'apply' | 'edit' | 'embedding'
 
 interface ModelSelectProps {
 	modelType?: ModelType
@@ -163,12 +163,14 @@ export function ModelSelect({ modelType = 'chat' }: ModelSelectProps) {
 				return settings.insightModelProvider
 			case 'apply':
 				return settings.applyModelProvider
+			case 'edit':
+				return settings.editModelProvider
 			case 'embedding':
 				return settings.embeddingModelProvider
 			default:
 				return settings.chatModelProvider
 		}
-	}, [modelType, settings.insightModelProvider, settings.applyModelProvider, settings.embeddingModelProvider, settings.chatModelProvider])
+	}, [modelType, settings.insightModelProvider, settings.applyModelProvider, settings.editModelProvider, settings.embeddingModelProvider, settings.chatModelProvider])
 
 	const currentModelId = useMemo(() => {
 		switch (modelType) {
@@ -176,12 +178,14 @@ export function ModelSelect({ modelType = 'chat' }: ModelSelectProps) {
 				return settings.insightModelId
 			case 'apply':
 				return settings.applyModelId
+			case 'edit':
+				return settings.editModelId
 			case 'embedding':
 				return settings.embeddingModelId
 			default:
 				return settings.chatModelId
 		}
-	}, [modelType, settings.insightModelId, settings.applyModelId, settings.embeddingModelId, settings.chatModelId])
+	}, [modelType, settings.insightModelId, settings.applyModelId, settings.editModelId, settings.embeddingModelId, settings.chatModelId])
 
 	const [modelProvider, setModelProvider] = useState(currentModelProvider)
 	const [chatModelId, setChatModelId] = useState(currentModelId)
@@ -560,6 +564,13 @@ export function ModelSelect({ modelType = 'chat' }: ModelSelectProps) {
 																	...settings,
 																	applyModelProvider: modelProvider,
 																	applyModelId: selectedOption.id,
+																})
+																break;
+															case 'edit':
+																setSettings({
+																	...settings,
+																	editModelProvider: modelProvider,
+																	editModelId: selectedOption.id,
 																})
 																break;
 															case 'embedding':

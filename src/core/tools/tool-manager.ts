@@ -10,6 +10,7 @@ import {
 	ApplyStatus,
 	CallTransformationsToolArgs,
 	DataviewQueryToolArgs,
+	EditFileToolArgs,
 	FetchUrlsContentToolArgs,
 	InsertContentToolArgs,
 	ListFilesToolArgs,
@@ -81,6 +82,8 @@ export class ToolManager {
 					return await this.executeSearchAndReplace(toolArgs, applyMsgId)
 				case 'apply_diff':
 					return await this.executeApplyDiff(toolArgs, applyMsgId)
+				case 'edit_file':
+					return await this.executeEditFile(toolArgs, applyMsgId)
 				case 'read_file':
 					return await this.executeReadFile(toolArgs, applyMsgId)
 				case 'list_files':
@@ -280,6 +283,48 @@ export class ToolManager {
 			}
 		} catch (error) {
 			console.error('Failed to execute apply_diff:', error)
+			return this.createFailureResult(
+				toolArgs.type,
+				applyMsgId,
+				error instanceof Error ? error.message : String(error)
+			)
+		}
+	}
+
+	/**
+	 * 编辑文件工具
+	 */
+	private async executeEditFile(toolArgs: EditFileToolArgs, applyMsgId: string): Promise<ToolExecutionResult> {
+		const { applyEditManager } = this.dependencies
+
+		try {
+			// 注册编辑操作
+			await applyEditManager.registerEdit(applyMsgId, toolArgs)
+			
+			// 打开 ApplyView 展示差异
+			await applyEditManager.openApplyView(applyMsgId)
+
+			// 等待用户操作完成（使用事件驱动方式）
+			const statusChangeEvent = await applyEditManager.waitForEditCompletion(applyMsgId)
+			
+			const applyStatus = statusChangeEvent.status === 'applied' ? ApplyStatus.Applied : ApplyStatus.Rejected
+			const applyEditContent = statusChangeEvent.status === 'applied' ? 'Changes successfully applied' : 'User rejected changes'
+
+			return {
+				type: 'edit_file',
+				applyMsgId,
+				applyStatus,
+				returnMsg: {
+					role: 'user',
+					applyStatus: ApplyStatus.Idle,
+					content: null,
+					promptContent: `[edit_file for '${toolArgs.filepath}'] Result:\n${applyEditContent}\n`,
+					id: uuidv4(),
+					mentionables: [],
+				}
+			}
+		} catch (error) {
+			console.error('Failed to execute edit_file:', error)
 			return this.createFailureResult(
 				toolArgs.type,
 				applyMsgId,
@@ -549,8 +594,8 @@ export class ToolManager {
 			filePath: toolArgs.path,
 			transformationType: transformationType,
 			model: {
-				provider: settings.applyModelProvider,
-				modelId: settings.applyModelId,
+				provider: settings.insightModelProvider,
+				modelId: settings.insightModelId,
 			},
 			saveToDatabase: true
 		})

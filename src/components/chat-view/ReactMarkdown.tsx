@@ -7,6 +7,7 @@ import {
 } from '../../utils/parse-infio-block'
 
 import MarkdownApplyDiffBlock from './Markdown/MarkdownApplyDiffBlock'
+import MarkdownLLMEditFileBlock from './Markdown/MarkdownLLMEditFileBlock'
 import MarkdownDataviewQueryBlock from './Markdown/MarkdownDataviewQueryBlock'
 import MarkdownEditFileBlock from './Markdown/MarkdownEditFileBlock'
 import MarkdownFetchUrlsContentBlock from './Markdown/MarkdownFetchUrlsContentBlock'
@@ -131,6 +132,18 @@ function ReactMarkdown({
 						onReject={onReject}
 						path={block.path}
 						diff={block.diff}
+						finish={block.finish}
+					/>
+				) : block.type === 'edit_file' ? (
+					<MarkdownLLMEditFileBlock
+						key={"edit-file-" + index}
+						applyStatus={applyStatus}
+						onApply={onApply}
+						onAccept={onAccept}
+						onReject={onReject}
+						path={block.path}
+						instruction={block.instruction}
+						content_changes={block.content_changes}
 						finish={block.finish}
 					/>
 				) : block.type === 'read_file' ? (

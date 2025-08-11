@@ -7,10 +7,11 @@ export type ToolGroupConfig = {
 // Map of tool slugs to their display names
 export const TOOL_DISPLAY_NAMES = {
 	execute_command: "run commands",
+	list_files: "list files",
 	read_file: "read files",
 	write_to_file: "write files",
 	apply_diff: "apply changes",
-	list_files: "list files",
+	edit_file: "edit files",
 	search_files: "search files",
 	dataview_query: "query dataview",
 	use_mcp_tool: "use mcp tools",
@@ -27,7 +28,7 @@ export const TOOL_GROUPS: Record<string, ToolGroupConfig> = {
 		tools: ["read_file", "list_files", "search_files", "dataview_query"],
 	},
 	edit: {
-		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace"],
+		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace", "edit_file"],
 	},
 	research: {
 		tools: ["search_web", "fetch_urls_content"],

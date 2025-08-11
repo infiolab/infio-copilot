@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, GitCommitVertical, RefreshCcwDot, RotateCcw, ScanText, MessageSquareText } from 'lucide-react'
+import { ChevronDown, ChevronRight, GitCommitVertical, MessageSquareText, RotateCcw, ScanText } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useApp } from '../../contexts/AppContext'
@@ -88,6 +88,10 @@ const InsightView = () => {
 	// Flashcards 展示模式状态
 	const [flashcardDisplayMode, setFlashcardDisplayMode] = useState<'front' | 'full'>('front')
 	const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set())
+
+	// 示例数据展示状态
+	const [showTimelineExample, setShowTimelineExample] = useState(false)
+	const [showFlashcardsExample, setShowFlashcardsExample] = useState(false)
 
 	// 模拟时间线数据
 	const mockTimelineData: TimelineItem[] = useMemo(() => [
@@ -822,14 +826,14 @@ const InsightView = () => {
 					onClick={() => setActiveTab('timeline')}
 				>
 					<GitCommitVertical size={16} />
-					时间线 ({mockTimelineData.length})
+					时间线 ({showTimelineExample ? mockTimelineData.length : 0})
 				</button>
 				<button
 					className={`infio-commands-tab-button ${activeTab === 'flashcards' ? 'active' : ''}`}
 					onClick={() => setActiveTab('flashcards')}
 				>
 					<MessageSquareText size={16} />
-					问答 ({mockFlashcardsData.length})
+					问答 ({showFlashcardsExample ? mockFlashcardsData.length : 0})
 				</button>
 			</div>
 
@@ -1002,190 +1006,243 @@ const InsightView = () => {
 				{/* 时间线 Tab */}
 				{activeTab === 'timeline' && (
 					<>
-						{/* 时间线统计 & 操作 */}
-						<div className="infio-insight-stats">
-							<div className="infio-insight-stats-overview">
-								<div className="infio-insight-stats-main">
-									<span className="infio-insight-stats-number">{mockTimelineData.length}</span>
-									<span className="infio-insight-stats-label">时间线事件</span>
+						{/* 功能未准备好的提示 */}
+						<div className="obsidian-feature-not-ready">
+							<div className="obsidian-feature-not-ready-content">
+								<div className="obsidian-feature-not-ready-icon">🚧</div>
+								<div className="obsidian-feature-not-ready-text">
+									<h4>时间线功能开发中</h4>
+									<p>该功能正在开发中，敬请期待。您可以查看示例了解未来的功能样式。</p>
 								</div>
-								<div className="infio-insight-stats-breakdown">
-									<div className="infio-insight-stats-items">
-										<div className="infio-insight-stats-item">
-											<span className="infio-insight-stats-item-icon">📝</span>
-											<span className="infio-insight-stats-item-value">
-												{mockTimelineData.filter(item => item.type === 'created').length}
-											</span>
-											<span className="infio-insight-stats-item-label">创建</span>
-										</div>
-										<div className="infio-insight-stats-item">
-											<span className="infio-insight-stats-item-icon">✏️</span>
-											<span className="infio-insight-stats-item-value">
-												{mockTimelineData.filter(item => item.type === 'modified').length}
-											</span>
-											<span className="infio-insight-stats-item-label">修改</span>
-										</div>
-										<div className="infio-insight-stats-item">
-											<span className="infio-insight-stats-item-icon">💡</span>
-											<span className="infio-insight-stats-item-value">
-												{mockTimelineData.filter(item => item.type === 'insight').length}
-											</span>
-											<span className="infio-insight-stats-item-label">洞察</span>
-										</div>
-									</div>
-								</div>
-							</div>
-							<div className="infio-insight-model-info">
-								<div className="infio-insight-model-row">
-									<span className="infio-insight-model-label">时间线范围</span>
-									<span className="infio-insight-model-value">最近 30 天</span>
-								</div>
-								<div className="infio-insight-actions">
+								<div className="obsidian-feature-not-ready-actions">
 									<button
-										onClick={() => console.log('导出时间线')}
+										onClick={() => setShowTimelineExample(!showTimelineExample)}
 										className="infio-insight-primary-btn"
-										title="导出时间线数据"
 									>
-										导出时间线
-									</button>
-									<button
-										onClick={() => console.log('清理时间线')}
-										className="infio-insight-primary-btn"
-										title="清理过期时间线"
-									>
-										清理时间线
+										{showTimelineExample ? '隐藏示例' : '查看示例'}
 									</button>
 								</div>
 							</div>
 						</div>
-					
-					<div className="obsidian-timeline-container">
-						{mockTimelineData.map((item) => (
-							<div key={item.id} className="obsidian-timeline-item">
-								<div className="obsidian-timeline-date">
-									<div className="obsidian-timeline-date-text">{item.date}</div>
-									<div className="obsidian-timeline-time">{item.time}</div>
-								</div>
-								<div className="obsidian-timeline-line">
-									<div className={`obsidian-timeline-dot ${item.type}`}></div>
-								</div>
-								<div className="obsidian-timeline-content">
-									<div className="obsidian-timeline-header">
-										<span className="obsidian-timeline-title">{item.title}</span>
-										<span className={`obsidian-timeline-type ${item.type}`}>
-											{item.type === 'created' ? '创建' : item.type === 'modified' ? '修改' : '洞察'}
-										</span>
+
+						{/* 只有在用户选择查看示例时才显示 */}
+						{showTimelineExample && (
+							<>
+								{/* 时间线统计 & 操作 */}
+								<div className="infio-insight-stats">
+									<div className="infio-insight-stats-overview">
+										<div className="infio-insight-stats-main">
+											<span className="infio-insight-stats-number">{mockTimelineData.length}</span>
+											<span className="infio-insight-stats-label">时间线事件 (示例)</span>
+										</div>
+										<div className="infio-insight-stats-breakdown">
+											<div className="infio-insight-stats-items">
+												<div className="infio-insight-stats-item">
+													<span className="infio-insight-stats-item-icon">📝</span>
+													<span className="infio-insight-stats-item-value">
+														{mockTimelineData.filter(item => item.type === 'created').length}
+													</span>
+													<span className="infio-insight-stats-item-label">创建</span>
+												</div>
+												<div className="infio-insight-stats-item">
+													<span className="infio-insight-stats-item-icon">✏️</span>
+													<span className="infio-insight-stats-item-value">
+														{mockTimelineData.filter(item => item.type === 'modified').length}
+													</span>
+													<span className="infio-insight-stats-item-label">修改</span>
+												</div>
+												<div className="infio-insight-stats-item">
+													<span className="infio-insight-stats-item-icon">💡</span>
+													<span className="infio-insight-stats-item-value">
+														{mockTimelineData.filter(item => item.type === 'insight').length}
+													</span>
+													<span className="infio-insight-stats-item-label">洞察</span>
+												</div>
+											</div>
+										</div>
 									</div>
-									<div className="obsidian-timeline-description">{item.description}</div>
-									{item.filePath && (
-										<div className="obsidian-timeline-path">{item.filePath}</div>
-									)}
-									<div className="obsidian-timeline-category">{item.category}</div>
+									<div className="infio-insight-model-info">
+										<div className="infio-insight-model-row">
+											<span className="infio-insight-model-label">时间线范围 (示例)</span>
+											<span className="infio-insight-model-value">最近 30 天</span>
+										</div>
+										<div className="infio-insight-actions">
+											<button
+												onClick={() => console.log('导出时间线')}
+												className="infio-insight-primary-btn"
+												disabled
+												title="功能开发中"
+											>
+												导出时间线
+											</button>
+											<button
+												onClick={() => console.log('清理时间线')}
+												className="infio-insight-primary-btn"
+												disabled
+												title="功能开发中"
+											>
+												清理时间线
+											</button>
+										</div>
+									</div>
 								</div>
+							
+							<div className="obsidian-timeline-container">
+								<div className="obsidian-example-badge">示例数据</div>
+								{mockTimelineData.map((item) => (
+									<div key={item.id} className="obsidian-timeline-item">
+										<div className="obsidian-timeline-date">
+											<div className="obsidian-timeline-date-text">{item.date}</div>
+											<div className="obsidian-timeline-time">{item.time}</div>
+										</div>
+										<div className="obsidian-timeline-line">
+											<div className={`obsidian-timeline-dot ${item.type}`}></div>
+										</div>
+										<div className="obsidian-timeline-content">
+											<div className="obsidian-timeline-header">
+												<span className="obsidian-timeline-title">{item.title}</span>
+												<span className={`obsidian-timeline-type ${item.type}`}>
+													{item.type === 'created' ? '创建' : item.type === 'modified' ? '修改' : '洞察'}
+												</span>
+											</div>
+											<div className="obsidian-timeline-description">{item.description}</div>
+											{item.filePath && (
+												<div className="obsidian-timeline-path">{item.filePath}</div>
+											)}
+											<div className="obsidian-timeline-category">{item.category}</div>
+										</div>
+									</div>
+								))}
 							</div>
-						))}
-					</div>
+							</>
+						)}
 					</>
 				)}
 
 				{/* Flashcards Tab */}
 				{activeTab === 'flashcards' && (
 					<>
-						{/* Flashcards 统计 & 操作 */}
-						<div className="infio-insight-stats">
-							<div className="infio-insight-stats-overview">
-								<div className="infio-insight-stats-main">
-									<span className="infio-insight-stats-number">{mockFlashcardsData.length}</span>
-									<span className="infio-insight-stats-label">记忆卡片</span>
+						{/* 功能未准备好的提示 */}
+						<div className="obsidian-feature-not-ready">
+							<div className="obsidian-feature-not-ready-content">
+								<div className="obsidian-feature-not-ready-icon">🚧</div>
+								<div className="obsidian-feature-not-ready-text">
+									<h4>记忆卡片功能开发中</h4>
+									<p>该功能正在开发中，敬请期待。您可以查看示例了解未来的功能样式。</p>
 								</div>
-								<div className="infio-insight-stats-breakdown">
-									<div className="infio-insight-stats-items">
-										<div className="infio-insight-stats-item">
-											<span className="infio-insight-stats-item-icon">📄</span>
-											<span className="infio-insight-stats-item-value">
-												{mockFlashcardsData.filter(card => card.source).length}
-											</span>
-											<span className="infio-insight-stats-item-label">有来源</span>
-										</div>
-										<div className="infio-insight-stats-item">
-											<span className="infio-insight-stats-item-icon">💭</span>
-											<span className="infio-insight-stats-item-value">
-												{mockFlashcardsData.filter(card => !card.source).length}
-											</span>
-											<span className="infio-insight-stats-item-label">无来源</span>
-										</div>
-									</div>
-								</div>
-							</div>
-							<div className="infio-insight-model-info">
-								<div className="infio-insight-model-row">
-									<span className="infio-insight-model-label">展示模式</span>
-									<span className="infio-insight-model-value">
-										{flashcardDisplayMode === 'front' ? '问题模式' : '完整模式'}
-									</span>
-								</div>
-								<div className="infio-insight-actions">
+								<div className="obsidian-feature-not-ready-actions">
 									<button
-										onClick={toggleDisplayMode}
+										onClick={() => setShowFlashcardsExample(!showFlashcardsExample)}
 										className="infio-insight-primary-btn"
-										title={flashcardDisplayMode === 'front' ? '切换到完整模式' : '切换到问题模式'}
 									>
-										{flashcardDisplayMode === 'front' ? '完整模式' : '问题模式'}
-									</button>
-									<button
-										onClick={() => console.log('添加卡片')}
-										className="infio-insight-primary-btn"
-										title="添加新的记忆卡片"
-									>
-										添加卡片
+										{showFlashcardsExample ? '隐藏示例' : '查看示例'}
 									</button>
 								</div>
 							</div>
 						</div>
-					
-					<div className="obsidian-flashcards-container">
-						<div className="obsidian-flashcards-grid">
-							{mockFlashcardsData.map((card) => (
-								<div 
-									key={card.id} 
-									className={`obsidian-flashcard ${flashcardDisplayMode === 'front' ? 'clickable' : ''}`}
-									onClick={() => flashcardDisplayMode === 'front' && toggleCardFlip(card.id)}
-									title={flashcardDisplayMode === 'front' ? (flippedCards.has(card.id) ? '点击隐藏答案' : '点击显示答案') : ''}
-								>
-									<div className="obsidian-flashcard-header">
-										{card.source && (
-											<span className="obsidian-flashcard-source">{card.source}</span>
-										)}
+
+						{/* 只有在用户选择查看示例时才显示 */}
+						{showFlashcardsExample && (
+							<>
+								{/* Flashcards 统计 & 操作 */}
+								<div className="infio-insight-stats">
+									<div className="infio-insight-stats-overview">
+										<div className="infio-insight-stats-main">
+											<span className="infio-insight-stats-number">{mockFlashcardsData.length}</span>
+											<span className="infio-insight-stats-label">记忆卡片 (示例)</span>
+										</div>
+										<div className="infio-insight-stats-breakdown">
+											<div className="infio-insight-stats-items">
+												<div className="infio-insight-stats-item">
+													<span className="infio-insight-stats-item-icon">📄</span>
+													<span className="infio-insight-stats-item-value">
+														{mockFlashcardsData.filter(card => card.source).length}
+													</span>
+													<span className="infio-insight-stats-item-label">有来源</span>
+												</div>
+												<div className="infio-insight-stats-item">
+													<span className="infio-insight-stats-item-icon">💭</span>
+													<span className="infio-insight-stats-item-value">
+														{mockFlashcardsData.filter(card => !card.source).length}
+													</span>
+													<span className="infio-insight-stats-item-label">无来源</span>
+												</div>
+											</div>
+										</div>
 									</div>
-									<div className="obsidian-flashcard-content">
-										{flashcardDisplayMode === 'full' ? (
-											// 完整模式：同时显示问题和答案
-											<>
-												<div className="obsidian-flashcard-question">
-													{card.front}
-												</div>
-												<div className="obsidian-flashcard-answer">
-													{card.back}
-												</div>
-											</>
-										) : (
-											// 问题模式：默认显示问题，点击卡片显示答案
-											<>
-												<div className="obsidian-flashcard-question">
-													{card.front}
-												</div>
-												{flippedCards.has(card.id) && (
-													<div className="obsidian-flashcard-answer">
-														{card.back}
-													</div>
+									<div className="infio-insight-model-info">
+										<div className="infio-insight-model-row">
+											<span className="infio-insight-model-label">展示模式 (示例)</span>
+											<span className="infio-insight-model-value">
+												{flashcardDisplayMode === 'front' ? '问题模式' : '完整模式'}
+											</span>
+										</div>
+										<div className="infio-insight-actions">
+											<button
+												onClick={toggleDisplayMode}
+												className="infio-insight-primary-btn"
+												title={flashcardDisplayMode === 'front' ? '切换到完整模式' : '切换到问题模式'}
+											>
+												{flashcardDisplayMode === 'front' ? '完整模式' : '问题模式'}
+											</button>
+											<button
+												onClick={() => console.log('添加卡片')}
+												className="infio-insight-primary-btn"
+												disabled
+												title="功能开发中"
+											>
+												添加卡片
+											</button>
+										</div>
+									</div>
+								</div>
+							
+							<div className="obsidian-flashcards-container">
+								<div className="obsidian-example-badge">示例数据</div>
+								<div className="obsidian-flashcards-grid">
+									{mockFlashcardsData.map((card) => (
+										<div 
+											key={card.id} 
+											className={`obsidian-flashcard ${flashcardDisplayMode === 'front' ? 'clickable' : ''}`}
+											onClick={() => flashcardDisplayMode === 'front' && toggleCardFlip(card.id)}
+											title={flashcardDisplayMode === 'front' ? (flippedCards.has(card.id) ? '点击隐藏答案' : '点击显示答案') : ''}
+										>
+											<div className="obsidian-flashcard-header">
+												{card.source && (
+													<span className="obsidian-flashcard-source">{card.source}</span>
 												)}
-											</>
-										)}
-									</div>
+											</div>
+											<div className="obsidian-flashcard-content">
+												{flashcardDisplayMode === 'full' ? (
+													// 完整模式：同时显示问题和答案
+													<>
+														<div className="obsidian-flashcard-question">
+															{card.front}
+														</div>
+														<div className="obsidian-flashcard-answer">
+															{card.back}
+														</div>
+													</>
+												) : (
+													// 问题模式：默认显示问题，点击卡片显示答案
+													<>
+														<div className="obsidian-flashcard-question">
+															{card.front}
+														</div>
+														{flippedCards.has(card.id) && (
+															<div className="obsidian-flashcard-answer">
+																{card.back}
+															</div>
+														)}
+													</>
+												)}
+											</div>
+										</div>
+									))}
 								</div>
-							))}
-						</div>
-					</div>
+							</div>
+							</>
+						)}
 					</>
 				)}
 			</div>
@@ -2213,6 +2270,62 @@ const InsightView = () => {
 					padding: var(--size-4-3);
 					border-radius: var(--radius-s);
 					margin-top: var(--size-4-4);
+				}
+
+				/* 功能未准备好提示样式 */
+				.obsidian-feature-not-ready {
+					background-color: var(--background-secondary);
+					border: 1px solid var(--background-modifier-border);
+					border-radius: var(--radius-s);
+					padding: var(--size-4-6);
+					margin-bottom: var(--size-4-4);
+				}
+
+				.obsidian-feature-not-ready-content {
+					display: flex;
+					align-items: center;
+					gap: var(--size-4-4);
+				}
+
+				.obsidian-feature-not-ready-icon {
+					font-size: 24px;
+					flex-shrink: 0;
+				}
+
+				.obsidian-feature-not-ready-text {
+					flex: 1;
+				}
+
+				.obsidian-feature-not-ready-text h4 {
+					margin: 0 0 var(--size-2-2) 0;
+					color: var(--text-normal);
+					font-size: var(--font-ui-large);
+					font-weight: 600;
+				}
+
+				.obsidian-feature-not-ready-text p {
+					margin: 0;
+					color: var(--text-muted);
+					font-size: var(--font-ui-medium);
+					line-height: 1.4;
+				}
+
+				.obsidian-feature-not-ready-actions {
+					flex-shrink: 0;
+				}
+
+				/* 示例数据标签样式 */
+				.obsidian-example-badge {
+					display: inline-block;
+					background-color: var(--color-orange, #f59e0b);
+					color: white;
+					font-size: var(--font-ui-smaller);
+					font-weight: 600;
+					padding: var(--size-2-1) var(--size-2-3);
+					border-radius: var(--radius-s);
+					margin-bottom: var(--size-4-3);
+					text-align: center;
+					letter-spacing: 0.5px;
 				}
 				`}
 			</style>
