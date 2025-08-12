@@ -1,5 +1,5 @@
 import * as Switch from "@radix-ui/react-switch";
-import { ChevronDown, ChevronRight, Download, Plus, Trash2, Undo2 } from 'lucide-react';
+import { Download, Plus, Trash2, Undo2 } from 'lucide-react';
 import { Notice, getLanguage } from 'obsidian';
 import React, { useEffect, useMemo, useState } from 'react';
 
@@ -70,12 +70,11 @@ const CustomModeView = () => {
 		getEffectiveBuiltinMode,
 		getAllEffectiveModes,
 	} = useCustomModes()
-	const { settings } = useSettings()
+	const { settings, setSettings } = useSettings()
 	const { getRAGEngine } = useRAG()
 	const diffStrategy = useDiffStrategy()
 
 	const promptGenerator = useMemo(() => {
-		// @ts-expect-error PromptGenerator constructor parameter types need to be reviewed
 		return new PromptGenerator(getRAGEngine, app, settings, diffStrategy, customModePrompts, getAllEffectiveModes)
 	}, [app, settings, diffStrategy, customModePrompts, getAllEffectiveModes])
 
@@ -90,7 +89,7 @@ const CustomModeView = () => {
 	// Currently selected mode
 	const [selectedMode, setSelectedMode] = useState<string>('ask')
 	const [isBuiltinMode, setIsBuiltinMode] = useState<boolean>(true)
-	const [isAdvancedCollapsed, setIsAdvancedCollapsed] = useState(true);
+
 
 	const isNewMode = React.useMemo(() => selectedMode === "add_new_mode", [selectedMode])
 
@@ -194,7 +193,7 @@ const CustomModeView = () => {
 					openTabById(id: string): void
 				}
 			}
-			const appWithSettings = app as unknown as AppWithSettings
+			const appWithSettings = app as AppWithSettings
 			if (appWithSettings.setting) {
 				appWithSettings.setting.open()
 				appWithSettings.setting.openTabById('infio-copilot')
@@ -304,7 +303,7 @@ const CustomModeView = () => {
 			);
 		}
 		// Show success notification
-		new Notice(t('notifications.customModeSaved'));
+		new Notice(t('notifications.customModeSaved') as string);
 	}, [isBuiltinMode, selectedMode, customModeId, modeName, roleDefinition, customInstructions, selectedTools, modeStrategy, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride, updateCustomMode])
 
 	// Create new mode
@@ -449,10 +448,11 @@ const CustomModeView = () => {
 						<div className="infio-custom-modes-builtin">
 							{[...buildinModes, ...customModeList].map(mode => {
 								const IconComponent = getIconComponent('icon' in mode ? mode.icon : undefined);
+								const isBuiltin = buildinModes.some(builtinMode => builtinMode.slug === mode.slug);
 								return (
 									<button
 										key={mode.slug}
-										className={`infio-mode-btn ${selectedMode === mode.slug ? 'active' : ''}`}
+										className={`infio-mode-btn ${selectedMode === mode.slug ? 'active' : ''} ${isBuiltin ? 'builtin' : 'custom'}`}
 										onClick={() => { setSelectedMode(mode.slug) }}
 									>
 										<IconComponent size={14} />
@@ -470,7 +470,7 @@ const CustomModeView = () => {
 						</div>
 
 						{/* Mode name and icon */}
-						<div className="infio-custom-modes-section">
+						<div className="infio-custom-modes-section infio-main-section">
 							<div className="infio-section-header">
 								<h3>{t('prompt.modeName')}</h3>
 								<div className="infio-section-header-actions">
@@ -548,7 +548,7 @@ const CustomModeView = () => {
 						</div>
 
 						{/* Role definition */}
-						<div className="infio-custom-modes-section">
+						<div className="infio-custom-modes-section infio-main-section">
 							<div className="infio-section-header">
 								<h3>{t('prompt.roleDefinition')}</h3>
 								{isBuiltinMode && isBuiltinModeOverridden(selectedMode) && (
@@ -581,7 +581,7 @@ const CustomModeView = () => {
 						</div>
 
 						{/* Strategy selection */}
-						<div className="infio-custom-modes-section">
+						<div className="infio-custom-modes-section infio-main-section">
 							<div className="infio-section-header">
 								<h3>系统提示策略</h3>
 								{isBuiltinMode && isBuiltinModeOverridden(selectedMode) && (
@@ -619,7 +619,7 @@ const CustomModeView = () => {
 						</div>
 
 						{/* Available tools */}
-						<div className="infio-custom-modes-section">
+						<div className="infio-custom-modes-section infio-main-section">
 							<div className="infio-section-header">
 								<h3>可用工具</h3>
 								{isBuiltinMode && isBuiltinModeOverridden(selectedMode) && (
@@ -659,7 +659,7 @@ const CustomModeView = () => {
 						</div>
 
 						{/* Mode-specific rules */}
-						<div className="infio-custom-modes-section">
+						<div className="infio-custom-modes-section infio-main-section">
 							<div className="infio-section-header">
 								<h3>{t('prompt.modeSpecificRules')}</h3>
 								{isBuiltinMode && isBuiltinModeOverridden(selectedMode) && (
@@ -690,63 +690,72 @@ const CustomModeView = () => {
 								placeholder={t('prompt.modeSpecificRulesPlaceholder')}
 							/>
 							<p className="infio-section-footer">
-								{t('prompt.supportReadingConfig')}<a href="#" className="infio-link" onClick={() => openOrCreateMarkdownFile(app, `_infio_prompts/${modeName}/rules.md`, 0)}>_infio_prompts/{modeName}/rules</a> {t('prompt.file')}
+								{t('prompt.supportReadingConfig')}<a href="#" className="infio-link" onClick={() => openOrCreateMarkdownFile(app, `${settings.infioPromptSettingsPath}/${modeName}/rules.md`, 0)}>{settings.infioPromptSettingsPath}/{modeName}/rules</a> {t('prompt.file')}
 							</p>
 						</div>
 
-						{/* Advanced, override system prompt */}
+						{/* Override system prompt */}
 						<div className="infio-custom-modes-section">
-							<div
-								className="infio-section-header infio-section-header-collapsible"
-								onClick={() => setIsAdvancedCollapsed(!isAdvancedCollapsed)}
-							>
-								<div className="infio-section-header-title-container">
-									{isAdvancedCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-									<h6 className="infio-section-header-title">{t('prompt.overrideSystemPrompt')}</h6>
-								</div>
+							<div className="infio-section-header">
+								<h3>{t('prompt.overrideSystemPrompt')}</h3>
 							</div>
-							{!isAdvancedCollapsed && (
-								<>
-									<p className="infio-section-subtitle">
-										{t('prompt.overrideDescription')}
-										<a href="#" className="infio-link" onClick={() => openOrCreateMarkdownFile(app, `_infio_prompts/${modeName}/system_prompt.md`, 0)}>_infio_prompts/{modeName}/system_prompt</a>
-										{t('prompt.overrideWarning')}
-										<button
-											className="infio-preview-btn"
-											onClick={async () => {
-												let filesSearchMethod = settings.filesSearchSettings.method
-												if (filesSearchMethod === 'auto' && settings.embeddingModelId && settings.embeddingModelId !== '') {
-													filesSearchMethod = 'semantic'
-												}
+							<p className="infio-section-subtitle">
+								{t('prompt.overrideDescription')}
+								<a href="#" className="infio-link" onClick={() => openOrCreateMarkdownFile(app, `${settings.infioPromptSettingsPath}/${modeName}/system_prompt.md`, 0)}>{settings.infioPromptSettingsPath}/{modeName}/system_prompt</a>
+								{t('prompt.overrideWarning')}
+								<button
+									className="infio-preview-btn"
+									onClick={async () => {
+										let filesSearchMethod = settings.filesSearchSettings.method
+										if (filesSearchMethod === 'auto' && settings.embeddingModelId && settings.embeddingModelId !== '') {
+											filesSearchMethod = 'semantic'
+										}
 
-												const userLanguage = getFullLanguageName(getLanguage())
-												const systemPrompt = await promptGenerator.getSystemMessageNew(modeName, filesSearchMethod, userLanguage)
-												const existingLeaf = app.workspace
-													.getLeavesOfType(PREVIEW_VIEW_TYPE)
-													.find(
-														(leaf) =>
-															leaf.view instanceof PreviewView && leaf.view.state.title === `${modeName} system prompt`
-													)
-												if (existingLeaf) {
-													app.workspace.setActiveLeaf(existingLeaf, { focus: true })
-												} else {
-													app.workspace.getLeaf(true).setViewState({
-														type: PREVIEW_VIEW_TYPE,
-														active: true,
-														state: {
-															content: typeof systemPrompt.content === 'string' ? systemPrompt.content : '',
-															title: `${modeName} system prompt`,
-														} satisfies PreviewViewState,
-													})
-												}
-											}
-											}
-										>
-											{t('prompt.previewSystemPrompt')}
-										</button>
-									</p>
-								</>
-							)}
+										const userLanguage = getFullLanguageName(getLanguage())
+										// Use selectedMode (slug) instead of modeName for system prompt generation
+										const systemPrompt = await promptGenerator.getSystemMessageNew(selectedMode, filesSearchMethod, userLanguage)
+										const existingLeaf = app.workspace
+											.getLeavesOfType(PREVIEW_VIEW_TYPE)
+											.find(
+												(leaf) =>
+													leaf.view instanceof PreviewView && leaf.view.state.title === `${modeName} system prompt`
+											)
+										if (existingLeaf) {
+											app.workspace.setActiveLeaf(existingLeaf, { focus: true })
+										} else {
+											app.workspace.getLeaf(true).setViewState({
+												type: PREVIEW_VIEW_TYPE,
+												active: true,
+												state: {
+													content: typeof systemPrompt.content === 'string' ? systemPrompt.content : '',
+													title: `${modeName} system prompt`,
+												} satisfies PreviewViewState,
+											})
+										}
+									}
+									}
+								>
+									{t('prompt.previewSystemPrompt')}
+								</button>
+							</p>
+						</div>
+
+						{/* Prompt Settings Path Configuration */}
+						<div className="infio-custom-modes-section">
+							<div className="infio-section-header">
+								<h3>{t('prompt.promptSettingsPath')}</h3>
+							</div>
+							<p className="infio-section-subtitle">{t('prompt.promptSettingsPathDescription')}</p>
+							<input
+								type="text"
+								value={settings.infioPromptSettingsPath}
+								onChange={async (e) => {
+									const newPath = e.target.value;
+									setSettings({ ...settings, infioPromptSettingsPath: newPath });
+								}}
+								className="infio-custom-modes-input"
+								placeholder={t('prompt.promptSettingsPathPlaceholder')}
+							/>
 						</div>
 
 						{/* Save */}
@@ -810,7 +819,7 @@ const CustomModeView = () => {
 												<div className="infio-market-mode-meta">
 													<div className="infio-market-mode-strategy">{mode.strategy}</div>
 													<div className="infio-market-mode-categories">
-														{mode.category.map((cat, index) => (
+														{mode.category.map((cat) => (
 															<span key={cat} className="infio-market-mode-category">
 																{cat}
 															</span>
@@ -921,6 +930,32 @@ const CustomModeView = () => {
 				.infio-mode-btn.active {
 					background-color: var(--text-accent);
 				}
+
+				/* Built-in mode styling */
+				.infio-mode-btn.builtin {
+					background-color: var(--background-primary);
+					color: var(--text-normal);
+					border: 1px solid var(--background-modifier-border);
+				}
+
+				.infio-mode-btn.builtin.active {
+					background-color: var(--interactive-accent);
+					color: var(--text-on-accent);
+					border-color: var(--interactive-accent);
+				}
+
+				/* Custom mode styling - slightly lighter than builtin */
+				.infio-mode-btn.custom {
+					background-color: var(--background-modifier-hover);
+					color: var(--text-normal);
+					border: 1px solid var(--background-modifier-border-hover);
+				}
+
+				.infio-mode-btn.custom.active {
+					background-color: var(--text-accent);
+					color: var(--text-on-accent);
+					border-color: var(--text-accent);
+				}
 				
 				.infio-custom-modes-custom {
 					display: flex;
@@ -947,6 +982,20 @@ const CustomModeView = () => {
 				
 				.infio-custom-modes-section {
 					margin-bottom: 16px;
+				}
+
+				.infio-main-section {
+					border: 1px solid var(--background-modifier-border);
+					border-radius: 12px;
+					padding: 16px;
+					background-color: var(--background-primary);
+					box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+					transition: border-color 0.2s ease, box-shadow 0.2s ease;
+				}
+
+				.infio-main-section:hover {
+					border-color: var(--interactive-accent);
+					box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 				}
 				
 				.infio-section-header {
@@ -1066,20 +1115,7 @@ const CustomModeView = () => {
 					width: fit-content;
 				}
 
-				.infio-section-header-collapsible {
-					cursor: pointer;
-					user-select: none;
-				}
 
-				.infio-section-header-title-container {
-					display: flex;
-					align-items: center;
-					gap: 4px;
-				}
-
-				.infio-section-header-title {
-					margin: 0;
-				}
 
 				/* Market modes styles */
 				.infio-market-modes-list {

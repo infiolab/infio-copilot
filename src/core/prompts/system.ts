@@ -36,10 +36,12 @@ export class SystemPrompt {
 	protected dataDir: string
 	protected app: App
 	private customModeManager: CustomModeManager
+	private promptSettingsPath: string
 
-	constructor(app: App) {
+	constructor(app: App, promptSettingsPath: string = ROOT_DIR) {
 		this.app = app
-		this.dataDir = normalizePath(`${ROOT_DIR}`)
+		this.promptSettingsPath = promptSettingsPath
+		this.dataDir = normalizePath(`${this.promptSettingsPath}`)
 		this.customModeManager = new CustomModeManager(app)
 		this.ensureDirectory()
 	}

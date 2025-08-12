@@ -209,7 +209,10 @@ export default {
 		"overrideDescription": "您可以通过创建文件来完全替换此模式的系统提示（不包括角色定义和自定义指令）",
 		"overrideWarning": "。这是一个非常高级的功能，将覆盖所有内置提示，包括工具使用，请谨慎使用",
 		"previewSystemPrompt": "预览系统提示",
-		"save": "保存"
+		"save": "保存",
+		"promptSettingsPath": "提示配置路径",
+		"promptSettingsPathDescription": "配置存储模式配置文件的目录路径，包括自定义指令和系统提示覆盖文件",
+		"promptSettingsPathPlaceholder": "请输入配置路径，如: _infio_prompts"
 	},
 	command: {
 		"createQuickCommand": "快捷命令",

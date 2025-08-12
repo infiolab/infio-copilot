@@ -110,7 +110,7 @@ export class PromptGenerator {
 		this.app = app
 		this.settings = settings
 		this.diffStrategy = diffStrategy
-		this.systemPrompt = new SystemPrompt(this.app)
+		this.systemPrompt = new SystemPrompt(this.app, settings.infioPromptSettingsPath)
 		this.customModePrompts = customModePrompts ?? null
 		this.getCustomModeList = getCustomModeList ?? null
 		this.getMcpHub = getMcpHub ?? null

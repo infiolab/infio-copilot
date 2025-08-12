@@ -207,7 +207,10 @@ export default {
 		"overrideDescription": "You can completely replace the system prompt for this mode (excluding role definition and custom instructions) by creating a file",
 		"overrideWarning": ". This is a very advanced feature that will override all built-in prompts including tool usage, please use with caution",
 		"previewSystemPrompt": "Preview System Prompt",
-		"save": "Save"
+		"save": "Save",
+		"promptSettingsPath": "Prompt Settings Path",
+		"promptSettingsPathDescription": "Configure the directory path for storing mode configuration files, including custom instructions and system prompt override files",
+		"promptSettingsPathPlaceholder": "Enter configuration path, e.g.: _infio_prompts"
 	},
 	command: {
 		"createQuickCommand": "Quick Command",

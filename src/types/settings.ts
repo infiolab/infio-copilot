@@ -289,6 +289,9 @@ export const InfioSettingsSchema = z.object({
 	openaicompatibleProvider: OpenAICompatibleProviderSchema,
 	localproviderProvider: LocalProviderSchema,
 
+	// Infio Prompt Settings Path
+	infioPromptSettingsPath: z.string().default('Prompts'),
+
 	// MCP Servers
 	mcpEnabled: z.boolean().catch(false),
 
