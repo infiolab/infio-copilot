@@ -243,6 +243,40 @@ export class InfioSettingTab extends PluginSettingTab {
 						})
 					}),
 			)
+		new Setting(sectionContainer)
+			.setName(t('settings.FilesSearch.useInsightInSemanticSearch'))
+			.setDesc(t('settings.FilesSearch.useInsightInSemanticSearchDescription'))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.filesSearchSettings.useInsightInSemanticSearch)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							filesSearchSettings: {
+								...this.plugin.settings.filesSearchSettings,
+								useInsightInSemanticSearch: value,
+							}
+						})
+					}),
+			)
+		new Setting(sectionContainer)
+			.setName(t('settings.FilesSearch.semanticSearchMethod'))
+			.setDesc(t('settings.FilesSearch.semanticSearchMethodDescription'))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('vector', t('settings.FilesSearch.vector'))
+					.addOption('hybrid', t('settings.FilesSearch.hybrid'))
+					.setValue(this.plugin.settings.filesSearchSettings.semanticSearchMethod)
+					.onChange(async (value) => {
+						await this.plugin.setSettings({
+							...this.plugin.settings,
+							filesSearchSettings: {
+								...this.plugin.settings.filesSearchSettings,
+								semanticSearchMethod: value as 'hybrid' | 'vector',
+							}
+						})
+					}),
+			)
 	}
 
 	private renderChatBehaviorSection(containerEl: HTMLElement): void {

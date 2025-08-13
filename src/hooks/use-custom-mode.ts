@@ -298,7 +298,7 @@ export function useCustomModes(): UseCustomModes {
 				effectiveModes.push(builtinMode)
 			}
 		}
-		console.log("getAllEffectiveModes", effectiveModes)
+		// console.log("getAllEffectiveModes", effectiveModes)
 		return effectiveModes
 	}, [customModeManager])
 

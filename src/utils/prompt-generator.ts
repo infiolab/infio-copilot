@@ -756,6 +756,7 @@ export class PromptGenerator {
 				).processQuery({
 					query,
 					onQueryProgressChange: onQueryProgressChange,
+					semanticSearchMethod: this.settings.filesSearchSettings.semanticSearchMethod,
 				})
 				: await (
 					await this.getRagEngine()
@@ -766,6 +767,7 @@ export class PromptGenerator {
 						folders: folders.map((f) => f.path),
 					},
 					onQueryProgressChange: onQueryProgressChange,
+					semanticSearchMethod: this.settings.filesSearchSettings.semanticSearchMethod,
 				})
 			const snippets = similaritySearchResults.map(({ path, content, metadata }) => {
 				const contentWithLineNumbers = this.addLineNumbersToContent({
@@ -821,7 +823,7 @@ export class PromptGenerator {
 	public async getSystemMessageNew(mode: Mode, filesSearchMethod: string, preferredLanguage: string): Promise<RequestMessage> {
 		const mcpHub = await this.getMcpHub?.()
 		const customModeList = await this.getCustomModeList?.() ?? null
-		console.log("customModeList", customModeList)
+		// console.log("customModeList", customModeList)
 		const prompt = await this.systemPrompt.getSystemPrompt(
 			this.app.vault.getRoot().path,
 			false,

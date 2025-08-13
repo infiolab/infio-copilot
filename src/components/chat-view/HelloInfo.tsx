@@ -67,7 +67,7 @@ const HelloInfo: React.FC<HelloInfoProps> = ({ onNavigate }) => {
 					<h3>What can I help you with?</h3>
 				</div>
 			</div>
-			<div className="infio-navigation-cards">
+			{/* <div className="infio-navigation-cards">
 				{navigationItems.map((item, index) => (
 					<a
 						key={index}
@@ -82,7 +82,7 @@ const HelloInfo: React.FC<HelloInfoProps> = ({ onNavigate }) => {
 						</div>
 					</a>
 				))}
-			</div>
+			</div> */}
 			<style>
 				{`
 				/*

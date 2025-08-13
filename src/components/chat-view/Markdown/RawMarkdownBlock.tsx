@@ -133,10 +133,10 @@ export default function RawMarkdownBlock({
 			if ((linkUrl.includes(' ') || linkUrl.includes('?') || linkUrl.includes('#') || linkUrl.includes('&')) && 
 				!linkUrl.includes('%20') && !linkUrl.includes('%3F') && !linkUrl.includes('%23') && !linkUrl.includes('%26')) {
 				const encodedUrl = encodeUrlForMarkdown(linkUrl)
-				console.debug('🔧 [RawMarkdownBlock] 编码URL:', {
-					original: linkUrl,
-					encoded: encodedUrl
-				})
+				// console.debug('🔧 [RawMarkdownBlock] 编码URL:', {
+				// 	original: linkUrl,
+				// 	encoded: encodedUrl
+				// })
 				return `[${linkText}](${encodedUrl})`
 			}
 			return match

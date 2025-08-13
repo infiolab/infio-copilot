@@ -217,6 +217,7 @@ export class RAGEngine {
 		limit,
 		language,
 		onQueryProgressChange,
+		semanticSearchMethod,
 	}: {
 		query: string
 		scope?: {
@@ -226,6 +227,7 @@ export class RAGEngine {
 		limit?: number
 		language?: string
 		onQueryProgressChange?: (queryProgress: QueryProgressState) => void
+		semanticSearchMethod?: 'hybrid' | 'vector'
 	}): Promise<
 		(Omit<SelectVector, 'embedding'> & {
 			similarity: number
@@ -241,53 +243,72 @@ export class RAGEngine {
 			type: 'querying',
 		})
 
-		// 并行执行相似度搜索和全文搜索
-		const [similarityResults, fulltextResults] = await Promise.all([
-			this.processSimilarityQuery({
+		// 根据搜索方法决定执行策略
+		const searchMethod = semanticSearchMethod || 'hybrid'
+		
+		if (searchMethod === 'vector') {
+			// 仅执行向量相似度搜索
+			const similarityResults = await this.processSimilarityQuery({
 				query,
 				scope,
 				limit,
 				onQueryProgressChange: undefined, // 避免重复触发进度回调
-			}),
-			this.processFulltextQuery({
-				query,
-				scope,
-				limit,
-				language,
-				onQueryProgressChange: undefined, // 避免重复触发进度回调
-			}),
-		])
-
-		// 优化：如果其中一个搜索结果为空，直接返回另一个结果
-		let finalResults: (Omit<SelectVector, 'embedding'> & { similarity: number })[]
-
-		if (fulltextResults.length === 0) {
-			// 全文搜索结果为空，直接返回相似度搜索结果
-			finalResults = similarityResults
-		} else if (similarityResults.length === 0) {
-			// 相似度搜索结果为空，直接返回全文搜索结果（转换格式）
-			finalResults = fulltextResults.map(result => ({
-				...result,
-				similarity: 1 - (result.rank - 1) / fulltextResults.length, // 将rank转换为相似度分数
-			}))
+			})
+			
+			onQueryProgressChange?.({
+				type: 'querying-done',
+				queryResult: similarityResults,
+			})
+			return similarityResults
 		} else {
-			// 两个搜索都有结果，使用 RRF 算法合并
-			const rrf_k = 60 // RRF 常数
-			const mergedResults = this.mergeWithRRF(similarityResults, fulltextResults, rrf_k)
+			// 并行执行相似度搜索和全文搜索 (hybrid)
+			const [similarityResults, fulltextResults] = await Promise.all([
+				this.processSimilarityQuery({
+					query,
+					scope,
+					limit,
+					onQueryProgressChange: undefined, // 避免重复触发进度回调
+				}),
+				this.processFulltextQuery({
+					query,
+					scope,
+					limit,
+					language,
+					onQueryProgressChange: undefined, // 避免重复触发进度回调
+				}),
+			])
 
-			// 转换为与现有接口兼容的格式
-			finalResults = mergedResults.map(result => ({
-				...result,
-				similarity: result.rrfScore, // 使用 RRF 分数作为相似度
-			}))
+			// 优化：如果其中一个搜索结果为空，直接返回另一个结果
+			let finalResults: (Omit<SelectVector, 'embedding'> & { similarity: number })[]
+
+			if (fulltextResults.length === 0) {
+				// 全文搜索结果为空，直接返回相似度搜索结果
+				finalResults = similarityResults
+			} else if (similarityResults.length === 0) {
+				// 相似度搜索结果为空，直接返回全文搜索结果（转换格式）
+				finalResults = fulltextResults.map(result => ({
+					...result,
+					similarity: 1 - (result.rank - 1) / fulltextResults.length, // 将rank转换为相似度分数
+				}))
+			} else {
+				// 两个搜索都有结果，使用 RRF 算法合并
+				const rrf_k = 60 // RRF 常数
+				const mergedResults = this.mergeWithRRF(similarityResults, fulltextResults, rrf_k)
+
+				// 转换为与现有接口兼容的格式
+				finalResults = mergedResults.map(result => ({
+					...result,
+					similarity: result.rrfScore, // 使用 RRF 分数作为相似度
+				}))
+			}
+
+			onQueryProgressChange?.({
+				type: 'querying-done',
+				queryResult: finalResults,
+			})
+
+			return finalResults
 		}
-
-		onQueryProgressChange?.({
-			type: 'querying-done',
-			queryResult: finalResults,
-		})
-
-		return finalResults
 	}
 
 	/**

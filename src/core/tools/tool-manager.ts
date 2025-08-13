@@ -442,7 +442,9 @@ export class ToolManager {
 			toolArgs.filepath,
 			currentWorkspace || undefined,
 			app,
-			await getTransEngine()
+			await getTransEngine(),
+			settings.filesSearchSettings.useInsightInSemanticSearch,
+			settings.filesSearchSettings.semanticSearchMethod
 		)
 
 		const contextInfo = currentWorkspace

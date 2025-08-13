@@ -261,11 +261,15 @@ const FilesSearchSettingsSchema = z.object({
 	regexBackend: z.enum(['coreplugin', 'ripgrep']).catch('coreplugin'),
 	matchBackend: z.enum(['omnisearch', 'coreplugin']).catch('coreplugin'),
 	ripgrepPath: z.string().catch(''),
+	useInsightInSemanticSearch: z.boolean().catch(false),
+	semanticSearchMethod: z.enum(['hybrid', 'vector']).catch('vector'),
 }).catch({
 	method: 'auto',
 	regexBackend: 'coreplugin',
 	matchBackend: 'coreplugin',
 	ripgrepPath: '',
+	useInsightInSemanticSearch: false,
+	semanticSearchMethod: 'vector',
 });
 
 export const InfioSettingsSchema = z.object({
@@ -353,6 +357,7 @@ export const InfioSettingsSchema = z.object({
 
 	// Workspace
 	workspace: z.string().catch(''),
+
 	// Mode
 	mode: z.string().catch('ask'),
 	defaultMention: z.enum(['none', 'current-file', 'vault']).catch('none'),

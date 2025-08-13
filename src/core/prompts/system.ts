@@ -73,7 +73,7 @@ export class SystemPrompt {
 	private async getEffectiveModeConfig(mode: Mode, customModes?: ModeConfig[]): Promise<ModeConfig | null> {
 		// Get the complete effective modes array and find the specific mode
 		const effectiveModes = await this.getEffectiveModesArray(customModes)
-		console.log("effectiveModes", effectiveModes)
+		// console.log("effectiveModes", effectiveModes)
 		return effectiveModes.find(m => m.slug === mode) || null
 	}
 

@@ -128,7 +128,7 @@ export default {
 			success: "成功",
 			failed: "失败",
 			switchToMode: '切换到 "{mode}" 模式',
-			semanticSearchInPath: '在 {path} 中语义搜索文件 "{query}"',
+			semanticSearchInPath: '搜索 {path} "{query}"',
 			webSearch: "网页搜索：{query}",
 			searching: "正在搜索...",
 			done: "完成",
@@ -376,6 +376,12 @@ export default {
 			omnisearch: 'Omnisearch',
 			ripgrepPath: 'ripgrep 路径',
 			ripgrepPathDescription: 'ripgrep 二进制文件的路径。使用 ripgrep 正则搜索时需要此项。',
+			useInsightInSemanticSearch: '在语义搜索中使用洞察',
+			useInsightInSemanticSearchDescription: '启用后在执行语义搜索时包含洞察数据。',
+			semanticSearchMethod: '语义搜索方法',
+			semanticSearchMethodDescription: '选择语义搜索的方法。',
+			vector: '向量',
+			hybrid: '混合',
 		},
 		
 		// 聊天行为部分

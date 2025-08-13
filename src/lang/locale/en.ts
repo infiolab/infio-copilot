@@ -127,7 +127,7 @@ export default {
 			success: "Success",
 			failed: "Failed",
 			switchToMode: 'Switch to "{mode}" mode',
-			semanticSearchInPath: 'semantic search files "{query}" in {path}',
+			semanticSearchInPath: 'Search {path} "{query}"',
 			webSearch: "Web search: {query}",
 			searching: "Searching...",
 			done: "Done",
@@ -374,6 +374,12 @@ export default {
 			omnisearch: 'Omnisearch',
 			ripgrepPath: 'ripgrep path',
 			ripgrepPathDescription: 'Path to the ripgrep binary. When using ripgrep regex search, this is required.',
+			useInsightInSemanticSearch: 'Use insights in semantic search',
+			useInsightInSemanticSearchDescription: 'Enable to include insights data when performing semantic search.',
+			semanticSearchMethod: 'Semantic search method',
+			semanticSearchMethodDescription: 'Choose the method for semantic search.',
+			vector: 'Vector',
+			hybrid: 'Hybrid',
 		},
 		
 		// Chat Behavior Section

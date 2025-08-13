@@ -4,8 +4,19 @@ import { App, TFile, TFolder, Vault } from 'obsidian'
 import { RAGEngine } from '../core/rag/rag-engine'
 import { TRANSFORMATIONS, TransEngine } from '../core/transformations/trans-engine'
 import { Workspace } from '../database/json/workspace/types'
+import { SelectSourceInsight, SelectVector } from '../database/schema'
 
+import { normalizePath } from './path'
 import { addLineNumbers } from './prompt-generator'
+
+// Type definitions for search results
+interface RAGSearchResult extends Omit<SelectVector, 'embedding'> {
+	similarity: number
+}
+
+interface InsightSearchResult extends Omit<SelectSourceInsight, 'embedding'> {
+	similarity: number
+}
 
 export const findFilesMatchingPatterns = async (
 	patterns: string[],
@@ -223,13 +234,15 @@ const listFolderContentsFirstLevel = async (folder: TFolder, prefix: string): Pr
 	return result
 }
 
-export const matchSearchFiles = async (vault: Vault, path: string, query: string, file_pattern: string) => {
+// TODO: Implement match search functionality
+// export const matchSearchFiles = async (vault: Vault, path: string, query: string, file_pattern: string) => {
+// 
+// }
 
-}
-
-export const regexSearchFiles = async (vault: Vault, path: string, regex: string, file_pattern: string) => {
-
-}
+// TODO: Implement regex search functionality  
+// export const regexSearchFiles = async (vault: Vault, path: string, regex: string, file_pattern: string) => {
+//
+// }
 
 /**
  * 语义搜索文件（同时查询原始笔记和抽象洞察）
@@ -240,13 +253,15 @@ export const semanticSearchFiles = async (
 	path?: string,
 	workspace?: Workspace,
 	app?: App,
-	transEngine?: TransEngine // Trans 引擎实例 - 抽象洞察数据库
+	transEngine?: TransEngine, // Trans 引擎实例 - 抽象洞察数据库
+	useInsightInSemanticSearch?: boolean, // 是否在语义搜索中使用洞察
+	semanticSearchMethod?: 'hybrid' | 'vector' // 语义搜索方法
 ): Promise<string> => {
 	let scope: { files: string[], folders: string[] } | undefined
 
 	// 如果指定了路径，使用该路径
 	if (path && path !== '' && path !== '.' && path !== '/') {
-		scope = { files: [], folders: [path] }
+		scope = { files: [], folders: [normalizePath(path)] }
 	} 
 	// 如果没有指定路径但有工作区，使用工作区范围
 	else if (workspace && app) {
@@ -256,7 +271,9 @@ export const semanticSearchFiles = async (
 		// 处理工作区中的文件夹和标签
 		for (const item of workspace.content) {
 			if (item.type === 'folder') {
-				folders.push(item.content)
+				// 标准化文件夹路径：移除尾部斜杠（除了根路径"/"）
+				const folderPath = normalizePath(item.content)
+				folders.push(folderPath)
 			} else if (item.type === 'tag') {
 				// 获取标签对应的所有文件
 				const tagFiles = getFilesWithTag(item.content, app)
@@ -277,36 +294,38 @@ export const semanticSearchFiles = async (
 		const ragResults = await ragEngine.processQuery({
 			query: query,
 			scope: scope,
+			limit: 10,
+			semanticSearchMethod: semanticSearchMethod || 'hybrid', // 传递语义搜索方法
 		})
 
 		if (ragResults.length > 0) {
-			resultSections.push('## 📝 原始笔记内容')
-			const ragSnippets = ragResults.map(({ path, content, metadata }: any) => {
+			resultSections.push('## 📝 Original Note Content')
+			const ragSnippets = ragResults.map(({ path, content, metadata }: RAGSearchResult) => {
 				const contentWithLineNumbers = addLineNumbers(content, metadata.startLine)
 				return `<file_block_content location="${path}#L${metadata.startLine}-${metadata.endLine}">\n${contentWithLineNumbers}\n</file_block_content>`
 			}).join('\n\n')
 			resultSections.push(ragSnippets)
 		}
 	} catch (error) {
-		console.warn('RAG 搜索失败:', error)
-		resultSections.push('## 📝 原始笔记内容\n⚠️ 原始笔记搜索失败')
+		console.warn('RAG search failed:', error)
+		resultSections.push('## 📝 Original Note Content\n⚠️ Original note search failed')
 	}
 
 	// 2. 查询抽象洞察数据库 (TransEngine) - 使用新的 processQuery 接口
-	if (transEngine) {
+	if (transEngine && useInsightInSemanticSearch === true) {
 		try {
 			const insightResults = await transEngine.processQuery({
 				query: query,
 				scope: scope,
-				limit: 20,
+				limit: 10,
 				minSimilarity: 0.3,
 			})
 
 			if (insightResults.length > 0) {
-				resultSections.push('\n## 🧠 AI 抽象洞察')
+				resultSections.push('\n## 🧠 AI Abstract Insights')
 				
-				// 按转换类型分组
-				const groupedInsights: { [key: string]: any[] } = {}
+				// Group by transformation type
+				const groupedInsights: { [key: string]: InsightSearchResult[] } = {}
 				insightResults.forEach(insight => {
 					if (!groupedInsights[insight.insight_type]) {
 						groupedInsights[insight.insight_type] = []
@@ -314,14 +333,14 @@ export const semanticSearchFiles = async (
 					groupedInsights[insight.insight_type].push(insight)
 				})
 
-				// 渲染每种类型的洞察
+				// Render each type of insight
 				for (const [insightType, insights] of Object.entries(groupedInsights)) {
 					const transformationConfig = TRANSFORMATIONS[insightType as keyof typeof TRANSFORMATIONS]
 					const typeName = transformationConfig ? transformationConfig.description : insightType
 					
 					resultSections.push(`\n### ${typeName}`)
 					
-					insights.forEach((insight, index) => {
+					insights.forEach((insight) => {
 						const similarity = (insight.similarity * 100).toFixed(1)
 						resultSections.push(
 							`<insight_block source="${insight.source_path}" type="${insightType}" similarity="${similarity}%">\n${insight.insight}\n</insight_block>`
@@ -330,8 +349,8 @@ export const semanticSearchFiles = async (
 				}
 			}
 		} catch (error) {
-			console.warn('TransEngine 搜索失败:', error)
-			resultSections.push('\n## 🧠 AI 抽象洞察\n⚠️ 洞察搜索失败: ' + (error instanceof Error ? error.message : String(error)))
+			console.warn('TransEngine search failed:', error)
+			resultSections.push('\n## 🧠 AI Abstract Insights\n⚠️ Insight search failed: ' + (error instanceof Error ? error.message : String(error)))
 		}
 	}
 

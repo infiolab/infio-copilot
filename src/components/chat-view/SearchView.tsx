@@ -14,6 +14,7 @@ import { t } from '../../lang/helpers'
 import { Mentionable } from '../../types/mentionable'
 import { getFilesWithTag } from '../../utils/glob-utils'
 import { openMarkdownFile } from '../../utils/obsidian'
+import { normalizePath } from '../../utils/path'
 
 import { ModelSelect } from './chat-input/ModelSelect'
 import SearchInputWithActions, { SearchInputRef } from './chat-input/SearchInputWithActions'
@@ -159,7 +160,9 @@ const SearchView = () => {
 				// 处理工作区中的文件夹和标签
 				for (const item of currentWorkspace.content) {
 					if (item.type === 'folder') {
-						folders.push(item.content)
+						// 标准化文件夹路径：移除尾部斜杠（除了根路径"/"）
+						const folderPath = normalizePath(item.content)
+						folders.push(folderPath)
 					} else if (item.type === 'tag') {
 						// 获取标签对应的所有文件
 						const tagFiles = getFilesWithTag(item.content, app)
@@ -180,6 +183,7 @@ const SearchView = () => {
 					query: searchTerm,
 					scope: scope,
 					limit: 50,
+					semanticSearchMethod: settings.filesSearchSettings.semanticSearchMethod,
 				})
 
 				setSearchResults(results)
@@ -207,6 +211,7 @@ const SearchView = () => {
 						query: searchTerm,
 						scope: scope,
 						limit: 25, // 每个类型限制25个结果
+						semanticSearchMethod: settings.filesSearchSettings.semanticSearchMethod,
 					}),
 					transEngine.processQuery({
 						query: searchTerm,
