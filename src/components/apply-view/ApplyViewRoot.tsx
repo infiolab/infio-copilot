@@ -134,13 +134,43 @@ export default function ApplyViewRoot({ state, close }: {
 		// 兼容旧的直接应用逻辑
 		const newContent = diff.reduce((result, change, index) => {
 			const status = diffStatus[index]
-			// Keep unchanged content, accepted additions, or accepted removals
-			if ((!change.added && !change.removed) ||
-				(change.added && status === 'accepted') ||
-				(change.removed && status === 'accepted')) {
-				return result + editedContents[index];
+			
+			// For unchanged content, always include
+			if (!change.added && !change.removed) {
+				return result + editedContents[index]
 			}
-			return result;
+			
+			// For changes that have been explicitly accepted, include them
+			if (status === 'accepted') {
+				return result + editedContents[index]
+			}
+			
+			// For changes that have been explicitly excluded, skip them
+			if (status === 'excluded') {
+				return result
+			}
+			
+			// For active changes (default behavior when accepting all):
+			if (status === 'active') {
+				// For replacements, include added content and skip removed content
+				if (change.isReplacement) {
+					if (change.replacementType === 'added') {
+						return result + editedContents[index]
+					} else if (change.replacementType === 'removed') {
+						return result // Skip removed content in replacements
+					}
+				}
+				// For non-replacement additions, include them
+				else if (change.added) {
+					return result + editedContents[index]
+				}
+				// For non-replacement removals, skip them
+				else if (change.removed) {
+					return result
+				}
+			}
+			
+			return result
 		}, '')
 		const file = app.vault.getFileByPath(state.file)
 		if (!file) {
@@ -290,18 +320,18 @@ export default function ApplyViewRoot({ state, close }: {
 													className="infio-editable-content"
 												/>
 												{/* Show replacement actions for last item in replacement group */}
-												{isLastInGroup && status === 'active' && (
+												{isLastInGroup && status === 'active' && part.replacementGroupId && (
 													<div className="infio-diff-line-actions">
 														<button
 															aria-label={t('applyView.acceptReplacement')}
-															onClick={() => acceptReplacement(part.replacementGroupId!)}
+															onClick={() => acceptReplacement(part.replacementGroupId)}
 															className="infio-accept"
 														>
 															{acceptIcon && '✓'}
 														</button>
 														<button
 															aria-label={t('applyView.rejectReplacement')}
-															onClick={() => rejectReplacement(part.replacementGroupId!)}
+															onClick={() => rejectReplacement(part.replacementGroupId)}
 															className="infio-exclude"
 														>
 															{rejectIcon && '✗'}
