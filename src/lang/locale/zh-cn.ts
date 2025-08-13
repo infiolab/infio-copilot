@@ -261,6 +261,11 @@ export default {
 		fileNotFound: '文件未找到',
 		acceptLine: '接受此行',
 		excludeLine: '排除此行',
+		replacement: '替换',
+		acceptReplacement: '接受替换',
+		rejectReplacement: '拒绝替换',
+		acceptReplace: '使用新内容',
+		keepOriginal: '保持原始',
 	},
 	previewView: {
 		close: '关闭预览',

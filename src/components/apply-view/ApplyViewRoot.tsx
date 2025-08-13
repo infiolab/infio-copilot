@@ -8,6 +8,41 @@ import { useApp } from '../../contexts/AppContext'
 import { useApplyEditManager } from '../../contexts/ApplyEditManagerContext'
 import { t } from '../../lang/helpers'
 
+// Enhanced diff type that includes replacement information
+interface EnhancedChange extends Change {
+	isReplacement?: boolean
+	replacementGroupId?: string
+	replacementType?: 'removed' | 'added'
+}
+
+// Function to detect replacements in diff
+const detectReplacements = (changes: Change[]): EnhancedChange[] => {
+	const enhanced: EnhancedChange[] = changes.map(change => ({ ...change }))
+	let groupId = 0
+
+	for (let i = 0; i < enhanced.length - 1; i++) {
+		const current = enhanced[i]
+		const next = enhanced[i + 1]
+
+		// Look for pattern: removed followed by added
+		if (current.removed && next.added) {
+			const currentGroupId = `replacement-${groupId++}`
+			
+			// Mark current as removed part of replacement
+			current.isReplacement = true
+			current.replacementGroupId = currentGroupId
+			current.replacementType = 'removed'
+			
+			// Mark next as added part of replacement
+			next.isReplacement = true
+			next.replacementGroupId = currentGroupId
+			next.replacementType = 'added'
+		}
+	}
+
+	return enhanced
+}
+
 export default function ApplyViewRoot({ state, close }: {
 	state: ApplyViewState
 	close: () => void
@@ -30,11 +65,12 @@ export default function ApplyViewRoot({ state, close }: {
 	// Track which lines have been accepted or excluded
 	const [diffStatus, setDiffStatus] = useState<Array<'active' | 'accepted' | 'excluded'>>([])
 
-	const [diff] = useState<Change[]>(() => {
+	const [diff] = useState<EnhancedChange[]>(() => {
 		const initialDiff = diffLines(state.oldContent, state.newContent)
+		const enhancedDiff = detectReplacements(initialDiff)
 		// Initialize all lines as 'active'
-		setDiffStatus(initialDiff.map(() => 'active'))
-		return initialDiff
+		setDiffStatus(enhancedDiff.map(() => 'active'))
+		return enhancedDiff
 	})
 
 	const [editedContents, setEditedContents] = useState<string[]>(() => {
@@ -47,6 +83,38 @@ export default function ApplyViewRoot({ state, close }: {
 			setDiffStatus(diff.map(() => 'active'))
 		}
 	}, [diff, diffStatus.length])
+
+	const acceptReplacement = (groupId: string) => {
+		setDiffStatus(prevStatus => {
+			const newStatus = [...prevStatus]
+			diff.forEach((change, index) => {
+				if (change.replacementGroupId === groupId) {
+					if (change.replacementType === 'removed') {
+						newStatus[index] = 'excluded' // Remove the old content
+					} else if (change.replacementType === 'added') {
+						newStatus[index] = 'accepted' // Keep the new content
+					}
+				}
+			})
+			return newStatus
+		})
+	}
+
+	const rejectReplacement = (groupId: string) => {
+		setDiffStatus(prevStatus => {
+			const newStatus = [...prevStatus]
+			diff.forEach((change, index) => {
+				if (change.replacementGroupId === groupId) {
+					if (change.replacementType === 'removed') {
+						newStatus[index] = 'accepted' // Keep the old content
+					} else if (change.replacementType === 'added') {
+						newStatus[index] = 'excluded' // Remove the new content
+					}
+				}
+			})
+			return newStatus
+		})
+	}
 
 	const handleAccept = async () => {
 		// 如果有 editId，使用 ApplyEditManager 处理
@@ -65,10 +133,11 @@ export default function ApplyViewRoot({ state, close }: {
 
 		// 兼容旧的直接应用逻辑
 		const newContent = diff.reduce((result, change, index) => {
-			// Keep unchanged content, non-excluded additions, or excluded removals
+			const status = diffStatus[index]
+			// Keep unchanged content, accepted additions, or accepted removals
 			if ((!change.added && !change.removed) ||
-				(change.added && diffStatus[index] !== 'excluded') ||
-				(change.removed && diffStatus[index] === 'excluded')) {
+				(change.added && status === 'accepted') ||
+				(change.removed && status === 'accepted')) {
 				return result + editedContents[index];
 			}
 			return result;
@@ -194,16 +263,25 @@ export default function ApplyViewRoot({ state, close }: {
 								{diff.map((part, index) => {
 									// Determine line display status based on diffStatus
 									const status = diffStatus[index]
-									const isHidden =
-										(part.added && status === 'excluded') ||
-										(part.removed && status === 'accepted')
+									const isHidden = status === 'excluded'
 
 									if (isHidden) return null
+
+									// Check if this is part of a replacement group
+									const isReplacementGroup = part.isReplacement && part.replacementGroupId
+									const isLastInGroup = isReplacementGroup && 
+										(index === diff.length - 1 || diff[index + 1].replacementGroupId !== part.replacementGroupId)
 
 									return (
 										<div
 											key={index}
-											className={`infio-diff-line ${part.added ? 'added' : part.removed ? 'removed' : ''} ${status !== 'active' ? status : ''}`}
+											className={`infio-diff-line ${
+												part.added ? 'added' : part.removed ? 'removed' : ''
+											} ${
+												part.isReplacement ? 'replacement' : ''
+											} ${
+												status !== 'active' ? status : ''
+											}`}
 										>
 											<div className="infio-diff-content-wrapper">
 												<ContentEditable
@@ -211,7 +289,27 @@ export default function ApplyViewRoot({ state, close }: {
 													onChange={(evt) => handleContentChange(index, evt)}
 													className="infio-editable-content"
 												/>
-												{(part.added || part.removed) && status === 'active' && (
+												{/* Show replacement actions for last item in replacement group */}
+												{isLastInGroup && status === 'active' && (
+													<div className="infio-diff-line-actions">
+														<button
+															aria-label={t('applyView.acceptReplacement')}
+															onClick={() => acceptReplacement(part.replacementGroupId!)}
+															className="infio-accept"
+														>
+															{acceptIcon && '✓'}
+														</button>
+														<button
+															aria-label={t('applyView.rejectReplacement')}
+															onClick={() => rejectReplacement(part.replacementGroupId!)}
+															className="infio-exclude"
+														>
+															{rejectIcon && '✗'}
+														</button>
+													</div>
+												)}
+												{/* Show individual line actions only for non-replacement lines */}
+												{(part.added || part.removed) && status === 'active' && !part.isReplacement && (
 													<div className="infio-diff-line-actions">
 														<button
 															aria-label={t('applyView.acceptLine')}
@@ -262,7 +360,7 @@ export default function ApplyViewRoot({ state, close }: {
         .infio-diff-line-actions {
           position: absolute;
           right: 4px;
-          top: 4px;
+          bottom: 4px;
           display: flex;
           gap: 4px;
         }
@@ -302,6 +400,18 @@ export default function ApplyViewRoot({ state, close }: {
 
         .infio-diff-line.accepted .infio-editable-content {
           opacity: 0.7;
+        }
+
+        /* Replacement styles - keep consistent with add/remove */
+        .infio-diff-line.replacement.removed .infio-editable-content {
+          background-color: rgba(255, 0, 0, 0.1);
+          border-left: 3px solid #ef5350;
+          text-decoration: line-through;
+        }
+        
+        .infio-diff-line.replacement.added .infio-editable-content {
+          background-color: rgba(0, 255, 0, 0.1);
+          border-left: 3px solid #26a69a;
         }
       `}</style>
 		</div>

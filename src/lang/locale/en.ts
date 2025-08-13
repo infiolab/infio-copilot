@@ -259,6 +259,11 @@ export default {
 		fileNotFound: 'File not found',
 		acceptLine: 'Accept line',
 		excludeLine: 'Exclude line',
+		replacement: 'Replacement',
+		acceptReplacement: 'Accept replacement',
+		rejectReplacement: 'Reject replacement',
+		acceptReplace: 'Use New',
+		keepOriginal: 'Keep Original',
 	},
 	previewView: {
 		close: 'Close',
