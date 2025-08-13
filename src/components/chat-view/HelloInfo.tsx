@@ -2,6 +2,7 @@ import { Box, History, Lightbulb, Search } from 'lucide-react';
 import React from 'react';
 
 import { t } from '../../lang/helpers';
+import { getInfioLogoSvg } from '../../utils/icon';
 
 interface HelloInfoProps {
 	onNavigate: (tab: 'commands' | 'custom-mode' | 'mcp' | 'search' | 'history' | 'insights' | 'workspace') => void;
@@ -53,12 +54,19 @@ const HelloInfo: React.FC<HelloInfoProps> = ({ onNavigate }) => {
 		// }
 	];
 
+	// Convert SVG string to data URL for proper display
+	const logoDataUrl = `data:image/svg+xml;base64,${btoa(getInfioLogoSvg())}`;
+
 	return (
 		<div className="infio-hello-info">
-			{/* <div className="infio-hello-title">
-				<h3>{t('chat.welcome.title')}</h3>
-				<p>{t('chat.welcome.subtitle')}</p>
-			</div> */}
+			<div className="infio-hero-section">
+				<div className="infio-logo-container">
+					<img src={logoDataUrl} alt="Infio Logo" className="infio-logo" />
+				</div>
+				<div className="infio-hello-title">
+					<h3>What can I help you with?</h3>
+				</div>
+			</div>
 			<div className="infio-navigation-cards">
 				{navigationItems.map((item, index) => (
 					<a
@@ -70,7 +78,6 @@ const HelloInfo: React.FC<HelloInfoProps> = ({ onNavigate }) => {
 							{item.icon}
 						</div>
 						<div className="infio-navigation-content">
-							<div className="infio-navigation-label">{item.label}</div>
 							<div className="infio-navigation-description">{item.description}</div>
 						</div>
 					</a>
@@ -91,19 +98,31 @@ const HelloInfo: React.FC<HelloInfoProps> = ({ onNavigate }) => {
 						margin: var(--size-4-4);
 					}
 
-					.infio-hello-title h3 {
-						font-size: 2rem;
-						font-weight: 600;
-						color: var(--text-normal);
-						margin: 0 0 var(--size-4-3) 0;
-						text-align: center;
+					.infio-hero-section {
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						gap: var(--size-4-4);
 					}
 
-					.infio-hello-title p {
-						font-size: var(--font-ui-medium);
-						color: var(--text-muted);
+					.infio-logo-container {
+						display: flex;
+						align-items: center;
+						justify-content: center;
+					}
+
+					.infio-logo {
+						width: 80px;
+						height: 80px;
+						border-radius: var(--radius-m);
+					}
+
+					.infio-hello-title h3 {
+						font-size: 1.5rem;
+						font-weight: 500;
+						color: var(--text-normal);
 						margin: 0;
-						line-height: var(--line-height-normal);
+						text-align: center;
 					}
 
 					.infio-navigation-cards {
@@ -111,52 +130,43 @@ const HelloInfo: React.FC<HelloInfoProps> = ({ onNavigate }) => {
 						flex-direction: column;
 						width: 100%;
 						max-width: 480px;
+						gap: var(--size-2-2);
 					}
 
 					.infio-navigation-card {
 						display: flex;
-						align-items: center;
-						gap: var(--size-4-4);
-						padding: var(--size-4-5) var(--size-4-6);
+						align-items: flex-start;
+						gap: var(--size-4-1);
+						padding: var(--size-4-2) var(--size-4-2);
 						cursor: pointer;
 						text-align: left;
 						width: 100%;
-						box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-					}
-
-					.infio-navigation-card:hover {
-						background: var(--background-modifier-hover);
-						border-color: var(--text-accent);
+						transition: all 0.2s ease;
 					}
 
 					.infio-navigation-icon {
 						display: flex;
 						align-items: center;
 						justify-content: center;
-						border-radius: var(--radius-m);
-						color: var(--text-accent);
+						width: 18px;
+						height: 18px;
+						border-radius: var(--radius-s);
 						flex-shrink: 0;
+						margin-top: var(--size-2-1);
 					}
 
 					.infio-navigation-content {
 						display: flex;
 						flex-direction: column;
-						gap: var(--size-2-2);
 						flex-grow: 1;
-					}
-
-					.infio-navigation-label {
-						font-size: var(--font-ui-large);
-						font-weight: 600;
-						color: var(--text-normal);
-						margin: 0;
+						padding-top: var(--size-2-1);
 					}
 
 					.infio-navigation-description {
-						font-size: var(--font-ui-small);
-						color: var(--text-muted);
+						font-size: var(--font-ui-medium);
+						color: var(--text-normal);
 						margin: 0;
-						line-height: 1.5;
+						line-height: 1.4;
 					}
 
 				`}

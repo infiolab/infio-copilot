@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { EditorView } from '@codemirror/view'
 // import { PGlite } from '@electric-sql/pglite'
-import { Editor, MarkdownView, Modal, Notice, Plugin, TFile } from 'obsidian'
+import { Editor, MarkdownView, Modal, Notice, Plugin, TFile, addIcon } from 'obsidian'
 
 import { ApplyView } from './ApplyView'
 import { ChatView } from './ChatView'
@@ -40,6 +40,7 @@ import { createDataviewManager, DataviewManager } from './utils/dataview'
 import { getMentionableBlockData } from './utils/obsidian'
 import './utils/path'
 import { onEnt } from './utils/web-search'
+import { getInfioLogoSimpleSvg } from './utils/icon'
 
 export default class InfioPlugin extends Plugin {
 	private metadataCacheUnloadFn: (() => void) | null = null
@@ -65,6 +66,9 @@ export default class InfioPlugin extends Plugin {
 	async onload() {
 		// load settings
 		await this.loadSettings()
+
+		// Add custom Infio logo icon
+		addIcon('infio-logo', getInfioLogoSimpleSvg())
 
 		// migrate to json database
 		setTimeout(() => {
@@ -101,8 +105,8 @@ export default class InfioPlugin extends Plugin {
 			this.applyEditManager = null
 		}
 
-		// add icon to ribbon
-		this.addRibbonIcon('wand-sparkles', t('main.openInfioCopilot'), () =>
+		// add icon to ribbon - using custom Infio logo
+		this.addRibbonIcon('infio-logo', t('main.openInfioCopilot'), () =>
 			this.openChatView(),
 		)
 

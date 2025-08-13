@@ -1,7 +1,6 @@
 import {
 	App,
 	Modal,
-	Notice,
 	PluginSettingTab,
 	Setting,
 	TFile
@@ -18,6 +17,7 @@ import { findFilesMatchingPatterns } from '../utils/glob-utils';
 import BasicAutoCompleteSettings from './components/BasicAutoCompleteSettings';
 // import DangerZoneSettings from './components/DangerZoneSettings';
 import CustomProviderSettings from './components/ModelProviderSettings';
+import PluginInfoSettings from './components/PluginInfoSettings';
 import PostprocessingSettings from './components/PostprocessingSettings';
 import PreprocessingSettings from './components/PreprocessingSettings';
 import PrivacySettings from './components/PrivacySettings';
@@ -27,6 +27,7 @@ export class InfioSettingTab extends PluginSettingTab {
 	plugin: InfioPlugin;
 	private autoCompleteContainer: HTMLElement | null = null;
 	private modelsContainer: HTMLElement | null = null;
+	private pluginInfoContainer: HTMLElement | null = null;
 
 	constructor(app: App, plugin: InfioPlugin) {
 		super(app, plugin)
@@ -36,6 +37,7 @@ export class InfioSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this
 		containerEl.empty()
+		this.renderPluginInfoSection(containerEl)
 		this.renderModelsSection(containerEl)
 		this.renderModelParametersSection(containerEl)
 		this.renderFilesSearchSection(containerEl)
@@ -62,8 +64,19 @@ export class InfioSettingTab extends PluginSettingTab {
 	}
 
 	private renderModelParametersSection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setHeading().setName(t('settings.ModelParameters.title'));
-		new Setting(containerEl)
+		// Create section container with border styling like ModelProviderSettings
+		const sectionContainer = containerEl.createDiv("model-parameters-section");
+		sectionContainer.style.cssText = `
+			background: var(--background-primary);
+			border: 1px solid var(--background-modifier-border);
+			border-radius: var(--radius-m);
+			padding: var(--size-4-4);
+			margin-top: var(--size-4-6);
+			margin-bottom: var(--size-4-6);
+		`;
+		
+		new Setting(sectionContainer).setHeading().setName(t('settings.ModelParameters.title'));
+		new Setting(sectionContainer)
 			.setName(t('settings.ModelParameters.temperature'))
 			.setDesc(t('settings.ModelParameters.temperatureDescription'))
 			.addText((text) => {
@@ -79,7 +92,7 @@ export class InfioSettingTab extends PluginSettingTab {
 						});
 					})
 			});
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.ModelParameters.topP'))
 			.setDesc(t('settings.ModelParameters.topPDescription'))
 			.addText((text) => {
@@ -95,7 +108,7 @@ export class InfioSettingTab extends PluginSettingTab {
 						});
 					})
 			});
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.ModelParameters.frequencyPenalty'))
 			.setDesc(t('settings.ModelParameters.frequencyPenaltyDescription'))
 			.addText((text) => {
@@ -111,7 +124,7 @@ export class InfioSettingTab extends PluginSettingTab {
 						});
 					})
 			});
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.ModelParameters.presencePenalty'))
 			.setDesc(t('settings.ModelParameters.presencePenaltyDescription'))
 			.addText((text) => {
@@ -127,7 +140,7 @@ export class InfioSettingTab extends PluginSettingTab {
 						});
 					})
 			});
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.ModelParameters.maxTokens'))
 			.setDesc(t('settings.ModelParameters.maxTokensDescription'))
 			.addText((text) => {
@@ -146,8 +159,18 @@ export class InfioSettingTab extends PluginSettingTab {
 	}
 
 	private renderFilesSearchSection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setHeading().setName(t('settings.FilesSearch.title'))
-		new Setting(containerEl)
+		// Create section container with border styling like ModelProviderSettings
+		const sectionContainer = containerEl.createDiv("files-search-section");
+		sectionContainer.style.cssText = `
+			background: var(--background-primary);
+			border: 1px solid var(--background-modifier-border);
+			border-radius: var(--radius-m);
+			padding: var(--size-4-4);
+			margin-bottom: var(--size-4-6);
+		`;
+		
+		new Setting(sectionContainer).setHeading().setName(t('settings.FilesSearch.title'))
+		new Setting(sectionContainer)
 			.setName(t('settings.FilesSearch.method'))
 			.setDesc(t('settings.FilesSearch.methodDescription'))
 			.addDropdown((dropdown) =>
@@ -167,7 +190,7 @@ export class InfioSettingTab extends PluginSettingTab {
 						})
 					}),
 			)
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.FilesSearch.regexBackend'))
 			.setDesc(t('settings.FilesSearch.regexBackendDescription'))
 			.addDropdown((dropdown) =>
@@ -185,7 +208,7 @@ export class InfioSettingTab extends PluginSettingTab {
 						})
 					}),
 			)
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.FilesSearch.matchBackend'))
 			.setDesc(t('settings.FilesSearch.matchBackendDescription'))
 			.addDropdown((dropdown) =>
@@ -203,7 +226,7 @@ export class InfioSettingTab extends PluginSettingTab {
 						})
 					}),
 			)
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.FilesSearch.ripgrepPath'))
 			.setDesc(t('settings.FilesSearch.ripgrepPathDescription'))
 			.addText((text) =>
@@ -223,8 +246,18 @@ export class InfioSettingTab extends PluginSettingTab {
 	}
 
 	private renderChatBehaviorSection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setHeading().setName(t('settings.ChatBehavior.title'));
-		new Setting(containerEl)
+		// Create section container with border styling like ModelProviderSettings
+		const sectionContainer = containerEl.createDiv("chat-behavior-section");
+		sectionContainer.style.cssText = `
+			background: var(--background-primary);
+			border: 1px solid var(--background-modifier-border);
+			border-radius: var(--radius-m);
+			padding: var(--size-4-4);
+			margin-bottom: var(--size-4-6);
+		`;
+		
+		new Setting(sectionContainer).setHeading().setName(t('settings.ChatBehavior.title'));
+		new Setting(sectionContainer)
 			.setName(t('settings.ChatBehavior.defaultMention'))
 			.setDesc(t('settings.ChatBehavior.defaultMentionDescription'))
 			.addDropdown((dropdown) =>
@@ -242,6 +275,12 @@ export class InfioSettingTab extends PluginSettingTab {
 			);
 	}
 
+	renderPluginInfoSection(containerEl: HTMLElement): void {
+		const pluginInfoDiv = containerEl.createDiv("plugin-info-section");
+		this.pluginInfoContainer = pluginInfoDiv;
+		this.renderPluginInfoContent(pluginInfoDiv);
+	}
+
 	renderModelsSection(containerEl: HTMLElement): void {
 		const modelsDiv = containerEl.createDiv("models-section");
 		this.modelsContainer = modelsDiv;
@@ -249,11 +288,21 @@ export class InfioSettingTab extends PluginSettingTab {
 	}
 
 	renderDeepResearchSection(containerEl: HTMLElement): void {
-		new Setting(containerEl)
+		// Create section container with border styling like ModelProviderSettings
+		const sectionContainer = containerEl.createDiv("deep-research-section");
+		sectionContainer.style.cssText = `
+			background: var(--background-primary);
+			border: 1px solid var(--background-modifier-border);
+			border-radius: var(--radius-m);
+			padding: var(--size-4-4);
+			margin-bottom: var(--size-4-6);
+		`;
+		
+		new Setting(sectionContainer)
 			.setHeading()
 			.setName(t('settings.WebSearch.title'))
 
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.WebSearch.serperApiKey'))
 			.setDesc(createFragment(el => {
 				el.appendText(t('settings.WebSearch.serperApiKeyDescription') + ' ');
@@ -280,7 +329,7 @@ export class InfioSettingTab extends PluginSettingTab {
 				return t;
 			})
 
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.WebSearch.searchEngine'))
 			.setDesc(t('settings.WebSearch.searchEngineDescription'))
 			.addDropdown((dropdown) =>
@@ -298,7 +347,7 @@ export class InfioSettingTab extends PluginSettingTab {
 					}),
 			)
 
-		new Setting(containerEl)
+		new Setting(sectionContainer)
 			.setName(t('settings.WebSearch.jinaApiKey'))
 			.setDesc(createFragment(el => {
 				el.appendText(t('settings.WebSearch.jinaApiKeyDescription') + ' ');
@@ -723,6 +772,20 @@ export class InfioSettingTab extends PluginSettingTab {
 		// 		/>
 		// 	);
 		// }
+	}
+
+	private renderPluginInfoContent(containerEl: HTMLElement): void {
+		const div = containerEl.createDiv("div");
+		const root = createRoot(div);
+		root.render(
+			<PluginInfoSettings
+				pluginVersion={this.plugin.manifest.version}
+				pluginName={this.plugin.manifest.name}
+				author={this.plugin.manifest.author}
+				authorUrl={this.plugin.manifest.authorUrl}
+				description={this.plugin.manifest.description}
+			/>
+		);
 	}
 
 	private renderComponent(containerEl: HTMLElement, component: React.ReactNode) {
