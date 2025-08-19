@@ -1167,7 +1167,6 @@ ${transcript.map((t) => `${t.offset}: ${t.text}`).join('\n')}`,
 		// @ts-expect-error response.content type is not fully defined
 		await this.processImagesInResponse(response.content)
 
-		// @ts-expect-error response.content type is not fully defined
 		const textContent = response.content.find((c: { type: string; text?: string }) => c.type === 'text')
 		// @ts-expect-error textContent type is not fully defined
 		const md = textContent?.text || ''

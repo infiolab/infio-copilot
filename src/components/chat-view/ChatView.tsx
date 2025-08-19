@@ -142,8 +142,7 @@ const Chat = forwardRef<ChatRef, ChatProps>((props, ref) => {
 		setShouldAutoLoadLastChat,
 	} = useChatStore()
 
-	const promptGenerator = useMemo(() => {
-		// @ts-expect-error TODO: Review PromptGenerator constructor parameters and types
+	const promptGenerator = useMemo(() => {			
 		return new PromptGenerator(getRAGEngine, app, settings, diffStrategy, customModePrompts, getAllEffectiveModes, getMcpHub)
 	}, [getRAGEngine, app, settings, diffStrategy, customModePrompts, getAllEffectiveModes, getMcpHub])
 

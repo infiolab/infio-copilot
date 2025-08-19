@@ -814,10 +814,10 @@ export class InfioSettingTab extends PluginSettingTab {
 		root.render(
 			<PluginInfoSettings
 				pluginVersion={this.plugin.manifest.version}
-				pluginName={this.plugin.manifest.name}
+				// pluginName={this.plugin.manifest.name}
 				author={this.plugin.manifest.author}
 				authorUrl={this.plugin.manifest.authorUrl}
-				description={this.plugin.manifest.description}
+				// description={this.plugin.manifest.description}
 			/>
 		);
 	}

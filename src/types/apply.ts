@@ -87,6 +87,7 @@ export type ApplyDiffToolArgs = {
 
 export type SearchWebToolArgs = {
 	type: 'search_web';
+	filepath?: string;
 	query: string;
 	finish?: boolean;
 }

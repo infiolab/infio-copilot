@@ -50,6 +50,7 @@ export const serializeMentionable = (
 				type: 'command',
 				commandName: mentionable.commandName,
 				commandId: mentionable.commandId,
+				commandContent: mentionable.content,
 			}
 	}
 }

@@ -223,6 +223,7 @@ export function isToolAllowedForMode(
 	experiments?: Record<string, boolean>,
 ): boolean {
 	// Always allow these tools
+	// @ts-expect-error tool is not fully defined
 	if (ALWAYS_AVAILABLE_TOOLS.includes(tool as keyof typeof ALWAYS_AVAILABLE_TOOLS)) {
 		return true
 	}

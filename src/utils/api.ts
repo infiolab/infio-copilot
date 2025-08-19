@@ -131,7 +131,7 @@ export const anthropicModels = {
 } as const satisfies Record<string, ModelInfo> // as const assertion makes the object 
 
 // Infio
-export const infioDefaultModelId = "gemini/gemini-2.5-pro-preview-06-05" // for chat
+export const infioDefaultModelId = "groq/openai/gpt-oss-20b" // for chat
 export const infioDefaultInsightModelId = "deepseek/deepseek-v3" // for insight
 export const infioDefaultAutoCompleteModelId = "groq/llama-3.3-70b-versatile" // for auto complete
 export const infioDefaultEmbeddingModelId = "openai/text-embedding-3-small" // for embedding

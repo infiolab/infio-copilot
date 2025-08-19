@@ -127,6 +127,7 @@ export class ApplyEditManager {
 
 		const editLog = await this.editLogManager.createEditLog({
 			msgId,
+			// @ts-expect-error toolArgs.type is not fully defined
 			type: toolArgs.type,
 			params: toolArgs,
 			originalContent,

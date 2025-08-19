@@ -65,7 +65,6 @@ export default function MarkdownLLMEditFileBlock({
 		setApplying(true)
 		try {
 			onApply({
-				// @ts-expect-error: ToolArgs type doesn't match the expected type but works at runtime
 				type: 'edit_file',
 				filepath: path,
 				instruction: instruction,

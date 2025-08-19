@@ -137,6 +137,7 @@ export class EditLogManager extends AbstractJsonRepository<EditLog, EditLogMetad
 		
 		return allEditLogs
 			.filter((log): log is EditLog => log !== null)
+			// @ts-expect-error log.params.filepath is not fully defined
 			.filter(log => log.params.filepath === filePath)
 	}
 

@@ -40,8 +40,8 @@ interface ApiPromptItem {
 	name?: string
 	description?: string
 	category?: string[] // Changed from string to string[]
-	role_definition?: string
-	custom_instructions?: string
+	roleDefinition?: string
+	customInstructions?: string
 	tools?: string[]
 	strategy?: "ask" | "write" | "research" | "raw"
 	icon?: string
@@ -133,6 +133,14 @@ const CustomModeView = () => {
 	// Mode enabled status
 	const [modeEnabled, setModeEnabled] = useState<boolean>(true)
 
+	// Local state for prompt settings path to avoid updating settings on every keystroke
+	const [localPromptSettingsPath, setLocalPromptSettingsPath] = useState<string>(settings.infioPromptSettingsPath || '')
+
+	// Sync local prompt settings path when global settings change
+	useEffect(() => {
+		setLocalPromptSettingsPath(settings.infioPromptSettingsPath || '')
+	}, [settings.infioPromptSettingsPath])
+
 	// Update form data when mode changes
 	useEffect(() => {
 		//  new mode
@@ -215,19 +223,20 @@ const CustomModeView = () => {
 
 		try {
 			const response: ApiPromptResponse = await fetchPromptsList(settings.infioProvider.apiKey)
+			console.log(response)
 
 			// Transform API response to MarketMode format
 			const transformedModes: MarketMode[] = (response.data || []).map((item: ApiPromptItem) => ({
-				slug: item.slug || item.id || item.name || 'unknown-id', // Use slug first, then fallback to id
-				name: item.name || 'Unknown',
-				description: item.description || 'No description available',
-				roleDefinition: item.role_definition || '',
-				customInstructions: item.custom_instructions || '',
-				tools: item.tools || [],
+				slug: item.slug,
+				name: item.name,
+				description: item.description,
+				roleDefinition: item.roleDefinition,
+				customInstructions: item.customInstructions,
+				tools: item.tools,
 				strategy: item.strategy || "ask",
-				category: Array.isArray(item.category) ? item.category : (item.category ? [item.category] : ['Uncategorized']), // Handle both array and string
-				icon: item.icon || 'command',
-				downloads: item.downloads || 0
+				category: item.category || [],
+				icon: item.icon,
+				downloads: item.downloads
 			}))
 
 			setMarketModes(transformedModes)
@@ -275,8 +284,18 @@ const CustomModeView = () => {
 		setModeIcon(icon);
 	}, [isNewMode])
 
+	// Save prompt settings path to global settings
+	const savePromptSettingsPath = React.useCallback(() => {
+		if (localPromptSettingsPath !== settings.infioPromptSettingsPath) {
+			setSettings({ ...settings, infioPromptSettingsPath: localPromptSettingsPath });
+		}
+	}, [localPromptSettingsPath, settings, setSettings]);
+
 	// Update mode configuration
 	const handleUpdateMode = React.useCallback(async () => {
+		// Save prompt settings path first
+		savePromptSettingsPath();
+		
 		if (isBuiltinMode) {
 			// Update builtin mode override
 			await createOrUpdateBuiltinModeOverride(
@@ -304,11 +323,15 @@ const CustomModeView = () => {
 		}
 		// Show success notification
 		new Notice(t('notifications.customModeSaved') as string);
-	}, [isBuiltinMode, selectedMode, customModeId, modeName, roleDefinition, customInstructions, selectedTools, modeStrategy, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride, updateCustomMode])
+	}, [isBuiltinMode, selectedMode, customModeId, modeName, roleDefinition, customInstructions, selectedTools, modeStrategy, modeIcon, modeEnabled, createOrUpdateBuiltinModeOverride, updateCustomMode, savePromptSettingsPath])
 
 	// Create new mode
 	const createNewMode = React.useCallback(async () => {
 		if (!isNewMode) return;
+		
+		// Save prompt settings path first
+		savePromptSettingsPath();
+		
 		await createCustomMode(
 			modeName,
 			roleDefinition,
@@ -336,7 +359,7 @@ const CustomModeView = () => {
 			schemaVersion: 1,
 		})
 		setSelectedMode("add_new_mode")
-	}, [isNewMode, modeName, roleDefinition, customInstructions, selectedTools, modeStrategy, modeIcon, modeEnabled, createCustomMode])
+	}, [isNewMode, modeName, roleDefinition, customInstructions, selectedTools, modeStrategy, modeIcon, modeEnabled, createCustomMode, savePromptSettingsPath])
 
 	// Delete mode
 	const deleteMode = React.useCallback(async () => {
@@ -391,6 +414,7 @@ const CustomModeView = () => {
 	// Install market mode - fixed version
 	const handleInstallMarketMode = async (marketMode: MarketMode) => {
 		try {
+			console.log(marketMode)
 			await createCustomMode(
 				marketMode.name,
 				marketMode.roleDefinition,
@@ -748,10 +772,9 @@ const CustomModeView = () => {
 							<p className="infio-section-subtitle">{t('prompt.promptSettingsPathDescription')}</p>
 							<input
 								type="text"
-								value={settings.infioPromptSettingsPath}
-								onChange={async (e) => {
-									const newPath = e.target.value;
-									setSettings({ ...settings, infioPromptSettingsPath: newPath });
+								value={localPromptSettingsPath}
+								onChange={(e) => {
+									setLocalPromptSettingsPath(e.target.value);
 								}}
 								className="infio-custom-modes-input"
 								placeholder={t('prompt.promptSettingsPathPlaceholder')}
