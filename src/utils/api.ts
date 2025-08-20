@@ -1728,6 +1728,168 @@ export const moonshotModels = {
 	}
 } as const satisfies Record<string, ModelInfo>
 
+// ZhipuAI (智谱AI)
+// https://open.bigmodel.cn/dev/api#overview
+export type ZhipuAIModelId = keyof typeof zhipuAIModels
+export const zhipuAIDefaultModelId: ZhipuAIModelId = "glm-4.5"
+export const zhipuAIDefaultInsightModelId: ZhipuAIModelId = "glm-4.5"
+export const zhipuAIDefaultAutoCompleteModelId: ZhipuAIModelId = "glm-4.5-flash"
+export const zhipuAIDefaultEmbeddingModelId: keyof typeof zhipuAIEmbeddingModels = "embedding-3"
+
+export const zhipuAIModels = {
+	"glm-4.5": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 100, // ¥100/1M tokens
+		outputPrice: 100, // ¥100/1M tokens
+		description: "智谱AI最新旗舰模型GLM-4.5，专为智能体应用打造，支持复杂推理和超长上下文"
+	},
+	"glm-4.5-air": {
+		maxTokens: 8192,
+		contextWindow: 32_000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 1, // ¥1/1M tokens
+		outputPrice: 1, // ¥1/1M tokens
+		description: "GLM-4.5系列轻量版，平衡性能与成本，支持多模态输入"
+	},
+	"glm-4.5-x": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 100, // ¥100/1M tokens
+		outputPrice: 100, // ¥100/1M tokens
+		description: "GLM-4.5系列增强版，提供更强的推理能力"
+	},
+	"glm-4.5-airx": {
+		maxTokens: 8192,
+		contextWindow: 32_000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 1, // ¥1/1M tokens
+		outputPrice: 1, // ¥1/1M tokens
+		description: "GLM-4.5-Air增强版，支持更多模态输入"
+	},
+	"glm-4.5-flash": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 0.1, // ¥0.1/1M tokens
+		outputPrice: 0.1, // ¥0.1/1M tokens
+		description: "GLM-4.5系列超快版本，极速推理，适合高频调用"
+	},
+	"glm-4-plus": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 50, // ¥50/1M tokens
+		outputPrice: 150, // ¥150/1M tokens
+		description: "GLM-4系列增强版，支持128K上下文和多模态能力"
+	},
+	"glm-4-air-250414": {
+		maxTokens: 8192,
+		contextWindow: 8192,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 1, // ¥1/1M tokens
+		outputPrice: 1, // ¥1/1M tokens
+		description: "GLM-4-Air指定版本，轻量化快速响应"
+	},
+	"glm-4-airx": {
+		maxTokens: 8192,
+		contextWindow: 8192,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 1, // ¥1/1M tokens
+		outputPrice: 1, // ¥1/1M tokens
+		description: "GLM-4-Air多模态版本，支持图像输入"
+	},
+	"glm-4-flashx": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 0.1, // ¥0.1/1M tokens
+		outputPrice: 0.1, // ¥0.1/1M tokens
+		description: "GLM-4-Flash增强版，极速推理能力"
+	},
+	"glm-4-flashx-250414": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 0.1, // ¥0.1/1M tokens
+		outputPrice: 0.1, // ¥0.1/1M tokens
+		description: "GLM-4-FlashX指定版本，超快响应"
+	},
+	"glm-z1-air": {
+		maxTokens: 32768,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 30, // ¥30/1M tokens
+		outputPrice: 30, // ¥30/1M tokens
+		description: "GLM-Z1系列轻量版，专注推理能力优化"
+	},
+	"glm-z1-airx": {
+		maxTokens: 32768,
+		contextWindow: 128_000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 30, // ¥30/1M tokens
+		outputPrice: 30, // ¥30/1M tokens
+		description: "GLM-Z1-Air多模态版，支持图像和推理"
+	},
+	"glm-z1-flash": {
+		maxTokens: 32768,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 3, // ¥3/1M tokens
+		outputPrice: 3, // ¥3/1M tokens
+		description: "GLM-Z1系列快速版，平衡推理与速度"
+	},
+	"glm-z1-flashx": {
+		maxTokens: 32768,
+		contextWindow: 128_000,
+		supportsImages: true,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 3, // ¥3/1M tokens
+		outputPrice: 3, // ¥3/1M tokens
+		description: "GLM-Z1-Flash多模态版，推理与多模态兼备"
+	}
+} as const satisfies Record<string, ModelInfo>
+
+export const zhipuAIEmbeddingModels = {
+	"embedding-3": {
+		dimensions: 1024,
+		description: "智谱AI最新嵌入模型，支持中英文，1024维向量"
+	},
+	"embedding-2": {
+		dimensions: 1024,
+		description: "智谱AI嵌入模型v2，适合文本检索和相似性计算"
+	}
+} as const satisfies Record<string, EmbeddingModelInfo>
+
 // LocalProvider (本地嵌入模型)
 export const localProviderDefaultModelId = null // this is not supported for chat/autocomplete
 export const localProviderDefaultInsightModelId = null // this is not supported for insight
@@ -1771,6 +1933,7 @@ export const GetAllProviders = (): ApiProvider[] => {
 		ApiProvider.Deepseek,
 		ApiProvider.Groq,
 		ApiProvider.Moonshot,
+		ApiProvider.ZhipuAI,
 		ApiProvider.Ollama,
 		ApiProvider.OpenAICompatible,
 		ApiProvider.LocalProvider,
@@ -1784,6 +1947,7 @@ export const GetEmbeddingProviders = (): ApiProvider[] => {
 		ApiProvider.Google,
 		ApiProvider.AlibabaQwen,
 		ApiProvider.SiliconFlow,
+		ApiProvider.ZhipuAI,
 		ApiProvider.OpenAICompatible,
 		ApiProvider.Ollama,
 		ApiProvider.LocalProvider,
@@ -1817,6 +1981,8 @@ export const GetProviderModels = async (provider: ApiProvider, settings?: InfioS
 			return grokModels
 		case ApiProvider.Moonshot:
 			return moonshotModels
+		case ApiProvider.ZhipuAI:
+			return zhipuAIModels
 		case ApiProvider.Ollama:
 			return {}
 		case ApiProvider.OpenAICompatible:
@@ -1855,6 +2021,8 @@ export const GetProviderModelsWithSettings = async (provider: ApiProvider, setti
 			return grokModels
 		case ApiProvider.Moonshot:
 			return moonshotModels
+		case ApiProvider.ZhipuAI:
+			return zhipuAIModels
 		case ApiProvider.Ollama:
 			return {}
 		case ApiProvider.OpenAICompatible:
@@ -1887,6 +2055,8 @@ export const GetEmbeddingProviderModels = (provider: ApiProvider): Record<string
 			return openAINativeEmbeddingModels;
 		case ApiProvider.AlibabaQwen:
 			return qwenEmbeddingModels;
+		case ApiProvider.ZhipuAI:
+			return zhipuAIEmbeddingModels;
 		case ApiProvider.LocalProvider:
 			return localProviderEmbeddingModels;
 		default:
@@ -1982,6 +2152,13 @@ export const GetDefaultModelId = (provider: ApiProvider): { chat: string, insigh
 				"insight": moonshotDefaultInsightModelId,
 				"autoComplete": moonshotDefaultAutoCompleteModelId,
 				"embedding": moonshotDefaultEmbeddingModelId,
+			}
+		case ApiProvider.ZhipuAI:
+			return {
+				"chat": zhipuAIDefaultModelId,
+				"insight": zhipuAIDefaultInsightModelId,
+				"autoComplete": zhipuAIDefaultAutoCompleteModelId,
+				"embedding": zhipuAIDefaultEmbeddingModelId,
 			}
 		case ApiProvider.Ollama:
 			return {

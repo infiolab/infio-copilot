@@ -13,6 +13,7 @@ export const providerApiUrls: Record<ApiProvider, string> = {
 	[ApiProvider.Groq]: 'https://console.groq.com/keys',
 	[ApiProvider.Grok]: 'https://console.x.ai/',
 	[ApiProvider.Moonshot]: 'https://platform.moonshot.cn/console/api-keys',
+	[ApiProvider.ZhipuAI]: 'https://open.bigmodel.cn/usercenter/apikeys',
 	[ApiProvider.Ollama]: '', // Ollama 不需要API Key
 	[ApiProvider.OpenAICompatible]: '', // 自定义兼容API，无固定URL
 	[ApiProvider.LocalProvider]: '', // 本地提供者，无固定URL
