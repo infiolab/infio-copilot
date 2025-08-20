@@ -45,26 +45,54 @@ export class OpenAICompatibleProvider implements BaseLLMProvider {
         dangerouslyAllowBrowser: true,
       })
     }
-  }
+	}
+	
+	// check Model is Reasoning Model
+	private isReasoning(modelName: string): boolean {
+		try {
+			if (!modelName) {
+				return false
+			}
+
+			if (this.baseURL !== INFIO_BASE_URL) {
+				return false
+			}
+
+			if (modelName.includes('gemini-2.5')) {
+				return true
+			}
+			if (modelName.includes('agent-')) {
+				return true
+			}
+			return false
+		} catch (e) {
+			console.error(e)
+		}
+		return false
+	}
 
   // 检查是否为阿里云Qwen API
   private isAlibabaQwen(): boolean {
     return this.baseURL === ALIBABA_QWEN_BASE_URL || 
            this.baseURL?.includes('dashscope.aliyuncs.com')
 	}
-	
+
 	private isInfio(): boolean {
 		return this.baseURL === INFIO_BASE_URL
 	}
 
   // 获取提供商特定的额外参数
-  private getExtraParams(isStreaming: boolean): Record<string, unknown> {
+  private getExtraParams(isStreaming: boolean, modelName: string): Record<string, unknown> {
     const extraParams: Record<string, unknown> = {}
     
     // 阿里云Qwen API需要在非流式调用中设置 enable_thinking: false
     if (this.isAlibabaQwen() && !isStreaming) {
       extraParams.enable_thinking = false
 		}    
+		if (this.isReasoning(modelName)) {
+			extraParams.reasoning_effort = 'low';
+		}
+
     return extraParams
   }
 
@@ -79,7 +107,7 @@ export class OpenAICompatibleProvider implements BaseLLMProvider {
       )
     }
 
-    const extraParams = this.getExtraParams(false) // 非流式调用
+    const extraParams = this.getExtraParams(false, model.modelId) // 非流式调用
     return this.adapter.generateResponse(this.client as OpenAI, request, options, extraParams)
   }
 
@@ -93,11 +121,7 @@ export class OpenAICompatibleProvider implements BaseLLMProvider {
         'OpenAI Compatible base URL or API key is missing. Please set it in settings menu.',
       )
 		}
-    const extraParams = this.getExtraParams(true) // 流式调用
-
-		if (this.isInfio()) {
-			extraParams.reasoning_effort = 'none'
-		}
+    const extraParams = this.getExtraParams(true, model.modelId)
 
     return this.adapter.streamResponse(this.client as OpenAI, request, options, extraParams)
   }

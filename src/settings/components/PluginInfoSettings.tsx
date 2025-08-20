@@ -1,23 +1,81 @@
-import * as React from 'react';
+import { Notice, Plugin } from 'obsidian';
 
+import * as React from 'react';
+import { ApiKeyModal } from './ApiKeyModal';
+import { ProUpgradeModal } from './ProUpgradeModal';
+
+import { fetchUserPlan, CheckProVersion } from '../../hooks/use-infio';
 import { getInfioLogoSvg } from '../../utils/icon';
+import type { InfioSettings } from '../../types/settings';
 
 interface PluginInfoSettingsProps {
 	pluginVersion: string;
 	author: string;
 	authorUrl: string;
+	plugin: Plugin;
+	settings: InfioSettings;
 }
 
 export default function PluginInfoSettings({
 	pluginVersion,
 	author,
-	authorUrl
+	authorUrl,
+	plugin,
+	settings,
 }: PluginInfoSettingsProps) {
 	// 检测是否为Pro版本（这里可以根据实际逻辑调整）
 	const isPro = true; // 暂时设为false，可以根据实际需求调整
+	const [isUpgrading, setIsUpgrading] = React.useState(false);
 
 	// Convert SVG string to data URL for proper display
 	const logoDataUrl = `data:image/svg+xml;base64,${btoa(getInfioLogoSvg())}`;
+
+	// 处理升级按钮点击
+	const handleUpgrade = async () => {
+		if (!plugin) {
+			new Notice('无法获取插件实例');
+			return;
+		}
+
+		if (!settings?.infioProvider?.apiKey) {
+			if (plugin?.app) {
+				new ApiKeyModal(plugin.app).open();
+			} else {
+				new Notice('请先在Infio Provider设置中配置 Infio API Key');
+			}
+			return;
+		}
+
+		setIsUpgrading(true);
+
+		try {
+			// 检查是否为Pro用户
+			const userPlan = await fetchUserPlan(settings.infioProvider.apiKey);
+			const isProUser = userPlan.plan?.toLowerCase().startsWith('pro') || false;
+			if (!isProUser) {
+				if (plugin?.app) {
+					new ProUpgradeModal(plugin.app).open();
+				} else {
+					new Notice('您的账户不是Pro用户, 请先升级到Pro');
+				}
+				return;
+			}
+
+			// 执行升级
+			const result = await CheckProVersion(plugin, userPlan.dl_zip || '');
+
+			if (result.success) {
+				// 升级成功的提示已经在upgradeToProVersion中处理了
+			} else {
+				new Notice(`加载失败: ${result.message}`);
+			}
+		} catch (error) {
+			// eslint-disable-next-line no-console
+			console.error('升级过程中发生错误:', error);
+		} finally {
+			setIsUpgrading(false);
+		}
+	};
 
 	return (
 		<div className="plugin-info-container">
@@ -34,6 +92,13 @@ export default function PluginInfoSettings({
 								{isPro ? 'Pro' : 'community'}
 							</span>
 							<span className="version-number">v{pluginVersion}</span>
+							<button
+								className="upgrade-button"
+								onClick={handleUpgrade}
+								disabled={isUpgrading}
+							>
+								{isUpgrading ? '加载中...' : '检查更新'}
+							</button>
 						</div>
 					</div>
 				</div>
@@ -245,6 +310,38 @@ export default function PluginInfoSettings({
 						justify-content: center;
 						padding: var(--size-2-3);
 					}
+				}
+				/* 升级按钮 */
+				.upgrade-button {
+					background: linear-gradient(135deg, var(--interactive-accent), var(--interactive-accent-hover));
+					color: var(--text-on-accent);
+					border: none;
+					padding: var(--size-2-1) var(--size-2-3);
+					border-radius: var(--radius-s);
+					font-size: var(--font-ui-small);
+					font-weight: 600;
+					cursor: pointer;
+					transition: all 0.2s ease;
+					white-space: nowrap;
+					box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+				}
+
+				.upgrade-button:hover:not(:disabled) {
+					background: linear-gradient(135deg, var(--interactive-accent-hover), var(--interactive-accent));
+					transform: translateY(-1px);
+					box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+				}
+
+				.upgrade-button:active:not(:disabled) {
+					transform: translateY(0);
+					box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+				}
+
+				.upgrade-button:disabled {
+					opacity: 0.6;
+					cursor: not-allowed;
+					transform: none;
+					box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 				}
 
 				/* 深色模式适配 */

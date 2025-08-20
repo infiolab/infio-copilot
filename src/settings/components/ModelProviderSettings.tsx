@@ -126,6 +126,12 @@ const CustomProviderSettings: React.FC<CustomProviderSettingsProps> = ({ plugin,
 				hasUpdates = true;
 				console.debug(t("settings.ModelProvider.autocompleteModelConfigured", { provider: selectedProvider, model: defaultModels.autoComplete }));
 			}
+			if (settedProviders.includes(ApiProvider.Infio)) {
+				newSettings.editModelProvider = ApiProvider.Infio;
+				newSettings.editModelId = "infio/edit";
+				hasUpdates = true;
+				console.debug(t("settings.ModelProvider.editModelConfigured", { provider: ApiProvider.Infio, model: "infio/edit" }));
+			}
 		}
 
 		// todo: this is a temporary fix for the embedding provider, we should remove this after the embedding provider is implemented

@@ -183,11 +183,6 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 
 	// 统一处理模型选择和保存
 	const handleModelSelect = (provider: ApiProvider, modelId: string, isCustom?: boolean) => {
-		console.debug(`handleModelSelect: ${provider} -> ${modelId}`)
-
-		// 检查是否是自定义模型（不在官方模型列表中）
-		// const isCustomModel = !modelIds.includes(modelId);
-
 		updateModel(provider, modelId, isCustom);
 	};
 
@@ -197,7 +192,6 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 			const ids = isEmbedding
 				? GetEmbeddingProviderModelIds(modelProvider)
 				: await GetProviderModelIds(modelProvider, settings);
-			console.debug(`📝 Fetched ${ids.length} official models for ${modelProvider}:`, ids);
 			setModelIds(ids);
 		};
 
@@ -207,14 +201,11 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 	const combinedModelIds = useMemo(() => {
 		const providerKey = getProviderSettingKey(modelProvider);
 		const providerModels = settings?.[providerKey]?.models;
-		console.debug(`🔍 Custom models in settings for ${modelProvider}:`, providerModels || 'none')
 		// Ensure providerModels is an array of strings
 		if (!providerModels || !Array.isArray(providerModels)) {
-			console.debug(`📋 Using only official models (${modelIds.length}):`, modelIds);
 			return modelIds;
 		}
 		const additionalModels = providerModels.filter((model): model is string => typeof model === 'string');
-		console.debug(`📋 Combined models: ${modelIds.length} official + ${additionalModels.length} custom`);
 		return [...modelIds, ...additionalModels];
 	}, [modelIds, settings, modelProvider]);
 
@@ -322,10 +313,9 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 					<label className="infio-llm-setting-model-label">{t("settings.ModelProvider.model")}</label>
 					<Popover.Root modal={false} open={isOpen} onOpenChange={setIsOpen}>
 						<Popover.Trigger asChild>
-							<button 
-								className={`infio-llm-setting-model-trigger clickable-icon ${
-									modelId && modelId.startsWith('infio/') ? 'infio-model-selected' : ''
-								}`} 
+							<button
+								className={`infio-llm-setting-model-trigger clickable-icon ${modelId && modelId.startsWith('infio/') ? 'infio-model-selected' : ''
+									}`}
 								type="button"
 							>
 								<span className="infio-llm-setting-model-display">
@@ -333,7 +323,7 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 									{modelId && modelId.startsWith('infio/') && (
 										<span className="infio-model-badge infio-model-badge-inline">Pro</span>
 									)}
-									{modelId && modelProvider === 'Infio' && !modelId.startsWith('infio/') && (
+									{modelId && String(modelProvider) === 'Infio' && !modelId.startsWith('infio/') && (
 										<span className="infio-api-badge infio-model-badge-inline">API</span>
 									)}
 								</span>
@@ -354,73 +344,106 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 								</svg>
 							</button>
 						</Popover.Trigger>
-						<Popover.Content
-							side="bottom"
-							align="start"
-							sideOffset={4}
-							className="infio-llm-setting-combobox-dropdown"
-						>
-							<div ref={listRef}>
-								<div className="infio-llm-setting-search-container">
-									<input
-										type="text"
-										className="infio-llm-setting-item-search"
-										placeholder={modelIds.length > 0 ? t("settings.ModelProvider.searchOrEnterModelName") : t("settings.ModelProvider.enterCustomModelName")}
-										value={searchTerm}
-										onChange={(e) => {
-											setSearchTerm(e.target.value);
-											setSelectedIndex(0);
-										}}
-										onKeyDown={(e) => {
-											switch (e.key) {
-												case "ArrowDown":
-													e.preventDefault();
-													setSelectedIndex((prev) =>
-														Math.min(prev + 1, filteredOptions.length - 1)
-													);
-													break;
-												case "ArrowUp":
-													e.preventDefault();
-													setSelectedIndex((prev) => Math.max(prev - 1, 0));
-													break;
-												case "Enter": {
-													e.preventDefault();
-													if (filteredOptions.length > 0) {
-														const selectedOption = filteredOptions[selectedIndex];
-														if (selectedOption) {
-															handleModelSelect(modelProvider, selectedOption.id, selectedOption.isCustom);
-														}
-													} else if (searchTerm.trim()) {
-														// If no options but there is input content, use the input content directly
-														handleModelSelect(modelProvider, searchTerm.trim(), true);
-													}
-													setSearchTerm("");
-													setIsOpen(false);
-													break;
-												}
-												case "Escape":
-													e.preventDefault();
-													setIsOpen(false);
-													setSearchTerm("");
-													break;
+						<Popover.Portal>
+							<Popover.Content
+								side="bottom"
+								align="start"
+								sideOffset={4}
+								className="infio-model-picker-dropdown"
+								avoidCollisions={true}
+								collisionPadding={8}
+								onOpenAutoFocus={(e) => {
+									e.preventDefault();
+									// 延迟聚焦到搜索输入框
+									setTimeout(() => {
+										if (e.currentTarget instanceof HTMLElement) {
+											const input = e.currentTarget.querySelector('input');
+											if (input instanceof HTMLInputElement) {
+												input.focus();
 											}
-										}}
-									/>
-								</div>
-								{filteredOptions.length > 0 ? (
-									<div className="infio-llm-setting-options-list">
-										{filteredOptions.map((option, index) => {
-											// 检测是否是 infio/ 开头的模型
-											const isInfioModel = option.id.startsWith('infio/');
-											// 检测是否是 Infio 提供商的其他模型
-											const isInfioProviderModel = modelProvider === 'Infio' && !isInfioModel;
-											
-											return (
-												<Popover.Close key={option.id} asChild>
+										}
+									}, 0);
+								}}
+								onCloseAutoFocus={(e) => e.preventDefault()}
+							>
+								<div
+									ref={listRef}
+									onMouseDown={(e) => {
+										// 防止点击内容区域时关闭 Popover
+										e.stopPropagation();
+									}}
+								>
+									<div className="infio-llm-setting-search-container">
+										<input
+											type="text"
+											className="infio-llm-setting-item-search"
+											placeholder={modelIds.length > 0 ? t("settings.ModelProvider.searchOrEnterModelName") : t("settings.ModelProvider.enterCustomModelName")}
+											value={searchTerm}
+											onChange={(e) => {
+												setSearchTerm(e.target.value);
+												setSelectedIndex(0);
+											}}
+											onMouseDown={(e) => {
+												// 防止点击输入框时关闭 Popover
+												e.stopPropagation();
+											}}
+											onFocus={(e) => {
+												// 防止聚焦时关闭 Popover
+												e.stopPropagation();
+											}}
+											onKeyDown={(e) => {
+												switch (e.key) {
+													case "ArrowDown":
+														e.preventDefault();
+														setSelectedIndex((prev) =>
+															Math.min(prev + 1, filteredOptions.length - 1)
+														);
+														break;
+													case "ArrowUp":
+														e.preventDefault();
+														setSelectedIndex((prev) => Math.max(prev - 1, 0));
+														break;
+													case "Enter": {
+														e.preventDefault();
+														if (filteredOptions.length > 0) {
+															const selectedOption = filteredOptions[selectedIndex];
+															if (selectedOption) {
+																handleModelSelect(modelProvider, selectedOption.id, selectedOption.isCustom);
+															}
+														} else if (searchTerm.trim()) {
+															// If no options but there is input content, use the input content directly
+															handleModelSelect(modelProvider, searchTerm.trim(), true);
+														}
+														setSearchTerm("");
+														setIsOpen(false);
+														break;
+													}
+													case "Escape":
+														e.preventDefault();
+														setIsOpen(false);
+														setSearchTerm("");
+														break;
+												}
+											}}
+										/>
+									</div>
+									{filteredOptions.length > 0 ? (
+										<div className="infio-llm-setting-options-list">
+											{filteredOptions.map((option, index) => {
+												// 检测是否是 infio/ 开头的模型
+												const isInfioModel = option.id.startsWith('infio/');
+												// 检测是否是 Infio 提供商的其他模型
+												const isInfioProviderModel = String(modelProvider) === 'Infio' && !isInfioModel;
+
+												return (
 													<div
+														key={option.id}
 														ref={(el) => (itemRefs.current[index] = el)}
 														onMouseEnter={() => setSelectedIndex(index)}
-														onClick={() => {
+														onMouseDown={(e) => {
+															// 防止事件冒泡
+															e.preventDefault();
+															e.stopPropagation();
 															handleModelSelect(modelProvider, option.id, option.isCustom);
 															setSearchTerm("");
 															setIsOpen(false);
@@ -435,13 +458,13 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 															<span className="infio-api-badge">API</span>
 														)}
 													</div>
-												</Popover.Close>
-											);
-										})}
-									</div>
-								) : null}
-							</div>
-						</Popover.Content>
+												);
+											})}
+										</div>
+									) : null}
+								</div>
+							</Popover.Content>
+						</Popover.Portal>
 					</Popover.Root>
 				</div>
 			</div>
@@ -580,15 +603,30 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 					transform: rotate(180deg);
 				}
 
-				.infio-llm-setting-combobox-dropdown {
+				.infio-model-picker-dropdown {
 					background: var(--background-primary);
 					border: 1px solid var(--background-modifier-border);
 					border-radius: 6px;
-					box-shadow: var(--shadow-s);
+					box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 					padding: 6px;
 					min-width: 300px;
 					max-width: 500px;
-					z-index: 1000;
+					z-index: 10000;
+					max-height: 300px;
+					overflow: hidden;
+					transform-origin: var(--radix-popover-content-transform-origin);
+					animation: popover-in 0.15s ease-out;
+				}
+
+				@keyframes popover-in {
+					from {
+						opacity: 0;
+						transform: scale(0.95) translateY(-5px);
+					}
+					to {
+						opacity: 1;
+						transform: scale(1) translateY(0);
+					}
 				}
 
 				.infio-llm-setting-search-container {

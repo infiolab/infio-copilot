@@ -7,11 +7,11 @@ import {
 } from '../../utils/parse-infio-block'
 
 import MarkdownApplyDiffBlock from './Markdown/MarkdownApplyDiffBlock'
-import MarkdownLLMEditFileBlock from './Markdown/MarkdownLLMEditFileBlock'
 import MarkdownDataviewQueryBlock from './Markdown/MarkdownDataviewQueryBlock'
 import MarkdownEditFileBlock from './Markdown/MarkdownEditFileBlock'
 import MarkdownFetchUrlsContentBlock from './Markdown/MarkdownFetchUrlsContentBlock'
 import MarkdownListFilesBlock from './Markdown/MarkdownListFilesBlock'
+import MarkdownLLMEditFileBlock from './Markdown/MarkdownLLMEditFileBlock'
 import MarkdownManageFilesBlock from './Markdown/MarkdownManageFilesBlock'
 import MarkdownMatchSearchFilesBlock from './Markdown/MarkdownMatchSearchFilesBlock'
 import MarkdownOptimizedReasoningBlock from './Markdown/MarkdownOptimizedReasoningBlock'

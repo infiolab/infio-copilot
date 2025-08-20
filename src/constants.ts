@@ -15,6 +15,8 @@ export const SUPPORT_EMBEDDING_SIMENTION: number[] = [
 	1536
 ]
 
+export const INFIO_PLATFORM_URL = 'https://platform.infio.app'
+
 export const OPENAI_BASE_URL = 'https://api.openai.com/v1'
 export const DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
@@ -22,8 +24,7 @@ export const GROK_BASE_URL = 'https://api.x.ai/v1'
 export const SILICONFLOW_BASE_URL = 'https://api.siliconflow.cn/v1'
 export const ALIBABA_QWEN_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1'
 export const MOONSHOT_BASE_URL = 'https://api.moonshot.cn/v1'
-// export const INFIO_BASE_URL = 'https://api.infio.app'
-export const INFIO_BASE_URL = 'http://192.168.31.211:4000'
+export const INFIO_BASE_URL = 'https://api.infio.app'
 export const JINA_BASE_URL = 'https://r.jina.ai'
 export const SERPER_BASE_URL = 'https://serpapi.com/search'
 // Pricing in dollars per million tokens

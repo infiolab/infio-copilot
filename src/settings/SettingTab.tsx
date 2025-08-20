@@ -818,6 +818,8 @@ export class InfioSettingTab extends PluginSettingTab {
 				author={this.plugin.manifest.author}
 				authorUrl={this.plugin.manifest.authorUrl}
 				// description={this.plugin.manifest.description}
+				plugin={this.plugin}
+				settings={this.plugin.settings}
 			/>
 		);
 	}
