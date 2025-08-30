@@ -141,8 +141,15 @@
   gap: var(--size-2-1);
   padding: 0 var(--size-4-3) var(--size-4-5) var(--size-4-3);
   margin: var(--size-4-2) calc(var(--size-4-3) * -1) 0;
+  margin-bottom: 1rem !important;                  /* 消息区域底部间距 */
+  padding-bottom: 1rem !important;                 /* 消息区域内底部间距 */
   /* 确保内容不会超出容器 */
   min-width: 0;
+  
+  /* 基础外观设置 */
+  line-height: 1.5 !important;
+  padding-left: 18px;
+  padding-right: 12px;
 
   .infio-chat-messages-user {
 		margin-top: 1px;
@@ -229,19 +236,29 @@
  */
 
 .infio-markdown {
-  line-height: var(--line-height-normal);
+  line-height: 1.5 !important;
   font-size: var(--font-ui-medium);
+  
+  /* 基础外观设置 */
+  padding-left: 18px;
+  padding-right: 12px;
 
   h1 {
     font-size: var(--font-ui-large);
+    line-height: 1.4 !important;
+    margin: 0.6em 0 0.3em 0 !important;
   }
 
   h2 {
     font-size: var(--font-ui-medium);
+    line-height: 1.4 !important;
+    margin: 0.6em 0 0.3em 0 !important;
   }
 
   h3 {
     font-size: var(--font-ui-medium);
+    line-height: 1.4 !important;
+    margin: 0.6em 0 0.3em 0 !important;
   }
 
   h4 {
@@ -260,6 +277,8 @@
 		margin-top: 0;
 		margin-bottom: 0;
     font-size: var(--font-ui-medium);
+    line-height: 1.6 !important;
+    margin: 0.4em 0 !important;
   }
 
   ul {
@@ -276,6 +295,8 @@
 
   li {
     font-size: var(--font-ui-medium);
+    line-height: 1.6 !important;
+    margin: 0.15em 0 !important;
   }
 
   blockquote {
@@ -622,6 +643,8 @@ button:not(.clickable-icon).infio-chat-list-dropdown {
   font-size: var(--font-ui-medium);
   border-radius: var(--radius-s);
   outline: none;
+  margin-bottom: 0.2rem !important;                /* 输入框底部间距 */
+  padding-bottom: 0.5rem !important;               /* 输入框内底部间距 */
 
   &:focus-within,
   &:focus,
@@ -818,6 +841,55 @@ button:not(.clickable-icon).infio-chat-list-dropdown {
  * - Hover and active states
  * - Transitions and animations
  */
+
+/* ========================================
+ * Logo 动画效果（仅限对话窗口）
+ * ======================================== */
+/* Logo 基础动画（仅限对话窗口） */
+.infio-chat-messages .infio-logo,
+.infio-markdown .infio-logo,
+.workspace-leaf-content[data-type="infio-copilot"] .infio-logo {
+  animation: logoFloat 3s ease-in-out infinite !important;  /* 浮动动画 */
+  transition: all 0.3s ease !important;                     /* 平滑过渡 */
+}
+
+/* Logo 悬停效果（仅限对话窗口） */
+.infio-chat-messages .infio-logo:hover,
+.infio-markdown .infio-logo:hover,
+.workspace-leaf-content[data-type="infio-copilot"] .infio-logo:hover {
+  animation: logoSpin 1s ease-in-out !important;            /* 悬停时旋转 */
+  transform: scale(1.1) !important;                         /* 悬停时放大 */
+  filter: brightness(1.2) !important;                       /* 悬停时变亮 */
+}
+
+/* 浮动动画关键帧 */
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-3px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-3px) rotate(-1deg);
+  }
+}
+
+/* 旋转动画关键帧 */
+@keyframes logoSpin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
 
 @media (hover: hover) {
   .obsidian-default-textarea:hover {
@@ -3660,8 +3732,8 @@ button.infio-chat-input-model-select {
 	right: 8px;
 	display: flex;
 	gap: 4px;
-	opacity: 0;
-	visibility: hidden;
+	opacity: 0.7;
+	visibility: visible;
 	transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
 	padding: 0px;
 	z-index: 50;  /* 降低z-index，确保不会遮挡代码块 */
