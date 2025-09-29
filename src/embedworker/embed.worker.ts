@@ -87,6 +87,7 @@ let pipeline: unknown = null;
 let tokenizer: unknown = null;
 let processing_message = false;
 let transformersLoaded = false;
+let transformersLoadFailed = false;
 
 /**
  * 测试一个网络端点是否可访问
@@ -130,24 +131,34 @@ async function initializeEndpoint(): Promise<void> {
 	const defaultEndpoint = 'https://huggingface.co';
 	const fallbackEndpoint = 'https://hf-mirror.com';
 
-	const isDefaultReachable = await testEndpoint(defaultEndpoint);
+	try {
+		const isDefaultReachable = await testEndpoint(defaultEndpoint);
 
-	const globalTransformers = globalThis as unknown as { transformers?: GlobalTransformers };
-	
-	if (!isDefaultReachable) {
-		console.log(`默认端点不可达，将切换到备用镜像: ${fallbackEndpoint}`);
-		// 这是关键步骤：在代码中设置 endpoint
-		if (globalTransformers.transformers?.env) {
-			globalTransformers.transformers.env.remoteHost = fallbackEndpoint;
+		const globalTransformers = globalThis as unknown as { transformers?: GlobalTransformers };
+
+		if (!isDefaultReachable) {
+			console.log(`默认端点不可达，将切换到备用镜像: ${fallbackEndpoint}`);
+			// 这是关键步骤：在代码中设置 endpoint
+			if (globalTransformers.transformers?.env) {
+				globalTransformers.transformers.env.remoteHost = fallbackEndpoint;
+			}
+		} else {
+			console.log(`将使用默认端点: ${defaultEndpoint}`);
 		}
-	} else {
-		console.log(`将使用默认端点: ${defaultEndpoint}`);
+	} catch (error) {
+		console.warn('端点测试失败，将使用默认配置:', error);
+		// 如果端点测试失败，继续使用默认配置
 	}
 }
 
 // 动态导入 Transformers.js
 async function loadTransformers(): Promise<void> {
 	if (transformersLoaded) return;
+
+	// 检查是否已经失败过，防止无限重试
+	if (transformersLoadFailed) {
+		throw new Error('Transformers.js already failed to load - skipping retry');
+	}
 
 	try {
 		console.log('Loading Transformers.js...');
@@ -181,6 +192,9 @@ async function loadTransformers(): Promise<void> {
 		console.log('Transformers.js loaded successfully');
 	} catch (error) {
 		console.error('Failed to load Transformers.js:', error);
+		// 关键：设置失败状态，防止无限重试
+		transformersLoadFailed = true;
+		transformersLoaded = true; // 也设置为 loaded，防止再次尝试
 		throw new Error(`Failed to load Transformers.js: ${error}`);
 	}
 }
@@ -190,13 +204,19 @@ async function loadModel(modelKey: string, useGpu: boolean = false): Promise<{ m
 		console.log(`Loading model: ${modelKey}, GPU: ${useGpu}`);
 
 		// 确保 Transformers.js 已加载
-		await loadTransformers();
+		try {
+			await loadTransformers();
+		} catch (error) {
+			console.warn('Transformers.js failed to load, model cannot be loaded:', error);
+			return { model_loaded: false };
+		}
 
 		const globalTransformers = globalThis as unknown as { transformers?: GlobalTransformers };
 		const transformers = globalTransformers.transformers;
-		
+
 		if (!transformers) {
-			throw new Error('Transformers.js not loaded');
+			console.warn('Transformers.js not available, model cannot be loaded');
+			return { model_loaded: false };
 		}
 
 		const { pipelineFactory, AutoTokenizer } = transformers;
@@ -274,6 +294,10 @@ async function unloadModel(): Promise<{ model_unloaded: boolean }> {
 
 		tokenizer = null;
 		model = null;
+
+		// 重置失败状态，允许重新加载
+		transformersLoaded = false;
+		transformersLoadFailed = false;
 
 		console.log('Model unloaded successfully');
 		return { model_unloaded: true };
