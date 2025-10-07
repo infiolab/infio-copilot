@@ -4,7 +4,7 @@ import { URL } from 'url'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { OpenAI } from 'openai'
 
-import { ALIBABA_QWEN_BASE_URL, INFIO_BASE_URL, OPENAI_BASE_URL, SILICONFLOW_BASE_URL } from "../../constants"
+import { ALIBABA_QWEN_BASE_URL, INFIO_BASE_URL, OPENAI_BASE_URL, SILICONFLOW_BASE_URL, ZHIPUAI_BASE_URL } from "../../constants"
 import { EmbeddingModel } from '../../types/embedding'
 import { ApiProvider } from '../../types/llm/model'
 import { InfioSettings } from '../../types/settings'
@@ -476,6 +476,114 @@ export const getEmbeddingModel = (
 						) {
 							throw new LLMRateLimitExceededException(
 								'OpenAI Compatible API rate limit exceeded. Please try again later.',
+							)
+						}
+						throw error
+					}
+				},
+			}
+		}
+		case ApiProvider.ZhipuAI: {
+			const baseURL = settings.zhipuaiProvider.useCustomUrl ? settings.zhipuaiProvider.baseUrl : ZHIPUAI_BASE_URL
+			const openai = new OpenAI({
+				apiKey: settings.zhipuaiProvider.apiKey,
+				baseURL: baseURL,
+				dangerouslyAllowBrowser: true,
+			})
+			const modelInfo = GetEmbeddingModelInfo(settings.embeddingModelProvider, settings.embeddingModelId)
+			if (!modelInfo) {
+				throw new Error(`Embedding model ${settings.embeddingModelId} not found for provider ${settings.embeddingModelProvider}`)
+			}
+			return {
+				id: settings.embeddingModelId,
+				dimension: modelInfo.dimensions,
+				supportsBatch: true,
+				getEmbedding: async (text: string) => {
+					try {
+						if (!openai.apiKey) {
+							throw new LLMAPIKeyNotSetException(
+								'ZhipuAI API key is missing. Please set it in settings menu.',
+							)
+						}
+						const requestParams = {
+							model: settings.embeddingModelId,
+							input: text,
+							dimensions: modelInfo.dimensions,
+						}
+						// 直接使用fetch调用智谱AI API以完全控制请求
+						const requestBody = JSON.stringify(requestParams);
+						
+						const response = await fetch(`${baseURL}/embeddings`, {
+							method: 'POST',
+							headers: {
+								'Authorization': `Bearer ${settings.zhipuaiProvider.apiKey}`,
+								'Content-Type': 'application/json',
+							},
+							body: requestBody
+						});
+						
+						const responseText = await response.text();
+						
+						const responseData = JSON.parse(responseText);
+						if (!responseData.data || !responseData.data[0]) {
+							throw new Error(`Invalid response: ${responseText}`);
+						}
+						
+						const embedding = {
+							data: [{ embedding: responseData.data[0].embedding }]
+						};
+						return embedding.data[0].embedding
+					} catch (error) {
+						if (
+							error.status === 429 &&
+							error.message.toLowerCase().includes('rate limit')
+						) {
+							throw new LLMRateLimitExceededException(
+								'ZhipuAI API rate limit exceeded. Please try again later.',
+							)
+						}
+						throw error
+					}
+				},
+				getBatchEmbeddings: async (texts: string[]) => {
+					try {
+						if (!openai.apiKey) {
+							throw new LLMAPIKeyNotSetException(
+								'ZhipuAI API key is missing. Please set it in settings menu.',
+							)
+						}
+						const results = []
+						for (let i = 0; i < texts.length; i++) {
+							const requestBody = {
+								model: settings.embeddingModelId,
+								input: texts[i],
+								dimensions: modelInfo.dimensions,
+							}
+							
+							const response = await fetch(`${baseURL}/embeddings`, {
+								method: 'POST',
+								headers: {
+									'Authorization': `Bearer ${settings.zhipuaiProvider.apiKey}`,
+									'Content-Type': 'application/json',
+								},
+								body: JSON.stringify(requestBody)
+							})
+							
+							const responseData = await response.json()
+							if (responseData.data && responseData.data[0]) {
+								results.push(responseData.data[0].embedding)
+							} else {
+								throw new Error(`Invalid response: ${JSON.stringify(responseData)}`)
+							}
+						}
+						return results
+					} catch (error) {
+						if (
+							error.status === 429 &&
+							error.message.toLowerCase().includes('rate limit')
+						) {
+							throw new LLMRateLimitExceededException(
+								'ZhipuAI API rate limit exceeded. Please try again later.',
 							)
 						}
 						throw error
