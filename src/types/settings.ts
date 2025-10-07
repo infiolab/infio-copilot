@@ -105,13 +105,15 @@ const GoogleProviderSchema = z.object({
 	apiKey: z.string().catch(''),
 	baseUrl: z.string().catch(''),
 	useCustomUrl: z.boolean().catch(false),
-	models: z.array(z.string()).catch([])
+	models: z.array(z.string()).catch([]),
+	embeddingDimensions: z.number().min(1).catch(768)
 }).catch({
 	name: 'Google',
 	apiKey: '',
 	baseUrl: '',
 	useCustomUrl: false,
-	models: []
+	models: [],
+	embeddingDimensions: 768
 })
 
 const OpenAIProviderSchema = z.object({
@@ -133,13 +135,15 @@ const OpenAICompatibleProviderSchema = z.object({
 	apiKey: z.string().catch(''),
 	baseUrl: z.string().optional(),
 	useCustomUrl: z.boolean().catch(true),
-	models: z.array(z.string()).catch([])
+	models: z.array(z.string()).catch([]),
+	embeddingDimensions: z.number().min(1).catch(768)
 }).catch({
 	name: 'OpenAICompatible',
 	apiKey: '',
 	baseUrl: '',
 	useCustomUrl: true,
-	models: []
+	models: [],
+	embeddingDimensions: 768
 })
 
 const OllamaProviderSchema = z.object({
@@ -147,13 +151,15 @@ const OllamaProviderSchema = z.object({
 	apiKey: z.string().catch('ollama'),
 	baseUrl: z.string().catch(''),
 	useCustomUrl: z.boolean().catch(false),
-	models: z.array(z.string()).catch([])
+	models: z.array(z.string()).catch([]),
+	embeddingDimensions: z.number().min(1).catch(768)
 }).catch({
 	name: 'Ollama',
 	apiKey: 'ollama',
 	baseUrl: '',
 	useCustomUrl: true,
-	models: []
+	models: [],
+	embeddingDimensions: 768
 })
 
 const GroqProviderSchema = z.object({

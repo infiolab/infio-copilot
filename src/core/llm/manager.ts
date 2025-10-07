@@ -79,7 +79,12 @@ class LLMManager implements LLMManagerInterface {
 		)
 		this.openaiProvider = new OpenAIAuthenticatedProvider(settings.openaiProvider.apiKey)
 		this.anthropicProvider = new AnthropicProvider(settings.anthropicProvider.apiKey)
-		this.googleProvider = new GeminiProvider(settings.googleProvider.apiKey)
+		this.googleProvider = new GeminiProvider(
+			settings.googleProvider.apiKey,
+			settings.googleProvider.baseUrl && settings.googleProvider.useCustomUrl ?
+				settings.googleProvider.baseUrl
+				: undefined
+		)
 		this.groqProvider = new GroqProvider(settings.groqProvider.apiKey)
 		this.grokProvider = new OpenAICompatibleProvider(settings.grokProvider.apiKey,
 			settings.grokProvider.baseUrl && settings.grokProvider.useCustomUrl ?
@@ -149,7 +154,6 @@ class LLMManager implements LLMManagerInterface {
 				return await this.googleProvider.generateResponse(
 					model,
 					request,
-					options,
 				)
 			case ApiProvider.Groq:
 				return await this.groqProvider.generateResponse(model, request, options)
@@ -203,7 +207,7 @@ class LLMManager implements LLMManagerInterface {
 					options,
 				)
 			case ApiProvider.Google:
-				return await this.googleProvider.streamResponse(model, request, options)
+				return await this.googleProvider.streamResponse(model, request)
 			case ApiProvider.Groq:
 				return await this.groqProvider.streamResponse(model, request, options)
 			case ApiProvider.Grok:

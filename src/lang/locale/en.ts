@@ -319,6 +319,8 @@ export default {
 				failed: 'Failed',
 				test: 'Test',
 			},
+			embeddingDimensions: 'Embedding Dimensions',
+			embeddingDimensionsDescription: 'Set the dimension size for embedding vectors. Smaller dimensions can save storage space and computational resources, but may reduce semantic search accuracy. Minimum: 1, Default: 768',
 		},
 		
 		// Model Parameters Section

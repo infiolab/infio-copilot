@@ -320,6 +320,8 @@ export default {
 				failed: '失败',
 				test: '测试',
 			},
+			embeddingDimensions: '嵌入维度',
+			embeddingDimensionsDescription: '设置嵌入向量的维度大小。较小的维度可以节省存储空间和计算资源，但可能会降低语义搜索的精度。最小值：1，默认：768',
 		},
 		
 		// 模型参数部分

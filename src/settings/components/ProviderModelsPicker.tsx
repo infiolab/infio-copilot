@@ -10,6 +10,18 @@ import { GetAllProviders, GetEmbeddingProviderModelIds, GetEmbeddingProviders, G
 
 import { getProviderSettingKey } from "./ModelProviderSettings";
 
+// 支持自定义嵌入维度的 provider 列表
+const PROVIDERS_WITH_CUSTOM_DIMENSIONS = [
+	ApiProvider.Google,
+	ApiProvider.Ollama,
+	ApiProvider.OpenAICompatible
+];
+
+// 判断 provider 是否支持自定义维度
+const supportsCustomDimensions = (provider: ApiProvider): boolean => {
+	return PROVIDERS_WITH_CUSTOM_DIMENSIONS.includes(provider);
+};
+
 type TextSegment = {
 	text: string;
 	isHighlighted: boolean;
@@ -158,6 +170,7 @@ export type ComboBoxComponentProps = {
 	isEmbedding?: boolean,
 	description?: string;
 	updateModel: (provider: ApiProvider, modelId: string, isCustom?: boolean) => void;
+	onUpdateEmbeddingDimensions?: (provider: ApiProvider, dimensions: string) => void;
 };
 
 export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
@@ -168,6 +181,7 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 	isEmbedding = false,
 	description,
 	updateModel,
+	onUpdateEmbeddingDimensions,
 }) => {
 	// provider state
 	const [modelProvider, setModelProvider] = useState(provider);
@@ -176,6 +190,14 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isOpen, setIsOpen] = useState(false);
 	const [selectedIndex, setSelectedIndex] = useState(0);
+
+	// 维度输入框的本地状态
+	const [dimensionsValue, setDimensionsValue] = useState(() => {
+		if (!supportsCustomDimensions(provider)) return '768';
+		const providerKey = getProviderSettingKey(provider);
+		const providerSettings = settings?.[providerKey];
+		return String((providerSettings as any)?.embeddingDimensions || 768);
+	});
 
 	const providers = isEmbedding ? GetEmbeddingProviders() : GetAllProviders()
 
@@ -195,7 +217,7 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 	useEffect(() => {
 		const fetchModelIds = async () => {
 			const ids = isEmbedding
-				? GetEmbeddingProviderModelIds(modelProvider)
+				? await GetEmbeddingProviderModelIds(modelProvider, settings)
 				: await GetProviderModelIds(modelProvider, settings);
 			console.debug(`📝 Fetched ${ids.length} official models for ${modelProvider}:`, ids);
 			setModelIds(ids);
@@ -275,6 +297,18 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 		}
 	}, [selectedIndex]);
 
+	// 同步外部 settings 变化到本地状态
+	useEffect(() => {
+		if (!supportsCustomDimensions(modelProvider)) {
+			setDimensionsValue('768');
+			return;
+		}
+		const providerKey = getProviderSettingKey(modelProvider);
+		const providerSettings = settings?.[providerKey];
+		const newValue = String((providerSettings as any)?.embeddingDimensions || 768);
+		setDimensionsValue(newValue);
+	}, [settings, modelProvider]);
+
 	// Handle provider change
 	const handleProviderChange = (newProvider: string) => {
 		// Use proper type checking without type assertion
@@ -288,6 +322,15 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 			setModelProvider(newProvider);
 			// 当提供商变更时，清空模型选择让用户重新选择
 			updateModel(newProvider, '', false);
+			// 更新维度值
+			if (supportsCustomDimensions(newProvider)) {
+				const providerKey = getProviderSettingKey(newProvider);
+				const providerSettings = settings?.[providerKey];
+				const newValue = String((providerSettings as any)?.embeddingDimensions || 768);
+				setDimensionsValue(newValue);
+			} else {
+				setDimensionsValue('768');
+			}
 		}
 	};
 
@@ -450,6 +493,36 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 						</Popover.Portal>
 					</Popover.Root>
 				</div>
+
+				{/* 嵌入模型维度配置 - 通用支持 Google、Ollama、OpenAICompatible */}
+				{isEmbedding && supportsCustomDimensions(modelProvider) && (
+					<div className="infio-llm-setting-dimensions-container">
+						<label className="infio-llm-setting-dimensions-label">
+							{t("settings.ModelProvider.embeddingDimensions")}
+						</label>
+						<input
+							type="number"
+							className="infio-llm-setting-dimensions-input"
+							placeholder="768"
+							min="1"
+							value={dimensionsValue}
+							onChange={(e) => {
+								// 只更新本地状态，不立即保存
+								setDimensionsValue(e.target.value);
+							}}
+							onBlur={(e) => {
+								// 失去焦点时保存设置
+								const newValue = e.target.value;
+								if (onUpdateEmbeddingDimensions) {
+									onUpdateEmbeddingDimensions(modelProvider, newValue);
+								}
+							}}
+						/>
+						<div className="infio-llm-setting-dimensions-description">
+							{t("settings.ModelProvider.embeddingDimensionsDescription")}
+						</div>
+					</div>
+				)}
 			</div>
 			<style>{`
 				.infio-llm-setting-item {
@@ -692,6 +765,70 @@ export const ComboBoxComponent: React.FC<ComboBoxComponentProps> = ({
 
 					.infio-llm-setting-provider-select,
 					.infio-llm-setting-model-trigger {
+						width: 100%;
+						max-width: none;
+					}
+				}
+
+				/* 维度配置样式 */
+				.infio-llm-setting-dimensions-container {
+					display: flex;
+					align-items: center;
+					gap: 12px;
+					margin-top: 8px;
+					padding-top: 8px;
+					border-top: 1px solid var(--background-modifier-border);
+				}
+
+				.infio-llm-setting-dimensions-label {
+					font-size: 13px;
+					font-weight: 500;
+					color: var(--text-muted);
+					min-width: 50px;
+					text-align: left;
+				}
+
+				.infio-llm-setting-dimensions-input {
+					max-width: 120px;
+					min-width: 80px;
+					padding: 6px 8px;
+					border: 1px solid var(--background-modifier-border);
+					border-radius: 4px;
+					background: var(--background-primary);
+					color: var(--text-normal);
+					font-size: 13px;
+					transition: all 0.2s ease;
+				}
+
+				.infio-llm-setting-dimensions-input:hover {
+					border-color: var(--interactive-accent);
+				}
+
+				.infio-llm-setting-dimensions-input:focus {
+					outline: none;
+					border-color: var(--interactive-accent);
+					box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+				}
+
+				.infio-llm-setting-dimensions-description {
+					font-size: 11px;
+					color: var(--text-muted);
+					line-height: 1.3;
+					flex: 1;
+				}
+
+				@media (max-width: 768px) {
+					.infio-llm-setting-dimensions-container {
+						flex-direction: column;
+						align-items: flex-start;
+						gap: 6px;
+					}
+
+					.infio-llm-setting-dimensions-label {
+						min-width: auto;
+					}
+
+					.infio-llm-setting-dimensions-input {
 						width: 100%;
 						max-width: none;
 					}

@@ -203,7 +203,7 @@ export function ModelSelect({ modelType = 'chat' }: ModelSelectProps) {
 			setIsLoading(true)
 			try {
 				if (modelType === 'embedding') {
-					const models = GetEmbeddingProviderModelIds(modelProvider)
+					const models = await GetEmbeddingProviderModelIds(modelProvider, settings)
 					setModelIds(models)
 				} else {
 					const models = await GetProviderModelsWithSettings(modelProvider, settings)

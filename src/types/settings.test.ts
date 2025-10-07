@@ -166,6 +166,7 @@ describe('parseSmartCopilotSettings', () => {
 				baseUrl: '',
 				useCustomUrl: false,
 				models: [],
+				embeddingDimensions: 768,
 			},
 			groqProvider: {
 				name: 'Groq',
@@ -194,6 +195,7 @@ describe('parseSmartCopilotSettings', () => {
 				name: 'Ollama',
 				useCustomUrl: true,
 				models: [],
+				embeddingDimensions: 768,
 			},
 			openaiProvider: {
 				name: 'OpenAI',
@@ -208,6 +210,7 @@ describe('parseSmartCopilotSettings', () => {
 				baseUrl: '',
 				useCustomUrl: true,
 				models: [],
+				embeddingDimensions: 768,
 			},
 			openrouterProvider: {
 				name: 'OpenRouter',
@@ -415,6 +418,7 @@ describe('settings migration', () => {
 				baseUrl: '',
 				useCustomUrl: false,
 				models: [],
+				embeddingDimensions: 768,
 			},
 			groqProvider: {
 				name: 'Groq',
@@ -443,6 +447,7 @@ describe('settings migration', () => {
 				name: 'Ollama',
 				useCustomUrl: true,
 				models: [],
+				embeddingDimensions: 768,
 			},
 			openaiProvider: {
 				name: 'OpenAI',
@@ -457,6 +462,7 @@ describe('settings migration', () => {
 				baseUrl: '',
 				useCustomUrl: true,
 				models: [],
+				embeddingDimensions: 768,
 			},
 			openrouterProvider: {
 				name: 'OpenRouter',

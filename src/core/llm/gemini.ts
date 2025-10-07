@@ -1,13 +1,12 @@
 import {
 	Content,
 	GoogleGenAI,
-	Part,
 	type GenerateContentConfig,
 	type GenerateContentParameters,
 	type GenerateContentResponse,
 } from "@google/genai"
 
-import { LLMModel } from '../../types/llm/model'
+import { ApiProvider, LLMModel } from '../../types/llm/model'
 import {
 	LLMOptions,
 	LLMRequestNonStreaming,
@@ -19,10 +18,8 @@ import {
 	LLMResponseStreaming,
 } from '../../types/llm/response'
 import {
-	GeminiModelId,
-	ModelInfo,
-	geminiDefaultModelId,
-	geminiModels
+	GetProviderModels,
+	ModelInfo
 } from "../../utils/api"
 import { parseImageDataUrl } from '../../utils/image'
 
@@ -42,7 +39,8 @@ import {
 export class GeminiProvider implements BaseLLMProvider {
 	private client: GoogleGenAI
 	private apiKey: string
-	private baseUrl: string
+	private baseUrl?: string
+	private dynamicModels: Record<string, ModelInfo> | null = null
 
 	constructor(apiKey: string, baseUrl?: string) {
 		this.apiKey = apiKey
@@ -50,28 +48,52 @@ export class GeminiProvider implements BaseLLMProvider {
 		this.client = new GoogleGenAI({ apiKey })
 	}
 
-	getModel(modelId: string) {
-		let id = modelId
-		let info: ModelInfo = geminiModels[id as GeminiModelId]
-
-		if (id?.endsWith(":thinking")) {
-			id = id.slice(0, -":thinking".length)
-
-			if (geminiModels[id as GeminiModelId]) {
-				info = geminiModels[id as GeminiModelId]
-
-				return {
-					id,
-					info,
-					thinkingConfig: undefined,
-					maxOutputTokens: info.maxTokens ?? undefined,
-				}
-			}
+	// 获取动态模型列表（带缓存）
+	private async getDynamicModels(): Promise<Record<string, ModelInfo>> {
+		if (this.dynamicModels) {
+			return this.dynamicModels
 		}
 
+		try {
+			// 使用 GetProviderModels 来获取动态模型
+			const settings = {
+				googleProvider: {
+					apiKey: this.apiKey,
+					baseUrl: this.baseUrl,
+					useCustomUrl: !!this.baseUrl
+				}
+			}
+			this.dynamicModels = await GetProviderModels(ApiProvider.Google, settings)
+			return this.dynamicModels
+		} catch (error) {
+			console.warn('Failed to fetch dynamic Gemini models:', error)
+			return {}
+		}
+	}
+
+	async getModel(modelId: string) {
+		const id = modelId
+		
+		// 只从动态模型中查找
+		const dynamicModels = await this.getDynamicModels()
+		const info = dynamicModels[id]
+
+		// 如果没找到模型，抛出错误
 		if (!info) {
-			id = geminiDefaultModelId
-			info = geminiModels[geminiDefaultModelId]
+			throw new Error(`Model ${modelId} not found in available Gemini models. Please check your model configuration.`)
+		}
+
+		// 检查模型是否支持 thinking
+		if (info.thinking === true) {
+			return {
+				id,
+				info,
+				thinkingConfig: {
+					includeThoughts: true,
+					thinkingBudget: -1  // -1 表示自动分配思考预算
+				},
+				maxOutputTokens: info.maxTokens ?? undefined,
+			}
 		}
 
 		return { id, info }
@@ -88,7 +110,7 @@ export class GeminiProvider implements BaseLLMProvider {
 			)
 		}
 
-		const { id: modelName, thinkingConfig, maxOutputTokens, info } = this.getModel(model.modelId)
+		const { id: modelName, thinkingConfig, maxOutputTokens } = await this.getModel(model.modelId)
 
 		const systemMessages = request.messages.filter((m) => m.role === 'system')
 		const systemInstruction: string | undefined =
@@ -148,7 +170,7 @@ export class GeminiProvider implements BaseLLMProvider {
 				`Gemini API key is missing. Please set it in settings menu.`,
 			)
 		}
-		const { id: modelName, thinkingConfig, maxOutputTokens, info } = this.getModel(model.modelId)
+		const { id: modelName, thinkingConfig, maxOutputTokens } = await this.getModel(model.modelId)
 
 		const systemMessages = request.messages.filter((m) => m.role === 'system')
 		const systemInstruction: string | undefined =
@@ -228,8 +250,10 @@ export class GeminiProvider implements BaseLLMProvider {
 								},
 							}
 						}
+						default:
+							throw new Error(`Unsupported content type`)
 					}
-				}) as Part[],
+				}),
 			}
 		}
 
@@ -248,14 +272,33 @@ export class GeminiProvider implements BaseLLMProvider {
 		model: string,
 		messageId: string,
 	): LLMResponseNonStreaming {
+		const firstCandidate = response.candidates?.[0]
+		const parts = firstCandidate?.content?.parts || []
+		
+		// 分离思考内容和实际回复内容
+		let reasoningContent = ''
+		let actualContent = ''
+		
+		for (const part of parts) {
+			if (part.text) {
+				// 检查是否是思考内容（带有 thought: true 标记）
+				if ('thought' in part && part.thought === true) {
+					reasoningContent += part.text
+				} else {
+					// 实际回复内容
+					actualContent += part.text
+				}
+			}
+		}
+		
 		return {
 			id: messageId,
 			choices: [
 				{
-					finish_reason:
-						response.candidates?.[0]?.finishReason ?? null,
+					finish_reason: firstCandidate?.finishReason ?? null,
 					message: {
-						content: response.candidates?.[0]?.content?.parts?.[0]?.text ?? '',
+						content: actualContent,
+						reasoning_content: reasoningContent || null,
 						role: 'assistant',
 					},
 				},
@@ -280,7 +323,23 @@ export class GeminiProvider implements BaseLLMProvider {
 		messageId: string,
 	): LLMResponseStreaming {
 		const firstCandidate = chunk.candidates?.[0]
-		const textContent = firstCandidate?.content?.parts?.[0]?.text || ''
+		const parts = firstCandidate?.content?.parts || []
+		
+		// 分离思考内容和实际回复内容
+		let reasoningContent = ''
+		let actualContent = ''
+		
+		for (const part of parts) {
+			if (part.text) {
+				// 检查是否是思考内容（带有 thought: true 标记）
+				if ('thought' in part && part.thought === true) {
+					reasoningContent += part.text
+				} else {
+					// 实际回复内容
+					actualContent += part.text
+				}
+			}
+		}
 		
 		return {
 			id: messageId,
@@ -288,7 +347,8 @@ export class GeminiProvider implements BaseLLMProvider {
 				{
 					finish_reason: firstCandidate?.finishReason ?? null,
 					delta: {
-						content: textContent,
+						content: actualContent,
+						reasoning_content: reasoningContent || null,
 					},
 				},
 			],

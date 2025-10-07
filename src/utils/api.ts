@@ -275,6 +275,158 @@ export const geminiDefaultInsightModelId: GeminiModelId = "gemini-2.5-flash-prev
 export const geminiDefaultAutoCompleteModelId: GeminiModelId = "gemini-2.5-flash-preview-05-20"
 export const geminiDefaultEmbeddingModelId: keyof typeof geminiEmbeddingModels = "text-embedding-004"
 
+// Gemini API 响应接口定义
+interface GeminiApiModel {
+	name: string;
+	displayName?: string;
+	description?: string;
+	inputTokenLimit?: number;
+	outputTokenLimit?: number;
+	supportedGenerationMethods?: string[];
+	thinking?: boolean;
+}
+
+interface GeminiApiResponse {
+	models?: GeminiApiModel[];
+}
+
+// 统一的 Gemini API 响应缓存
+let geminiApiResponseCache: GeminiApiResponse | null = null;
+let geminiModelsCache: Record<string, ModelInfo> | null = null;
+let geminiEmbeddingModelsCache: Record<string, EmbeddingModelInfo> | null = null;
+
+// 统一的 Gemini API 调用函数
+async function fetchGeminiApiResponse(apiKey?: string, baseUrl?: string): Promise<GeminiApiResponse> {
+	if (geminiApiResponseCache) {
+		return geminiApiResponseCache;
+	}
+
+	try {
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			"x-goog-api-key": apiKey
+		};
+
+		// 构建URL
+		const url = new URL('/v1beta/models', baseUrl || 'https://generativelanguage.googleapis.com');
+
+		const response = await fetch(url.toString(), {
+			method: 'GET',
+			headers: headers
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+		}
+
+		const data: GeminiApiResponse = await response.json();
+		geminiApiResponseCache = data;
+		return data;
+	} catch (error) {
+		console.error('Failed to fetch Gemini API response:', error);
+		throw error;
+	}
+}
+
+async function fetchGeminiModels(apiKey?: string, baseUrl?: string): Promise<Record<string, ModelInfo>> {
+	if (geminiModelsCache) {
+		return geminiModelsCache;
+	}
+
+	try {
+		const data = await fetchGeminiApiResponse(apiKey, baseUrl);
+		const models: Record<string, ModelInfo> = {};
+
+		if (data?.models) {
+			for (const model of data.models) {
+				// 只处理生成模型，跳过嵌入模型和其他特殊模型
+				if (model.name && model.supportedGenerationMethods?.includes('generateContent')) {
+					// 从 "models/gemini-pro" 格式中提取模型名称
+					const modelId = model.name.replace('models/', '');
+					
+					// 检查是否支持缓存（通过supportedGenerationMethods中是否包含createCachedContent）
+					const supportsPromptCache = model.supportedGenerationMethods?.includes('createCachedContent') || false;
+					
+					// 基础模型信息
+					const baseModelInfo: ModelInfo = {
+						maxTokens: model.outputTokenLimit || 8192,
+						contextWindow: model.inputTokenLimit || 32768,
+						supportsPromptCache: supportsPromptCache,
+						inputPrice: 0,
+						outputPrice: 0,
+						description: model.description || model.displayName || `Gemini model: ${modelId}`,
+						thinking: false, // 普通版本不支持thinking
+					};
+
+					// 根据API返回的thinking字段设置模型信息
+					const modelInfo: ModelInfo = {
+						...baseModelInfo,
+						thinking: model.thinking === true,
+						supportsReasoningBudget: model.thinking === true,
+						requiredReasoningBudget: model.thinking === true,
+					};
+
+					// 添加模型到列表
+					models[modelId] = modelInfo;
+				}
+			}
+		}
+
+		// 如果没有获取到任何模型，返回空对象
+		if (Object.keys(models).length === 0) {
+			console.warn('No models fetched from Gemini API');
+			return {};
+		}
+
+		geminiModelsCache = models;
+		return models;
+	} catch (error) {
+		console.error('Failed to fetch Gemini models:', error);
+		// 如果出错，返回空对象，不让用户选择模型
+		return {};
+	}
+}
+
+async function fetchGeminiEmbeddingModels(apiKey?: string, baseUrl?: string): Promise<Record<string, EmbeddingModelInfo>> {
+	if (geminiEmbeddingModelsCache) {
+		return geminiEmbeddingModelsCache;
+	}
+
+	try {
+		const data = await fetchGeminiApiResponse(apiKey, baseUrl);
+		const embeddingModels: Record<string, EmbeddingModelInfo> = {};
+
+		if (data?.models) {
+			for (const model of data.models) {
+				// 只处理嵌入模型，检查supportedGenerationMethods中是否包含embedContent
+				if (model.name && model.supportedGenerationMethods?.includes('embedContent')) {
+					const modelId = model.name;
+					
+					embeddingModels[modelId] = {
+						dimensions: 768, // Gemini 嵌入模型默认维度
+						description: model.description || model.displayName || `Gemini embedding model: ${modelId}`,
+					};
+				}
+			}
+		}
+
+		// 如果没有获取到任何嵌入模型，返回静态定义的模型作为回退
+		if (Object.keys(embeddingModels).length === 0) {
+			console.warn('No embedding models fetched from Gemini API, using static models');
+			geminiEmbeddingModelsCache = geminiEmbeddingModels;
+			return geminiEmbeddingModels;
+		}
+
+		geminiEmbeddingModelsCache = embeddingModels;
+		return embeddingModels;
+	} catch (error) {
+		console.error('Failed to fetch Gemini embedding models:', error);
+		// 如果出错，返回静态定义的模型作为回退
+		geminiEmbeddingModelsCache = geminiEmbeddingModels;
+		return geminiEmbeddingModels;
+	}
+}
+
 export const geminiModels = {
 	"gemini-2.5-flash-preview-05-20:thinking": {
 		maxTokens: 65_535,
@@ -1809,8 +1961,11 @@ export const GetProviderModels = async (provider: ApiProvider, settings?: InfioS
 			return anthropicModels
 		case ApiProvider.Deepseek:
 			return deepSeekModels
-		case ApiProvider.Google:
-			return geminiModels
+		case ApiProvider.Google: {
+			const apiKey = settings?.googleProvider?.apiKey
+			const baseUrl = settings?.googleProvider?.useCustomUrl ? settings?.googleProvider?.baseUrl : undefined
+			return await fetchGeminiModels(apiKey, baseUrl)
+		}
 		case ApiProvider.Groq:
 			return groqModels
 		case ApiProvider.Grok:
@@ -1847,8 +2002,11 @@ export const GetProviderModelsWithSettings = async (provider: ApiProvider, setti
 			return anthropicModels
 		case ApiProvider.Deepseek:
 			return deepSeekModels
-		case ApiProvider.Google:
-			return geminiModels
+		case ApiProvider.Google: {
+			const apiKey = settings?.googleProvider?.apiKey
+			const baseUrl = settings?.googleProvider?.useCustomUrl ? settings?.googleProvider?.baseUrl : undefined
+			return await fetchGeminiModels(apiKey, baseUrl)
+		}
 		case ApiProvider.Groq:
 			return groqModels
 		case ApiProvider.Grok:
@@ -1875,12 +2033,15 @@ export const GetProviderModelIds = async (provider: ApiProvider, settings?: Infi
 /// Embedding models
 
 // Get all embedding models for a provider
-export const GetEmbeddingProviderModels = (provider: ApiProvider): Record<string, EmbeddingModelInfo> => {
+export const GetEmbeddingProviderModels = async (provider: ApiProvider, settings?: InfioSettings): Promise<Record<string, EmbeddingModelInfo>> => {
 	switch (provider) {
 		case ApiProvider.Infio:
 			return infioEmbeddingModels
-		case ApiProvider.Google:
-			return geminiEmbeddingModels
+		case ApiProvider.Google: {
+			const apiKey = settings?.googleProvider?.apiKey
+			const baseUrl = settings?.googleProvider?.useCustomUrl ? settings?.googleProvider?.baseUrl : undefined
+			return await fetchGeminiEmbeddingModels(apiKey, baseUrl)
+		}
 		case ApiProvider.SiliconFlow:
 			return siliconFlowEmbeddingModels
 		case ApiProvider.OpenAI:
@@ -1894,12 +2055,13 @@ export const GetEmbeddingProviderModels = (provider: ApiProvider): Record<string
 	}
 }
 // Get all embedding model ids for a provider
-export const GetEmbeddingProviderModelIds = (provider: ApiProvider): string[] => {
-	return Object.keys(GetEmbeddingProviderModels(provider))
+export const GetEmbeddingProviderModelIds = async (provider: ApiProvider, settings?: InfioSettings): Promise<string[]> => {
+	const models = await GetEmbeddingProviderModels(provider, settings)
+	return Object.keys(models)
 }
 // Get embedding model info for a provider and model id
-export const GetEmbeddingModelInfo = (provider: ApiProvider, modelId: string): EmbeddingModelInfo | undefined => {
-	const models = GetEmbeddingProviderModels(provider)
+export const GetEmbeddingModelInfo = async (provider: ApiProvider, modelId: string, settings?: InfioSettings): Promise<EmbeddingModelInfo | undefined> => {
+	const models = await GetEmbeddingProviderModels(provider, settings)
 	return models[modelId]
 }
 

@@ -1,7 +1,7 @@
 import https from 'https'
 import { URL } from 'url'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import { OpenAI } from 'openai'
 
 import { ALIBABA_QWEN_BASE_URL, INFIO_BASE_URL, OPENAI_BASE_URL, SILICONFLOW_BASE_URL } from "../../constants"
@@ -336,20 +336,28 @@ export const getEmbeddingModel = (
 			}
 		}
 		case ApiProvider.Google: {
-			const client = new GoogleGenerativeAI(settings.googleProvider.apiKey)
-			const model = client.getGenerativeModel({ model: settings.embeddingModelId })
-			const modelInfo = GetEmbeddingModelInfo(settings.embeddingModelProvider, settings.embeddingModelId)
-			if (!modelInfo) {
-				throw new Error(`Embedding model ${settings.embeddingModelId} not found for provider ${settings.embeddingModelProvider}`)
-			}
+			const client = new GoogleGenAI({ apiKey: settings.googleProvider.apiKey })
+			
+			// 构建 httpOptions，支持自定义 baseUrl
+			const httpOptions = settings.googleProvider.useCustomUrl && settings.googleProvider.baseUrl
+				? { baseUrl: settings.googleProvider.baseUrl }
+				: undefined
+
 			return {
 				id: settings.embeddingModelId,
-				dimension: modelInfo.dimensions,
+				dimension: settings.googleProvider.embeddingDimensions,
 				supportsBatch: false,
 				getEmbedding: async (text: string) => {
 					try {
-						const response = await model.embedContent(text)
-						return response.embedding.values
+						const response = await client.models.embedContent({
+							model: settings.embeddingModelId,
+							contents: text,
+							config: {
+								httpOptions,
+								outputDimensionality: settings.googleProvider.embeddingDimensions
+							}
+						})
+						return response.embeddings[0].values
 					} catch (error) {
 						if (
 							error.status === 429 &&
@@ -366,8 +374,15 @@ export const getEmbeddingModel = (
 					try {
 						const embeddings = await Promise.all(
 							texts.map(async (text) => {
-								const response = await model.embedContent(text)
-								return response.embedding.values
+								const response = await client.models.embedContent({
+									model: settings.embeddingModelId,
+									contents: text,
+									config: {
+										httpOptions,
+										outputDimensionality: settings.googleProvider.embeddingDimensions
+									}
+								})
+								return response.embeddings[0].values
 							})
 						)
 						return embeddings
@@ -393,7 +408,7 @@ export const getEmbeddingModel = (
 			})
 			return {
 				id: settings.embeddingModelId,
-				dimension: 0,
+				dimension: settings.ollamaProvider.embeddingDimensions,
 				supportsBatch: false,
 				getEmbedding: async (text: string) => {
 					if (!settings.ollamaProvider.baseUrl) {
@@ -429,7 +444,7 @@ export const getEmbeddingModel = (
 			});
 			return {
 				id: settings.embeddingModelId,
-				dimension: 0,
+				dimension: settings.openaicompatibleProvider.embeddingDimensions,
 				supportsBatch: false,
 				getEmbedding: async (text: string) => {
 					try {
