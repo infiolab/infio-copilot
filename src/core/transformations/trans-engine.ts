@@ -1009,6 +1009,50 @@ export class TransEngine {
 	}
 
 	/**
+	 * 获取分页洞察数据
+	 */
+	async getInsightsPage(
+		page: number, 
+		pageSize: number = 50
+	): Promise<{
+		insights: Omit<import('../../database/schema').SelectSourceInsight, 'embedding'>[]
+		totalCount: number
+		totalPages: number
+		currentPage: number
+	}> {
+		if (!this.embeddingModel || !this.insightManager) {
+			console.warn('TransEngine: embedding model or insight manager not available')
+			return {
+				insights: [],
+				totalCount: 0,
+				totalPages: 0,
+				currentPage: 1
+			}
+		}
+		try {
+			const result = await this.insightManager.getInsightsPage(this.embeddingModel, page, pageSize)
+			// 移除 embedding 字段，避免返回大量数据
+			const insights = result.insights.map((insight) => {
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+				const { embedding, ...rest } = insight;
+				return rest;
+			});
+			return {
+				...result,
+				insights
+			}
+		} catch (error) {
+			console.error('TransEngine getInsightsPage failed:', error)
+			return {
+				insights: [],
+				totalCount: 0,
+				totalPages: 0,
+				currentPage: 1
+			}
+		}
+	}
+
+	/**
 	 * 根据标签获取文件
 	 */
 	private getFilesByTag(tag: string): import('obsidian').TFile[] {

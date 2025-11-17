@@ -141,6 +141,22 @@ export class InsightManager {
   }
 
   /**
+   * 获取分页洞察
+   */
+  async getInsightsPage(
+    embeddingModel: EmbeddingModel, 
+    page: number, 
+    pageSize: number = 50
+  ): Promise<{
+    insights: SelectSourceInsight[]
+    totalCount: number
+    totalPages: number
+    currentPage: number
+  }> {
+    return await this.repository.getInsightsPage(embeddingModel, page, pageSize)
+  }
+
+  /**
    * 根据源路径获取洞察
    */
   async getInsightsBySourcePath(

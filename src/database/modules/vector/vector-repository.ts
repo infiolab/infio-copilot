@@ -179,6 +179,14 @@ export class VectorRepository {
 			throw new DatabaseNotInitializedException()
 		}
 		const tableName = this.getTableName(embeddingModel)
+		
+		console.log('🔍 VectorRepository performSimilaritySearch - Input:', {
+			queryVectorDimension: queryVector.length,
+			embeddingModelId: embeddingModel.id,
+			embeddingModelDimension: embeddingModel.dimension,
+			tableName: tableName,
+			queryVectorFirst5: queryVector.slice(0, 5)
+		})
 
 		let scopeCondition = ''
 		const params: unknown[] = [`[${queryVector.join(',')}]`, options.minSimilarity, options.limit]
@@ -217,6 +225,14 @@ export class VectorRepository {
       ORDER BY similarity DESC
       LIMIT $3
     `
+
+		console.log('🔍 VectorRepository performSimilaritySearch - Query Execution:', {
+			query: query.trim(),
+			paramsLength: params.length,
+			vectorParamLength: (params[0] as string).length,
+			minSimilarity: params[1],
+			limit: params[2]
+		})
 
 		type SearchResult = Omit<SelectVector, 'embedding'> & { similarity: number }
 		const result = await this.db.query<SearchResult>(query, params)

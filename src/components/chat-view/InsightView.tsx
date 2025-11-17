@@ -40,6 +40,11 @@ const InsightView = () => {
 	const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set())
 	// 当前搜索范围信息
 	const [currentScope, setCurrentScope] = useState<string>('')
+	// 分页状态
+	const [currentPage, setCurrentPage] = useState<number>(1)
+	const [totalPages, setTotalPages] = useState<number>(0)
+	const [totalInsights, setTotalInsights] = useState<number>(0)
+	const [pageSize] = useState<number>(50)
 	// 初始化洞察状态
 	const [isInitializing, setIsInitializing] = useState(false)
 	const [initProgress, setInitProgress] = useState<{
@@ -83,7 +88,10 @@ const InsightView = () => {
 			setCurrentScope(scopeDescription)
 
 			const transEngine = await getTransEngine()
-			const allInsights = await transEngine.getAllInsights()
+			const pageResult = await transEngine.getInsightsPage(currentPage, pageSize)
+			const allInsights = pageResult.insights
+			setTotalInsights(pageResult.totalCount)
+			setTotalPages(pageResult.totalPages)
 
 			// 构建工作区范围集合（包含文件、文件夹、工作区路径）
 			let workspacePaths: Set<string> | null = null
@@ -154,10 +162,9 @@ const InsightView = () => {
 				)
 			}
 
-			// 按创建时间排序，取最新的50条
+			// 按创建时间排序（数据库已排序，这里保持一致）
 			const sortedInsights = filteredInsights
 				.sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
-				.slice(0, 50)
 
 			// 添加显示时间
 			const insightsWithDisplayTime = sortedInsights.map(insight => ({
@@ -173,12 +180,19 @@ const InsightView = () => {
 		} finally {
 			setIsLoading(false)
 		}
-	}, [getTransEngine, settings, workspaceManager, app])
+	}, [getTransEngine, settings, workspaceManager, app, currentPage, pageSize])
 
 	// 组件加载时自动获取洞察
 	useEffect(() => {
 		loadInsights()
 	}, [loadInsights])
+
+	// 监听分页变化，重新加载数据
+	useEffect(() => {
+		if (hasLoaded) {
+			loadInsights()
+		}
+	}, [currentPage, hasLoaded, loadInsights])
 
 	// 初始化工作区洞察
 	const initializeWorkspaceInsights = useCallback(async () => {
@@ -545,8 +559,15 @@ const InsightView = () => {
 					{hasLoaded && !isLoading && (
 						<div className="infio-insight-stats-overview">
 							<div className="infio-insight-stats-main">
-								<span className="infio-insight-stats-number">{insightResults.length}</span>
+								<span className="infio-insight-stats-number">
+									{totalInsights}
+								</span>
 								<span className="infio-insight-stats-label">{t('insights.stats.insightCount')}</span>
+								{totalPages > 1 && (
+									<span className="infio-insight-stats-page">
+										Page {currentPage} of {totalPages}
+									</span>
+								)}
 							</div>
 							<div className="infio-insight-stats-breakdown">
 								{insightGroupedResults.length > 0 && (
@@ -601,6 +622,62 @@ const InsightView = () => {
 					</div>
 				</div>
 			</div>
+
+			{/* 分页控件 */}
+			{hasLoaded && !isLoading && totalPages > 1 && (
+				<div className="infio-insight-pagination">
+					<button
+						onClick={() => setCurrentPage(1)}
+						disabled={currentPage === 1}
+						className="infio-insight-pagination-btn"
+						title="First page"
+					>
+						«
+					</button>
+					<button
+						onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+						disabled={currentPage === 1}
+						className="infio-insight-pagination-btn"
+						title="Previous page"
+					>
+						‹
+					</button>
+					
+					<div className="infio-insight-pagination-info">
+						<input
+							type="number"
+							min="1"
+							max={totalPages}
+							value={currentPage}
+							onChange={(e) => {
+								const page = parseInt(e.target.value)
+								if (page >= 1 && page <= totalPages) {
+									setCurrentPage(page)
+								}
+							}}
+							className="infio-insight-pagination-input"
+						/>
+						<span className="infio-insight-pagination-total">/ {totalPages}</span>
+					</div>
+					
+					<button
+						onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+						disabled={currentPage === totalPages}
+						className="infio-insight-pagination-btn"
+						title="Next page"
+					>
+						›
+					</button>
+					<button
+						onClick={() => setCurrentPage(totalPages)}
+						disabled={currentPage === totalPages}
+						className="infio-insight-pagination-btn"
+						title="Last page"
+					>
+						»
+					</button>
+				</div>
+			)}
 
 			{/* 加载进度 */}
 			{isLoading && (
@@ -1486,6 +1563,71 @@ const InsightView = () => {
 					font-size: var(--font-ui-small);
 					color: var(--text-faint);
 					font-style: italic;
+				}
+
+				.infio-insight-stats-page {
+					color: var(--text-muted);
+					font-size: var(--font-ui-smaller);
+					margin-left: var(--size-2-2);
+				}
+
+				.infio-insight-pagination {
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					gap: var(--size-2-2);
+					padding: var(--size-4-3);
+					border-bottom: 1px solid var(--background-modifier-border);
+				}
+
+				.infio-insight-pagination-btn {
+					background: var(--background-secondary);
+					color: var(--text-normal);
+					border: 1px solid var(--background-modifier-border);
+					width: 32px;
+					height: 32px;
+					border-radius: var(--radius-s);
+					font-size: var(--font-ui-medium);
+					font-weight: bold;
+					cursor: pointer;
+					transition: all 0.15s ease-in-out;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+				}
+
+				.infio-insight-pagination-btn:hover:not(:disabled) {
+					background: var(--interactive-accent);
+					color: var(--text-on-accent);
+					border-color: var(--interactive-accent);
+				}
+
+				.infio-insight-pagination-btn:disabled {
+					opacity: 0.5;
+					cursor: not-allowed;
+				}
+
+				.infio-insight-pagination-info {
+					display: flex;
+					align-items: center;
+					gap: var(--size-2-1);
+					margin: 0 var(--size-2-3);
+				}
+
+				.infio-insight-pagination-input {
+					width: 50px;
+					height: 28px;
+					text-align: center;
+					border: 1px solid var(--background-modifier-border);
+					border-radius: var(--radius-s);
+					background: var(--background-primary);
+					color: var(--text-normal);
+					font-size: var(--font-ui-small);
+				}
+
+				.infio-insight-pagination-total {
+					color: var(--text-muted);
+					font-size: var(--font-ui-small);
 				}
 
 				/* 确认对话框样式 */

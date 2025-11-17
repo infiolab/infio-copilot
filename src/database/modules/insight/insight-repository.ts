@@ -27,10 +27,77 @@ export class InsightRepository {
       throw new DatabaseNotInitializedException()
     }
     const tableName = this.getTableName(embeddingModel)
+    
+    // 分批加载避免内存问题
+    const batchSize = 100
+    let offset = 0
+    const allInsights: SelectSourceInsight[] = []
+    
+    while (true) {
+      const result = await this.db.query<SelectSourceInsight>(
+        `SELECT id, insight, insight_type, source_path, source_type, created_at, updated_at 
+         FROM "${tableName}" ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+        [batchSize, offset]
+      )
+      
+      if (result.rows.length === 0) {
+        break
+      }
+      
+      allInsights.push(...result.rows)
+      offset += batchSize
+      
+      // 每500条记录输出一次进度日志
+      if (allInsights.length % 500 === 0) {
+        console.log(`📊 Insights加载进度: ${allInsights.length} 条记录`)
+      }
+      
+      // 避免无限循环
+      if (result.rows.length < batchSize) {
+        break
+      }
+    }
+    
+    return allInsights
+  }
+
+  async getInsightsPage(
+    embeddingModel: EmbeddingModel, 
+    page: number, 
+    pageSize: number = 50
+  ): Promise<{
+    insights: SelectSourceInsight[]
+    totalCount: number
+    totalPages: number
+    currentPage: number
+  }> {
+    if (!this.db) {
+      throw new DatabaseNotInitializedException()
+    }
+    const tableName = this.getTableName(embeddingModel)
+    
+    // 获取总数
+    const countResult = await this.db.query<{count: number}>(
+      `SELECT COUNT(*) as count FROM "${tableName}"`
+    )
+    const totalCount = countResult.rows[0].count
+    const totalPages = Math.ceil(totalCount / pageSize)
+    const currentPage = Math.min(Math.max(1, page), totalPages)
+    const offset = (currentPage - 1) * pageSize
+    
+    // 获取分页数据
     const result = await this.db.query<SelectSourceInsight>(
-      `SELECT * FROM "${tableName}" ORDER BY created_at DESC`
-		)
-    return result.rows
+      `SELECT id, insight, insight_type, source_path, source_type, created_at, updated_at 
+       FROM "${tableName}" ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+      [pageSize, offset]
+    )
+    
+    return {
+      insights: result.rows,
+      totalCount,
+      totalPages,
+      currentPage
+    }
   }
 
   async getInsightsBySourcePath(
