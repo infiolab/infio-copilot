@@ -270,9 +270,9 @@ async function fetchOpenRouterModels(): Promise<Record<string, ModelInfo>> {
 // Gemini
 // https://ai.google.dev/gemini-api/docs/models/gemini
 export type GeminiModelId = keyof typeof geminiModels
-export const geminiDefaultModelId: GeminiModelId = "gemini-2.5-pro-preview-05-06"
-export const geminiDefaultInsightModelId: GeminiModelId = "gemini-2.5-flash-preview-05-20"
-export const geminiDefaultAutoCompleteModelId: GeminiModelId = "gemini-2.5-flash-preview-05-20"
+export const geminiDefaultModelId: GeminiModelId = "gemini-2.5-pro"
+export const geminiDefaultInsightModelId: GeminiModelId = "gemini-2.5-flash"
+export const geminiDefaultAutoCompleteModelId: GeminiModelId = "gemini-2.5-flash"
 export const geminiDefaultEmbeddingModelId: keyof typeof geminiEmbeddingModels = "text-embedding-004"
 
 export const geminiModels = {
